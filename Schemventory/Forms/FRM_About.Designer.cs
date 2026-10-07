@@ -126,6 +126,7 @@ partial class FRM_About
         FormBorderStyle = FormBorderStyle.FixedSingle;
         Icon = (Icon)resources.GetObject("$this.Icon");
         Margin = new Padding(3, 4, 3, 4);
+        MaximizeBox = false;
         Name = "FRM_About";
         StartPosition = FormStartPosition.CenterScreen;
         Text = "FRM_About";

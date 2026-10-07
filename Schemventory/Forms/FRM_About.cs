@@ -13,7 +13,7 @@ public partial class FRM_About : Form
         Text = WindowName;
 
         LBL_ProgramName.Text = $"About {Constants.AppName}";
-        LBL_CopyrightText.Text = $"{Constants.AppName} Version {Application.ProductVersion}\nCopyright © {Constants.AppAuthor}, {DateTime.Now.Year}\n{Constants.AppWebsite}";
+        LBL_CopyrightText.Text = $"{Constants.AppName} Version {Application.ProductVersion}\n© {Constants.AppAuthor}, {DateTime.Now.Year}\n{Constants.AppWebsite}";
         LBL_3rdPartyText.Text =
             @"This software uses icons provided by Icons8.
 https://icons8.com
