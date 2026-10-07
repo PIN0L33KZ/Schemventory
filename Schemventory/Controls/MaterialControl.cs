@@ -1,0 +1,489 @@
+using Schemventory.App;
+using Schemventory.Forms;
+using Schemventory.Services;
+
+namespace Schemventory.Controls;
+
+public partial class MaterialControl : UserControl
+{
+    private readonly ItemIconService _itemIconService;
+    private readonly ItemDataProvider _itemDataProvider;
+    private readonly ProjectMaterialService _projectMaterialService;
+    private readonly System.Windows.Forms.Timer _hoverTimer;
+    private bool _isHovered;
+
+    public event EventHandler? StateChanged;
+    public ProjectMaterial Material { get; }
+
+    public MaterialControl(ProjectMaterial material, ItemIconService itemIconService, ItemDataProvider itemDataProvider, ProjectMaterialService projectMaterialService)
+    {
+        InitializeComponent();
+
+        Material = material;
+        _itemIconService = itemIconService;
+        _itemDataProvider = itemDataProvider;
+        _projectMaterialService = projectMaterialService;
+
+        RegisterEvents(this);
+
+        _hoverTimer = new System.Windows.Forms.Timer
+        {
+            Interval = 50
+        };
+
+        _hoverTimer.Tick += HoverTimer_Tick;
+
+        PBX_StateIcon.Parent = PBX_MaterialIcon;
+        PBX_StateIcon.Location = new Point(
+            PBX_MaterialIcon.ClientSize.Width - PBX_StateIcon.Width,
+            PBX_MaterialIcon.ClientSize.Height - PBX_StateIcon.Height);
+
+        PBX_StateIcon.BringToFront();
+    }
+
+    private void HoverTimer_Tick(object? sender, EventArgs e)
+    {
+        if(RectangleToScreen(ClientRectangle).Contains(Cursor.Position))
+            return;
+
+        EndHover();
+    }
+
+    private async void MaterialControl_Load(object sender, EventArgs e)
+    {
+        FillMaterialData();
+
+        await LoadItemDataAsync();
+        await LoadMaterialIconAsync();
+    }
+
+    private void MaterialControl_DoubleClick(object? sender, EventArgs e)
+    {
+        try
+        {
+            switch(Material.State)
+            {
+                case ProjectMaterialState.Missing:
+                case ProjectMaterialState.Replaced:
+                    MarkAsCollected();
+                    break;
+
+                case ProjectMaterialState.Collected:
+                    RestorePreviousState();
+                    break;
+
+                case ProjectMaterialState.Ignored:
+                default:
+                    return;
+            }
+
+            ApplyMaterialState();
+            StateChanged?.Invoke(this, EventArgs.Empty);
+        }
+        catch(Exception exception)
+        {
+            _ = MessageBox.Show($"The material state could not be changed.\n\n{exception.Message}", "Schemventory", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    private void MarkAsCollected()
+    {
+        _projectMaterialService.MarkCompleted(Material.ProjectId, Material.ItemId);
+
+        Material.State = ProjectMaterialState.Collected;
+        Material.CollectedAmount = Material.RequiredAmount;
+    }
+
+    private void RestorePreviousState()
+    {
+        if(!string.IsNullOrWhiteSpace(Material.ReplacementItemId))
+        {
+            _projectMaterialService.MarkReplaced(Material.ProjectId, Material.ItemId, Material.ReplacementItemId);
+
+            Material.State = ProjectMaterialState.Replaced;
+            Material.CollectedAmount = 0;
+            return;
+        }
+
+        _projectMaterialService.MarkMissing(Material.ProjectId, Material.ItemId);
+
+        Material.State = ProjectMaterialState.Missing;
+        Material.CollectedAmount = 0;
+    }
+
+    private void HoverStart(object? sender, EventArgs e)
+    {
+        if(_isHovered)
+            return;
+
+        _isHovered = true;
+
+        IBN_MoreOptions.Show();
+
+        PNL_Background.BorderColor = GetStateColor();
+        PNL_Background.FillColor3 = GetStateColor();
+
+        _hoverTimer.Start();
+    }
+
+    private void HoverEnd(object? sender, EventArgs e)
+    {
+        _ = BeginInvoke(() =>
+        {
+            if(IsDisposed)
+                return;
+
+            if(RectangleToScreen(ClientRectangle).Contains(Cursor.Position))
+                return;
+
+            EndHover();
+        });
+    }
+
+    private void MouseRightClick(object? sender, MouseEventArgs e)
+    {
+        if(e.Button != MouseButtons.Right)
+            return;
+
+        UpdateContextMenuState();
+
+        CMS_MaterialOptions.Show(Cursor.Position);
+    }
+
+    private void EndHover()
+    {
+        _hoverTimer.Stop();
+        _isHovered = false;
+
+        IBN_MoreOptions.Hide();
+
+        ApplyDefaultColors();
+    }
+
+    private async Task LoadItemDataAsync()
+    {
+        Material.MaxStackSize = await _itemDataProvider.GetMaxStackSizeAsync(Material.DisplayItemId);
+
+        if(IsDisposed)
+            return;
+
+        LBL_MaxStackSize.Text = $"Stack size: {Material.MaxStackSize}";
+        ApplyMaterialState();
+    }
+
+    private void FillMaterialData()
+    {
+        LBL_MaxStackSize.Text = $"Stack size: {Material.MaxStackSize}";
+        LBL_BlocksNeeded.Text = $"Total: {Material.RequiredAmount}";
+        ApplyMaterialState();
+    }
+
+    private void ApplyMaterialState()
+    {
+        ApplyDefaultColors();
+
+        LBL_MaterialName.Text = GetMaterialDisplayName();
+
+        switch(Material.State)
+        {
+            case ProjectMaterialState.Missing:
+                LBL_TotalFormatted.ForeColor = Constants.MissingColor;
+                LBL_TotalFormatted.Text = GetMissingText();
+                PBX_StateIcon.Image = null;
+                PBX_StateIcon.Hide();
+                RegisterToolTips(this, "Double click to mark this material as collected");
+                break;
+
+            case ProjectMaterialState.Replaced:
+                LBL_TotalFormatted.ForeColor = Constants.ReplacedColor;
+                LBL_TotalFormatted.Text = GetMissingText();
+                PBX_StateIcon.Image = Properties.Resources.Switched;
+                PBX_StateIcon.Show();
+                RegisterToolTips(this, "This material has been replaced");
+                break;
+
+            case ProjectMaterialState.Collected:
+                LBL_TotalFormatted.ForeColor = Constants.CollectedColor;
+                LBL_TotalFormatted.Text = "All collected!";
+                PBX_StateIcon.Image = Properties.Resources.Checked;
+                PBX_StateIcon.Show();
+                RegisterToolTips(this, "Double click to mark this material as missing");
+                break;
+
+            case ProjectMaterialState.Ignored:
+                LBL_TotalFormatted.ForeColor = Constants.IgnoredColor;
+                LBL_TotalFormatted.Text = "Material Ignored";
+                PBX_StateIcon.Image = Properties.Resources.Ignored;
+                PBX_StateIcon.Show();
+                RegisterToolTips(this, "This material is ignored");
+                break;
+
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
+    }
+
+    private void ApplyDefaultColors()
+    {
+        PNL_Background.FillColor3 = Constants.DefaultColor;
+        PNL_Background.BorderColor = Constants.DefaultBorderColor;
+    }
+
+    private Color GetStateColor()
+    {
+        return Material.State switch
+        {
+            ProjectMaterialState.Collected => Constants.CollectedColor,
+            ProjectMaterialState.Replaced => Constants.ReplacedColor,
+            ProjectMaterialState.Ignored => Constants.IgnoredColor,
+            ProjectMaterialState.Missing => Constants.MissingColor,
+            _ => Constants.DefaultColor
+        };
+    }
+
+    private string GetMaterialDisplayName()
+    {
+        var displayName = GetDisplayName(Material.DisplayItemId);
+
+        return Material.State == ProjectMaterialState.Replaced
+            ? $"{displayName} (replaced)"
+            : displayName;
+    }
+
+    private string GetMissingText()
+    {
+        var missingAmount = Material.RemainingAmount;
+        var stacks = missingAmount / Material.MaxStackSize;
+        var blocks = missingAmount % Material.MaxStackSize;
+
+        var stackText = stacks == 1 ? "Stack" : "Stacks";
+        var blockText = blocks == 1 ? "Block" : "Blocks";
+
+        return stacks > 0 && blocks > 0
+            ? $"Missing: {stacks} {stackText} + {blocks} {blockText}"
+            : stacks > 0 ? $"Missing: {stacks} {stackText}" : $"Missing: {blocks} {blockText}";
+    }
+
+    private async Task LoadMaterialIconAsync()
+    {
+        try
+        {
+            Image? image = await _itemIconService.GetItemIconAsync(Material.DisplayItemId, 64);
+
+            if(IsDisposed)
+            {
+                image?.Dispose();
+                return;
+            }
+
+            PBX_MaterialIcon.Image?.Dispose();
+            PBX_MaterialIcon.Image = image;
+            PBX_MaterialIcon.SizeMode = PictureBoxSizeMode.Zoom;
+        }
+        catch
+        {
+            PBX_MaterialIcon.Image = null;
+        }
+    }
+
+    private static string GetDisplayName(string itemId)
+    {
+        var name = itemId.Replace("minecraft:", "", StringComparison.Ordinal);
+        name = name.Replace('_', ' ');
+
+        return System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(name);
+    }
+
+    private void RegisterEvents(Control control)
+    {
+        control.MouseEnter += HoverStart;
+        control.MouseLeave += HoverEnd;
+        control.MouseDown += MouseRightClick;
+
+        // Skip Buttons
+        if(control != this && control is not Guna.UI2.WinForms.Guna2ImageButton)
+        {
+            control.DoubleClick += MaterialControl_DoubleClick;
+        }
+
+        foreach(Control child in control.Controls)
+            RegisterEvents(child);
+    }
+
+    private void RegisterToolTips(Control control, string toolTip)
+    {
+        // Skip Buttons
+        if(control != this && control is not Guna.UI2.WinForms.Guna2ImageButton)
+            TTP_Main.SetToolTip(control, toolTip);
+
+        foreach(Control child in control.Controls)
+            RegisterToolTips(child, toolTip);
+    }
+
+    private void IBN_MoreOptions_Click(object sender, EventArgs e)
+    {
+        UpdateContextMenuState();
+
+        CMS_MaterialOptions.Show(IBN_MoreOptions, new Point(0, IBN_MoreOptions.Height));
+    }
+
+    private void UpdateContextMenuState()
+    {
+        TMI_SetStateMissing.Visible = Material.State != ProjectMaterialState.Missing;
+        TMI_SetStateCollected.Visible = Material.State != ProjectMaterialState.Collected;
+        TMI_SetStateIgnore.Visible = Material.State != ProjectMaterialState.Ignored;
+        TMI_SetCollectedAmount.Visible = Material.State is not ProjectMaterialState.Collected and not ProjectMaterialState.Ignored;
+    }
+
+    private void TMI_SetStateCollected_Click(object sender, EventArgs e)
+    {
+        SetMaterialState(ProjectMaterialState.Collected);
+    }
+
+    private void TMI_SetStateMissing_Click(object sender, EventArgs e)
+    {
+        SetMaterialState(ProjectMaterialState.Missing);
+    }
+
+    private void TMI_SetStateIgnored_Click(object sender, EventArgs e)
+    {
+        SetMaterialState(ProjectMaterialState.Ignored);
+    }
+
+    private void SetMaterialState(ProjectMaterialState state)
+    {
+        try
+        {
+            switch(state)
+            {
+                case ProjectMaterialState.Missing:
+                    _projectMaterialService.MarkMissing(Material.ProjectId, Material.ItemId);
+                    Material.CollectedAmount = 0;
+                    Material.ReplacementItemId = null;
+                    break;
+
+                case ProjectMaterialState.Collected:
+                    _projectMaterialService.MarkCompleted(Material.ProjectId, Material.ItemId);
+                    Material.CollectedAmount = Material.RequiredAmount;
+                    break;
+
+                case ProjectMaterialState.Ignored:
+                    _projectMaterialService.MarkIgnored(Material.ProjectId, Material.ItemId);
+                    Material.CollectedAmount = 0;
+                    Material.ReplacementItemId = null;
+                    break;
+
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(state), state, null);
+            }
+
+            Material.State = state;
+
+            ApplyMaterialState();
+            StateChanged?.Invoke(this, EventArgs.Empty);
+        }
+        catch(Exception exception)
+        {
+            _ = MessageBox.Show($"The material state could not be changed.\n\n{exception.Message}", "Schemventory", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    private void TMI_SetCollectedAmount_Click(object sender, EventArgs e)
+    {
+        if(Material.State == ProjectMaterialState.Ignored)
+            return;
+
+        using FRM_AdjustCollectedAmount form = new(Material);
+
+        if(form.ShowDialog(this) != DialogResult.OK)
+            return;
+
+        if(form.AmountChange == 0)
+            return;
+
+        var newCollectedAmount = Math.Clamp(
+            Material.CollectedAmount + form.AmountChange,
+            0,
+            Material.RequiredAmount);
+
+        SetCollectedAmount(newCollectedAmount);
+    }
+
+    private void SetCollectedAmount(long collectedAmount)
+    {
+        try
+        {
+            _projectMaterialService.UpdateCollectedAmount(Material.ProjectId, Material.ItemId, collectedAmount);
+
+            Material.CollectedAmount = collectedAmount;
+
+            Material.State = Material.CollectedAmount >= Material.RequiredAmount
+                ? ProjectMaterialState.Collected
+                : !string.IsNullOrWhiteSpace(Material.ReplacementItemId) ? ProjectMaterialState.Replaced : ProjectMaterialState.Missing;
+
+            ApplyMaterialState();
+            StateChanged?.Invoke(this, EventArgs.Empty);
+        }
+        catch(Exception exception)
+        {
+            _ = MessageBox.Show($"The collected amount could not be changed.\n\n{exception.Message}", "Schemventory", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    private async void TMI_ReplaceMaterial_Click(object sender, EventArgs e)
+    {
+        try
+        {
+            using FRM_ReplaceMaterial form = new(Material, _itemDataProvider, _itemIconService);
+
+            if(form.ShowDialog(this) != DialogResult.OK)
+                return;
+
+            if(form.ResetRequested)
+            {
+                ResetReplacement();
+
+                await RefreshMaterialAsync();
+
+                StateChanged?.Invoke(this, EventArgs.Empty);
+                return;
+            }
+
+            if(string.IsNullOrWhiteSpace(form.ReplacementItemId))
+                return;
+
+            _projectMaterialService.MarkReplaced(Material.ProjectId, Material.ItemId, form.ReplacementItemId);
+
+            Material.State = ProjectMaterialState.Replaced;
+            Material.ReplacementItemId = form.ReplacementItemId;
+            Material.CollectedAmount = 0;
+
+            await RefreshMaterialAsync();
+
+            StateChanged?.Invoke(this, EventArgs.Empty);
+        }
+        catch(Exception exception)
+        {
+            _ = MessageBox.Show(
+                $"The material could not be replaced.\n\n{exception.Message}",
+                Constants.AppName,
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
+        }
+    }
+
+    private async Task RefreshMaterialAsync()
+    {
+        await LoadItemDataAsync();
+        await LoadMaterialIconAsync();
+    }
+
+    private void ResetReplacement()
+    {
+        _projectMaterialService.MarkMissing(Material.ProjectId, Material.ItemId);
+
+        Material.State = ProjectMaterialState.Missing;
+        Material.ReplacementItemId = null;
+        Material.CollectedAmount = 0;
+    }
+}
