@@ -1,5 +1,11 @@
 # Schemventory
 
+## Screenshots
+<img width="1001" height="559" alt="grafik" src="https://github.com/user-attachments/assets/228fe83f-a754-4790-8abd-74c66850edef" />
+<img width="409" height="657" alt="grafik" src="https://github.com/user-attachments/assets/a0bbd82b-dfcf-4be1-99ce-b0b89e90a27c" />
+<img width="1001" height="559" alt="grafik" src="https://github.com/user-attachments/assets/c5d7c30e-b019-4f1d-bd10-eb8faffb9a95" />
+<img width="840" height="566" alt="grafik" src="https://github.com/user-attachments/assets/ebaef710-d92d-4a60-b350-55f13c4199f3" />
+
 Schemventory is a Windows application for creating and tracking material lists from Minecraft schematic files.
 
 It reads supported schematic formats, resolves the blocks into inventory materials and helps you keep track of what you still need to collect for a build.
@@ -130,14 +136,6 @@ Some features that may be added or expanded in future versions include:
 - Further improvements to material replacement workflows
 - Additional material-list tools and filters
 - More project-management features
-
-## Screenshots
-
-Screenshots can be added here once the repository contains suitable images.
-
-```md
-![Material list](docs/images/material-list.png)
-```
 
 ## Contributing
 
