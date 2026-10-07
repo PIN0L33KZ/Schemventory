@@ -243,6 +243,7 @@ partial class FRM_MaterialList
         // 
         // IBN_About
         // 
+        IBN_About.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
         IBN_About.CheckedState.ImageSize = new Size(64, 64);
         IBN_About.Cursor = Cursors.Hand;
         IBN_About.HoverState.ImageSize = new Size(25, 25);
