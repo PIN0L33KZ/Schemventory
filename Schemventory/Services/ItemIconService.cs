@@ -1,12 +1,21 @@
-﻿using Schemventory.App;
+using Schemventory.App;
+using System.Collections.Concurrent;
+using System.Net;
 
 namespace Schemventory.Services;
 
 public sealed class ItemIconService
 {
-    private static readonly HttpClient HttpClient = new();
+    private static readonly TimeSpan MissingCacheLifetime = TimeSpan.FromDays(7);
+
+    private static readonly HttpClient HttpClient = new()
+    {
+        Timeout = TimeSpan.FromSeconds(10)
+    };
+
     private readonly string _cacheDirectory;
     private readonly SemaphoreSlim _downloadSemaphore = new(6);
+    private readonly ConcurrentDictionary<string, SemaphoreSlim> _itemLocks = new(StringComparer.Ordinal);
 
     public ItemIconService()
     {
@@ -15,25 +24,64 @@ public sealed class ItemIconService
         _ = Directory.CreateDirectory(_cacheDirectory);
     }
 
-    public async Task<Image> GetItemIconAsync(string itemId, int size = 64, CancellationToken cancellationToken = default)
+    public async Task<Image> GetItemIconAsync(
+        string itemId,
+        int size = 64,
+        CancellationToken cancellationToken = default)
     {
         var normalizedItemId = NormalizeItemId(itemId);
         var cacheFilePath = GetCacheFilePath(normalizedItemId, size);
+        var missingCacheFilePath = GetMissingCacheFilePath(normalizedItemId, size);
 
-        if(File.Exists(cacheFilePath))
-            return LoadImage(cacheFilePath);
+        var cachedImage = TryLoadCachedImage(cacheFilePath);
 
-        var imageData = await DownloadIconAsync(normalizedItemId, size, cancellationToken);
+        if(cachedImage is not null)
+            return cachedImage;
 
-        if(imageData is null)
+        if(IsMissingCacheValid(missingCacheFilePath))
             return new Bitmap(Properties.Resources.MissingIcon);
 
-        await File.WriteAllBytesAsync(cacheFilePath, imageData, cancellationToken);
+        var cacheKey = $"{normalizedItemId}:{size}";
+        var itemLock = _itemLocks.GetOrAdd(cacheKey, _ => new SemaphoreSlim(1, 1));
 
-        return LoadImage(cacheFilePath);
+        await itemLock.WaitAsync(cancellationToken);
+
+        try
+        {
+            // Another caller may have filled the cache while this one was waiting.
+            cachedImage = TryLoadCachedImage(cacheFilePath);
+
+            if(cachedImage is not null)
+                return cachedImage;
+
+            if(IsMissingCacheValid(missingCacheFilePath))
+                return new Bitmap(Properties.Resources.MissingIcon);
+
+            var imageData = await DownloadIconAsync(normalizedItemId, size, cancellationToken);
+
+            if(imageData is null)
+            {
+                await File.WriteAllTextAsync(missingCacheFilePath, string.Empty, cancellationToken);
+
+                return new Bitmap(Properties.Resources.MissingIcon);
+            }
+
+            TryDeleteFile(missingCacheFilePath);
+
+            await File.WriteAllBytesAsync(cacheFilePath, imageData, cancellationToken);
+
+            return LoadImage(cacheFilePath);
+        }
+        finally
+        {
+            _ = itemLock.Release();
+        }
     }
 
-    private async Task<byte[]?> DownloadIconAsync(string itemId, int size, CancellationToken cancellationToken)
+    private async Task<byte[]?> DownloadIconAsync(
+        string itemId,
+        int size,
+        CancellationToken cancellationToken)
     {
         await _downloadSemaphore.WaitAsync(cancellationToken);
 
@@ -41,7 +89,9 @@ public sealed class ItemIconService
         {
             var imageData = await TryDownloadIconAsync("item", itemId, size, cancellationToken);
 
-            return imageData is not null ? imageData : await TryDownloadIconAsync("block", itemId, size, cancellationToken);
+            return imageData is not null
+                ? imageData
+                : await TryDownloadIconAsync("block", itemId, size, cancellationToken);
         }
         finally
         {
@@ -49,23 +99,79 @@ public sealed class ItemIconService
         }
     }
 
-    private static async Task<byte[]?> TryDownloadIconAsync(string type, string itemId, int size, CancellationToken cancellationToken)
+    private static async Task<byte[]?> TryDownloadIconAsync(
+        string type,
+        string itemId,
+        int size,
+        CancellationToken cancellationToken)
     {
         var url = $"https://blockrender.dev/render/{type}/{Uri.EscapeDataString(itemId)}.png?size={size}";
 
-        using HttpResponseMessage response = await HttpClient.GetAsync(url, cancellationToken);
+        using HttpRequestMessage request = new(HttpMethod.Get, url);
+        request.Headers.UserAgent.ParseAdd("Schemventory/1.0");
 
-        if(response.StatusCode == System.Net.HttpStatusCode.NotFound)
+        using HttpResponseMessage response = await HttpClient.SendAsync(
+            request,
+            HttpCompletionOption.ResponseHeadersRead,
+            cancellationToken);
+
+        if(response.StatusCode == HttpStatusCode.NotFound)
             return null;
+
+        if(response.StatusCode == HttpStatusCode.TooManyRequests)
+            throw new HttpRequestException("Item icon request was rate limited.", null, response.StatusCode);
 
         _ = response.EnsureSuccessStatusCode();
 
         return await response.Content.ReadAsByteArrayAsync(cancellationToken);
     }
 
+    private Image? TryLoadCachedImage(string filePath)
+    {
+        if(!File.Exists(filePath))
+            return null;
+
+        try
+        {
+            return LoadImage(filePath);
+        }
+        catch
+        {
+            TryDeleteFile(filePath);
+            return null;
+        }
+    }
+
+    private static bool IsMissingCacheValid(string filePath)
+    {
+        if(!File.Exists(filePath))
+            return false;
+
+        try
+        {
+            if(DateTime.UtcNow - File.GetLastWriteTimeUtc(filePath) < MissingCacheLifetime)
+                return true;
+
+            File.Delete(filePath);
+        }
+        catch
+        {
+            // If the marker cannot be inspected or removed, allow a fresh request.
+        }
+
+        return false;
+    }
+
     private string GetCacheFilePath(string itemId, int size)
     {
         var fileName = $"{itemId}_{size}.png";
+
+        return Path.Combine(_cacheDirectory, fileName);
+    }
+
+    private string GetMissingCacheFilePath(string itemId, int size)
+    {
+        var fileName = $"{itemId}_{size}.missing";
 
         return Path.Combine(_cacheDirectory, fileName);
     }
@@ -86,5 +192,18 @@ public sealed class ItemIconService
         using MemoryStream stream = new(data);
 
         return new Bitmap(stream);
+    }
+
+    private static void TryDeleteFile(string filePath)
+    {
+        try
+        {
+            if(File.Exists(filePath))
+                File.Delete(filePath);
+        }
+        catch
+        {
+            // Cache cleanup must never prevent the application from working.
+        }
     }
 }
