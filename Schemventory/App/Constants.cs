@@ -3,6 +3,9 @@
 internal class Constants
 {
     public const string AppName = "Schemventory";
+    public const string AppAuthor = "PIN0L33KZ GbR";
+    public const string AppWebsite = "https://pinoleekz.de/";
+
     public static readonly string CacheDirectory = Path.Combine(Helper.GetAppDataPath(), "Cache");
     public static readonly string AppDatabasePath = Path.Combine(Helper.GetAppDataPath(), "Schemventory.db");
 

@@ -28,8 +28,10 @@ partial class FRM_MaterialList
     /// </summary>
     private void InitializeComponent()
     {
+        components = new System.ComponentModel.Container();
         Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges1 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
         Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges2 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
+        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges3 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
         System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FRM_MaterialList));
         PNL_ProjectInfo = new Guna.UI2.WinForms.Guna2Panel();
         LBL_DifferentMaterialsCount = new Label();
@@ -41,6 +43,8 @@ partial class FRM_MaterialList
         CBX_ShowReplaced = new Guna.UI2.WinForms.Guna2CheckBox();
         CBX_ShowCollected = new Guna.UI2.WinForms.Guna2CheckBox();
         CBX_ShowIgnored = new Guna.UI2.WinForms.Guna2CheckBox();
+        IBN_About = new Guna.UI2.WinForms.Guna2ImageButton();
+        TTP_Main = new ToolTip(components);
         PNL_ProjectInfo.SuspendLayout();
         SuspendLayout();
         // 
@@ -74,6 +78,7 @@ partial class FRM_MaterialList
         LBL_DifferentMaterialsCount.Size = new Size(309, 20);
         LBL_DifferentMaterialsCount.TabIndex = 0;
         LBL_DifferentMaterialsCount.Text = "Different material count: DifferentMaterial";
+        TTP_Main.SetToolTip(LBL_DifferentMaterialsCount, "Amount of different materials used in this project");
         // 
         // LBL_TotalBlocks
         // 
@@ -86,6 +91,7 @@ partial class FRM_MaterialList
         LBL_TotalBlocks.Size = new Size(218, 20);
         LBL_TotalBlocks.TabIndex = 0;
         LBL_TotalBlocks.Text = "Total block count: BlockCount";
+        TTP_Main.SetToolTip(LBL_TotalBlocks, "Amout of blocks used in this project");
         // 
         // LBL_ProjectName
         // 
@@ -139,6 +145,7 @@ partial class FRM_MaterialList
         CHB_ShowMissing.CheckedState.FillColor = Color.FromArgb(162, 123, 90);
         CHB_ShowMissing.CheckMarkColor = Color.FromArgb(235, 234, 234);
         CHB_ShowMissing.CheckState = CheckState.Checked;
+        CHB_ShowMissing.Cursor = Cursors.Hand;
         CHB_ShowMissing.Font = new Font("Leelawadee UI", 11.25F, FontStyle.Regular, GraphicsUnit.Point, 0);
         CHB_ShowMissing.ForeColor = Color.FromArgb(235, 234, 234);
         CHB_ShowMissing.Location = new Point(12, 495);
@@ -146,6 +153,7 @@ partial class FRM_MaterialList
         CHB_ShowMissing.Size = new Size(143, 24);
         CHB_ShowMissing.TabIndex = 1;
         CHB_ShowMissing.Text = "Missing materials";
+        TTP_Main.SetToolTip(CHB_ShowMissing, "Show/Hide missing materials");
         CHB_ShowMissing.UncheckedState.BorderColor = Color.FromArgb(103, 99, 99);
         CHB_ShowMissing.UncheckedState.BorderRadius = 2;
         CHB_ShowMissing.UncheckedState.BorderThickness = 2;
@@ -165,6 +173,7 @@ partial class FRM_MaterialList
         CBX_ShowReplaced.CheckedState.FillColor = Color.FromArgb(162, 123, 90);
         CBX_ShowReplaced.CheckMarkColor = Color.FromArgb(235, 234, 234);
         CBX_ShowReplaced.CheckState = CheckState.Checked;
+        CBX_ShowReplaced.Cursor = Cursors.Hand;
         CBX_ShowReplaced.Font = new Font("Leelawadee UI", 11.25F, FontStyle.Regular, GraphicsUnit.Point, 0);
         CBX_ShowReplaced.ForeColor = Color.FromArgb(235, 234, 234);
         CBX_ShowReplaced.Location = new Point(161, 495);
@@ -172,6 +181,7 @@ partial class FRM_MaterialList
         CBX_ShowReplaced.Size = new Size(155, 24);
         CBX_ShowReplaced.TabIndex = 2;
         CBX_ShowReplaced.Text = "Replaced materials";
+        TTP_Main.SetToolTip(CBX_ShowReplaced, "Show/Hide replaced materials");
         CBX_ShowReplaced.UncheckedState.BorderColor = Color.FromArgb(103, 99, 99);
         CBX_ShowReplaced.UncheckedState.BorderRadius = 2;
         CBX_ShowReplaced.UncheckedState.BorderThickness = 2;
@@ -189,6 +199,7 @@ partial class FRM_MaterialList
         CBX_ShowCollected.CheckedState.BorderThickness = 0;
         CBX_ShowCollected.CheckedState.FillColor = Color.FromArgb(162, 123, 90);
         CBX_ShowCollected.CheckMarkColor = Color.FromArgb(235, 234, 234);
+        CBX_ShowCollected.Cursor = Cursors.Hand;
         CBX_ShowCollected.Font = new Font("Leelawadee UI", 11.25F, FontStyle.Regular, GraphicsUnit.Point, 0);
         CBX_ShowCollected.ForeColor = Color.FromArgb(235, 234, 234);
         CBX_ShowCollected.Location = new Point(322, 495);
@@ -196,6 +207,7 @@ partial class FRM_MaterialList
         CBX_ShowCollected.Size = new Size(156, 24);
         CBX_ShowCollected.TabIndex = 3;
         CBX_ShowCollected.Text = "Collected materials";
+        TTP_Main.SetToolTip(CBX_ShowCollected, "Show/Hide collected materials");
         CBX_ShowCollected.UncheckedState.BorderColor = Color.FromArgb(103, 99, 99);
         CBX_ShowCollected.UncheckedState.BorderRadius = 2;
         CBX_ShowCollected.UncheckedState.BorderThickness = 2;
@@ -213,6 +225,7 @@ partial class FRM_MaterialList
         CBX_ShowIgnored.CheckedState.BorderThickness = 0;
         CBX_ShowIgnored.CheckedState.FillColor = Color.FromArgb(162, 123, 90);
         CBX_ShowIgnored.CheckMarkColor = Color.FromArgb(235, 234, 234);
+        CBX_ShowIgnored.Cursor = Cursors.Hand;
         CBX_ShowIgnored.Font = new Font("Leelawadee UI", 11.25F, FontStyle.Regular, GraphicsUnit.Point, 0);
         CBX_ShowIgnored.ForeColor = Color.FromArgb(235, 234, 234);
         CBX_ShowIgnored.Location = new Point(484, 495);
@@ -220,6 +233,7 @@ partial class FRM_MaterialList
         CBX_ShowIgnored.Size = new Size(145, 24);
         CBX_ShowIgnored.TabIndex = 4;
         CBX_ShowIgnored.Text = "Ignored materials";
+        TTP_Main.SetToolTip(CBX_ShowIgnored, "Show/Hide ignored materials");
         CBX_ShowIgnored.UncheckedState.BorderColor = Color.FromArgb(103, 99, 99);
         CBX_ShowIgnored.UncheckedState.BorderRadius = 2;
         CBX_ShowIgnored.UncheckedState.BorderThickness = 2;
@@ -227,12 +241,42 @@ partial class FRM_MaterialList
         CBX_ShowIgnored.UseVisualStyleBackColor = false;
         CBX_ShowIgnored.CheckedChanged += CBX_ShowIgnored_CheckedChanged;
         // 
+        // IBN_About
+        // 
+        IBN_About.CheckedState.ImageSize = new Size(64, 64);
+        IBN_About.Cursor = Cursors.Hand;
+        IBN_About.HoverState.ImageSize = new Size(25, 25);
+        IBN_About.Image = Properties.Resources.About;
+        IBN_About.ImageOffset = new Point(0, 0);
+        IBN_About.ImageRotate = 0F;
+        IBN_About.ImageSize = new Size(25, 25);
+        IBN_About.Location = new Point(969, 495);
+        IBN_About.Name = "IBN_About";
+        IBN_About.PressedState.ImageSize = new Size(25, 25);
+        IBN_About.ShadowDecoration.CustomizableEdges = customizableEdges3;
+        IBN_About.Size = new Size(30, 30);
+        IBN_About.TabIndex = 5;
+        TTP_Main.SetToolTip(IBN_About, "About this software");
+        IBN_About.Click += IBN_About_Click;
+        // 
+        // TTP_Main
+        // 
+        TTP_Main.AutomaticDelay = 200;
+        TTP_Main.AutoPopDelay = 99999;
+        TTP_Main.BackColor = Color.FromArgb(38, 34, 34);
+        TTP_Main.ForeColor = Color.FromArgb(235, 234, 234);
+        TTP_Main.InitialDelay = 200;
+        TTP_Main.ReshowDelay = 0;
+        TTP_Main.ToolTipIcon = ToolTipIcon.Info;
+        TTP_Main.ToolTipTitle = "Information";
+        // 
         // FRM_MaterialList
         // 
         AutoScaleDimensions = new SizeF(7F, 17F);
         AutoScaleMode = AutoScaleMode.Font;
         BackColor = Color.FromArgb(38, 34, 34);
         ClientSize = new Size(999, 527);
+        Controls.Add(IBN_About);
         Controls.Add(CBX_ShowIgnored);
         Controls.Add(CBX_ShowCollected);
         Controls.Add(CBX_ShowReplaced);
@@ -268,4 +312,6 @@ partial class FRM_MaterialList
     private Guna.UI2.WinForms.Guna2CheckBox CBX_ShowReplaced;
     private Guna.UI2.WinForms.Guna2CheckBox CBX_ShowCollected;
     private Guna.UI2.WinForms.Guna2CheckBox CBX_ShowIgnored;
+    private Guna.UI2.WinForms.Guna2ImageButton IBN_About;
+    private ToolTip TTP_Main;
 }

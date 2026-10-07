@@ -1,39 +1,40 @@
 # Schemventory
-Schemventory is a Windows application for creating and tracking material lists from Minecraft schematic files.
 
-It reads supported schematic formats, resolves the blocks into inventory materials and helps you keep track of what you still need to collect for a build.
+Schemventory is a Windows application for creating and tracking Minecraft material lists from schematic files.
+
+It reads supported schematic formats, resolves block states into inventory materials and helps track what has already been collected, what is still missing and which materials have been replaced or ignored.
 
 ## Features
 
-- Read **Litematica `.litematic`** files
-- Read **Sponge `.schem`** files
+- Read Litematica `.litematic` files
+- Read Sponge Schematic v2 and v3 `.schem` files
 - Generate material lists from schematic contents
-- Track collected materials and remaining amounts
-- Enter collected amounts conveniently as **stacks and blocks**
-- Mark materials as:
-  - Missing
-  - Collected
-  - Replaced
-  - Ignored
-- Replace one required material with another Minecraft item
+- Track required, collected and remaining material amounts
+- Enter collected amounts in stacks and blocks
+- Mark materials as missing, collected, replaced or ignored
+- Replace a required material with another Minecraft item
+- Search available Minecraft items when selecting replacements
+- Reset a replacement back to the original material
 - Filter the material list by state
 - Sort materials by state and required amount
-- Persist projects and material progress using SQLite
-- Display Minecraft item/block icons
-- Cache item metadata and icons locally to reduce repeated downloads
-- Respect Minecraft item stack sizes when calculating stacks and blocks
+- Persist projects and material progress with SQLite
+- Display rendered Minecraft item and block icons
+- Respect each item's maximum stack size
+- Cache item metadata and rendered icons locally
+- Revalidate cached item metadata and avoid unnecessary repeated downloads
+- Cache missing icon lookups to reduce repeated failed requests
 
 ## Supported schematic formats
 
 | Format | Support |
 | --- | --- |
-| `.litematic` | Supported |
-| `.schem` | Supported |
-| `.schematic` | Planned |
+| Litematica `.litematic` | Supported |
+| Sponge Schematic v2 `.schem` | Supported |
+| Sponge Schematic v3 `.schem` | Supported |
 
 ## Material tracking
 
-Each material can have one of four states:
+Each project material can be in one of four states:
 
 | State | Description |
 | --- | --- |
@@ -42,109 +43,134 @@ Each material can have one of four states:
 | **Replaced** | The original material has been replaced with another Minecraft item. |
 | **Ignored** | The material is excluded from collection statistics. |
 
-Collected amounts can be adjusted without manually converting everything into blocks. For example, you can enter:
+Collected amounts can be adjusted using stacks and individual blocks, so values do not have to be converted manually.
+
+For example:
 
 ```text
 1 Stack + 24 Blocks
 ```
 
-Schemventory automatically calculates the remaining amount using the item's actual maximum stack size.
+Schemventory uses the selected item's maximum stack size when calculating collected and remaining amounts.
 
 ## Material replacement
 
-Materials can be replaced with another Minecraft item while keeping the original schematic requirement intact.
+Required materials can be replaced with another Minecraft item while keeping the original schematic material stored separately.
 
 For example:
 
 ```text
 Oak Planks
-    ↓ replace with
+    ↓
 Spruce Planks
 ```
 
-The replacement is stored separately from the original material, allowing Schemventory to continue tracking the schematic requirement while showing the material you actually intend to use.
+The replacement dialog provides a searchable item list with item IDs, stack-size information and an icon preview.
+
+A replacement can also be reset to restore the original material.
+
+## Material resolution
+
+Schemventory resolves schematic block states into the corresponding inventory materials.
+
+The resolver includes handling for cases such as:
+
+- doors and beds
+- double-height plants
+- potted plants
+- candle cakes
+- wall signs and hanging signs
+- wall banners
+- wall skull and head variants
+- wall coral fans
+- crops
+- cauldrons
+- farmland and dirt paths
+- other block-to-item mappings
+
+Blocks that do not represent collectable build materials, such as air, fluids, portals and fire, are excluded.
 
 ## Projects
 
-Schemventory stores projects locally and keeps track of material progress between sessions.
+Projects are stored locally in SQLite.
 
-Project data includes information such as:
+Stored project data includes:
 
-- Project name
-- Schematic path
-- Required materials
-- Collected amounts
-- Material states
-- Replacement materials
+- project name
+- schematic path
+- creation and last-opened timestamps
+- required material amounts
+- collected amounts
+- material states
+- replacement material IDs
 
-## Item data and icons
+## Item data and caching
 
-Schemventory uses Minecraft item metadata to determine item stack sizes and uses rendered item/block icons for the material list.
+Schemventory uses item metadata from [`misode/mcmeta`](https://github.com/misode/mcmeta) to determine Minecraft item stack sizes and populate the replacement-material list.
 
-Downloaded metadata and icons are cached locally so they do not need to be fetched again every time the application starts.
+Item metadata is stored in a compact local cache. Cached metadata is reused between sessions and periodically revalidated to avoid unnecessary downloads.
+
+Rendered item and block icons are provided by [`blockrender.dev`](https://blockrender.dev/) and cached locally after the first successful request.
+
+Missing icon lookups are also cached temporarily so unavailable renders are not repeatedly requested.
 
 ## Technology
 
 Schemventory is built with:
 
-- **C# / .NET**
-- **Windows Forms**
-- **Guna.UI2**
-- **SQLite** via `Microsoft.Data.Sqlite`
-- **fNbt** for NBT data
-
-External data/services currently used by the application include:
-
-- [`misode/mcmeta`](https://github.com/misode/mcmeta) for Minecraft item metadata
-- [`blockrender.dev`](https://blockrender.dev/) for item and block renders
+- C#
+- .NET 10 for Windows
+- Windows Forms
+- Guna.UI2.WinForms
+- Microsoft.Data.Sqlite
+- fNbt
 
 ## Building from source
 
-1. Clone the repository:
+Clone the repository:
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/PIN0L33KZ/Schemventory.git
 ```
 
-2. Open the solution in Visual Studio.
-3. Restore the NuGet packages.
-4. Build and run the project.
+Open `Schemventory.slnx` in Visual Studio, restore the NuGet packages and build the project.
 
-A Windows environment is required because Schemventory uses Windows Forms.
+Schemventory targets `net10.0-windows` and requires Windows.
+
+## External resources
+
+Schemventory uses or integrates resources from:
+
+- [`misode/mcmeta`](https://github.com/misode/mcmeta) for Minecraft item metadata
+- [`blockrender.dev`](https://blockrender.dev/) for rendered Minecraft item and block icons
+- [Icons8](https://icons8.com/) as a provider for icons used in the application
 
 ## Usage
 
 1. Create or open a project.
-2. Select a supported Minecraft schematic file.
+2. Select a supported schematic file.
 3. Let Schemventory generate the material list.
-4. Track collected materials as you gather resources.
-5. Replace or ignore materials where necessary.
-6. Use the filters to focus on the materials you currently need.
+4. Track collected resources as you gather them.
+5. Adjust collected amounts in stacks and blocks when needed.
+6. Replace or ignore materials where appropriate.
+7. Use the material-state filters to focus on the resources relevant to you.
 
-## Roadmap
+## Project structure
 
-Some features that may be added or expanded in future versions include:
-
-- Legacy `.schematic` support
-- Further improvements to material replacement workflows
-- Additional material-list tools and filters
-- More project-management features
-
-## Contributing
-
-Issues and pull requests are welcome.
-
-If you find a bug or have an idea for an improvement, please open an issue with as much detail as possible.
-
-## Licence
-
-Add the licence used by this repository here, for example:
+The application is organised around separate readers, services, data models, forms and controls.
 
 ```text
-MIT Licence
+Schemventory/
+├── App/
+├── Controls/
+├── Data/
+├── Forms/
+├── Interfaces/
+├── Properties/
+└── Services/
 ```
 
-If the project does not currently have a licence, remove this section until one is added.
+Schematic readers produce block-state data, which is resolved into inventory materials and then persisted as project materials for display and tracking in the Windows Forms UI.
 
 ---
 

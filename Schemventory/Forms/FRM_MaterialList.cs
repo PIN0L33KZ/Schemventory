@@ -203,4 +203,10 @@ public partial class FRM_MaterialList : Form
     {
         ApplyMaterialView();
     }
+
+    private void IBN_About_Click(object sender, EventArgs e)
+    {
+        FRM_About aboutForm = new();
+        _ = aboutForm.ShowDialog();
+    }
 }

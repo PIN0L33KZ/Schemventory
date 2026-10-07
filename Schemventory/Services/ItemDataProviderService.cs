@@ -73,8 +73,8 @@ public sealed class ItemDataProvider
 
             try
             {
-                var metadata = await ReadCacheMetadataAsync(cancellationToken);
-                var refreshResult = await DownloadDataAsync(metadata, cancellationToken);
+                CacheMetadata? metadata = await ReadCacheMetadataAsync(cancellationToken);
+                DownloadResult refreshResult = await DownloadDataAsync(metadata, cancellationToken);
 
                 if(refreshResult.NotModified)
                 {
@@ -141,7 +141,7 @@ public sealed class ItemDataProvider
         try
         {
             var json = await File.ReadAllTextAsync(_cacheFilePath, cancellationToken);
-            var stackSizes = JsonSerializer.Deserialize<Dictionary<string, int>>(json);
+            Dictionary<string, int>? stackSizes = JsonSerializer.Deserialize<Dictionary<string, int>>(json);
 
             if(stackSizes is null)
                 return false;
@@ -204,15 +204,11 @@ public sealed class ItemDataProvider
 
     private async Task<bool> IsCacheFreshAsync(CancellationToken cancellationToken)
     {
-        var metadata = await ReadCacheMetadataAsync(cancellationToken);
+        CacheMetadata? metadata = await ReadCacheMetadataAsync(cancellationToken);
 
-        if(metadata is not null)
-            return DateTime.UtcNow - metadata.LastCheckedUtc < CacheLifetime;
-
-        if(!File.Exists(_cacheFilePath))
-            return false;
-
-        return DateTime.UtcNow - File.GetLastWriteTimeUtc(_cacheFilePath) < CacheLifetime;
+        return metadata is not null
+            ? DateTime.UtcNow - metadata.LastCheckedUtc < CacheLifetime
+            : File.Exists(_cacheFilePath) && DateTime.UtcNow - File.GetLastWriteTimeUtc(_cacheFilePath) < CacheLifetime;
     }
 
     private void LoadSourceData(string json)
@@ -242,7 +238,7 @@ public sealed class ItemDataProvider
         List<ItemData> items = new(stackSizes.Count);
         Dictionary<string, ItemData> itemsById = new(stackSizes.Count, StringComparer.Ordinal);
 
-        foreach(var entry in stackSizes)
+        foreach(KeyValuePair<string, int> entry in stackSizes)
         {
             ItemData itemData = new()
             {

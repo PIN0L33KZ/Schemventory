@@ -33,7 +33,7 @@ public sealed class ItemIconService
         var cacheFilePath = GetCacheFilePath(normalizedItemId, size);
         var missingCacheFilePath = GetMissingCacheFilePath(normalizedItemId, size);
 
-        var cachedImage = TryLoadCachedImage(cacheFilePath);
+        Image? cachedImage = TryLoadCachedImage(cacheFilePath);
 
         if(cachedImage is not null)
             return cachedImage;
@@ -42,7 +42,7 @@ public sealed class ItemIconService
             return new Bitmap(Properties.Resources.MissingIcon);
 
         var cacheKey = $"{normalizedItemId}:{size}";
-        var itemLock = _itemLocks.GetOrAdd(cacheKey, _ => new SemaphoreSlim(1, 1));
+        SemaphoreSlim itemLock = _itemLocks.GetOrAdd(cacheKey, _ => new SemaphoreSlim(1, 1));
 
         await itemLock.WaitAsync(cancellationToken);
 

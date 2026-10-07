@@ -175,15 +175,12 @@ public sealed class MaterialResolver
 
     private static string? ResolveWallVariant(string blockId)
     {
-        if(blockId.EndsWith("_wall_sign", StringComparison.Ordinal))
-        {
-            return blockId.Replace(
+        return blockId.EndsWith("_wall_sign", StringComparison.Ordinal)
+            ? blockId.Replace(
                 "_wall_sign",
                 "_sign",
-                StringComparison.Ordinal);
-        }
-
-        return blockId.EndsWith("_wall_hanging_sign", StringComparison.Ordinal)
+                StringComparison.Ordinal)
+            : blockId.EndsWith("_wall_hanging_sign", StringComparison.Ordinal)
             ? blockId.Replace(
                 "_wall_hanging_sign",
                 "_hanging_sign",
