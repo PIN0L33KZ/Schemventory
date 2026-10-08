@@ -1,5 +1,4 @@
 ﻿using Schemventory.App;
-using Schemventory.Controls;
 using Schemventory.Data;
 using Schemventory.Services;
 
@@ -13,15 +12,11 @@ public partial class FRM_MaterialList : Form
     private readonly ProjectMaterialService _projectMaterialService;
     private readonly ItemIconService _itemIconService;
     private readonly ItemDataProvider _itemDataProvider;
-    private readonly List<MaterialControl> _materialControls = [];
 
     private IReadOnlyCollection<ProjectMaterial> _materials = [];
+    private List<ProjectMaterial> _viewMaterials = [];
 
-    public FRM_MaterialList(
-        DatabaseService databaseService,
-        Project project,
-        ItemIconService itemIconService,
-        ItemDataProvider itemDataProvider)
+    public FRM_MaterialList(DatabaseService databaseService, Project project, ItemIconService itemIconService, ItemDataProvider itemDataProvider)
     {
         InitializeComponent();
 
@@ -31,35 +26,39 @@ public partial class FRM_MaterialList : Form
         _projectMaterialService = new ProjectMaterialService(databaseService);
         _itemIconService = itemIconService;
         _itemDataProvider = itemDataProvider;
+
+        PNL_MaterialList.Initialize(_itemIconService, _itemDataProvider, _projectMaterialService);
+
+        PNL_MaterialList.MaterialStateChanged += MaterialControl_StateChanged;
+        PNL_MaterialList.ScrollMetricsChanged += PNL_MaterialList_ScrollMetricsChanged;
+        PNL_MaterialList.ScrollPositionChanged += PNL_MaterialList_ScrollPositionChanged;
+        PNL_MaterialList.MouseWheelScrollRequested += PNL_MaterialList_MouseWheelScrollRequested;
+
+        VSB_Main.Scroll += VSB_Main_Scroll;
     }
 
     private async void FRM_MaterialList_Load(object sender, EventArgs e)
     {
         SuspendLayout();
-        PNL_MaterialList.SuspendLayout();
 
         try
         {
             LoadMaterialList();
             FillProjectData();
-            FillMaterialControls();
-            ApplyMaterialFilter();
+            ApplyMaterialView(resetScrollPosition: true);
 
             await Task.Yield();
         }
         finally
         {
-            PNL_MaterialList.ResumeLayout(true);
             ResumeLayout(true);
-
             Opacity = 1;
         }
     }
 
     private void MaterialControl_StateChanged(object? sender, EventArgs e)
     {
-        SortMaterialControls();
-        ApplyMaterialFilter();
+        ApplyMaterialView(resetScrollPosition: false);
         UpdateStatistics();
     }
 
@@ -84,15 +83,11 @@ public partial class FRM_MaterialList : Form
 
             if(groupedMaterials.TryGetValue(itemId, out (long RequiredAmount, long CollectedAmount) current))
             {
-                groupedMaterials[itemId] = (
-                    current.RequiredAmount + material.RequiredAmount,
-                    current.CollectedAmount + collectedAmount);
+                groupedMaterials[itemId] = (current.RequiredAmount + material.RequiredAmount, current.CollectedAmount + collectedAmount);
             }
             else
             {
-                groupedMaterials[itemId] = (
-                    material.RequiredAmount,
-                    collectedAmount);
+                groupedMaterials[itemId] = (material.RequiredAmount, collectedAmount);
             }
         }
 
@@ -127,96 +122,26 @@ public partial class FRM_MaterialList : Form
 
     private void LoadMaterialList()
     {
-        _materials = _projectMaterialService.GetByProjectId(_project.Id);
+        _materials =
+            _projectMaterialService.GetByProjectId(_project.Id);
     }
 
-    private void FillMaterialControls()
+    private void ApplyMaterialView(bool resetScrollPosition)
     {
-        PNL_MaterialList.Controls.Clear();
-        _materialControls.Clear();
+        _viewMaterials = _materials
+            .Where(ShouldShowMaterial)
+            .OrderBy(x => GetStateSortOrder(x.State))
+            .ThenByDescending(x => x.RequiredAmount)
+            .ToList();
 
-        foreach(ProjectMaterial material in GetSortedMaterials())
-        {
-            MaterialControl materialControl = new(
-                material,
-                _itemIconService,
-                _itemDataProvider,
-                _projectMaterialService);
+        var hasVisibleMaterials = _viewMaterials.Count > 0;
 
-            materialControl.StateChanged += MaterialControl_StateChanged;
+        PNL_MaterialList.Visible = hasVisibleMaterials;
+        LBL_FilterWarn.Visible = !hasVisibleMaterials;
 
-            _materialControls.Add(materialControl);
-        }
+        PNL_MaterialList.SetMaterials(_viewMaterials, resetScrollPosition);
 
-        if(_materialControls.Count > 0)
-            PNL_MaterialList.Controls.AddRange([.. _materialControls]);
-    }
-
-    private void ApplyMaterialFilter()
-    {
-        var hasVisibleControls = false;
-
-        PNL_MaterialList.SuspendLayout();
-
-        try
-        {
-            foreach(MaterialControl materialControl in _materialControls)
-            {
-                var isVisible = ShouldShowMaterial(materialControl.Material);
-
-                if(materialControl.Visible != isVisible)
-                    materialControl.Visible = isVisible;
-
-                if(isVisible)
-                    hasVisibleControls = true;
-            }
-
-            if(hasVisibleControls)
-            {
-                if(!PNL_MaterialList.Visible)
-                    PNL_MaterialList.Show();
-
-                if(LBL_FilterWarn.Visible)
-                    LBL_FilterWarn.Hide();
-            }
-            else
-            {
-                if(PNL_MaterialList.Visible)
-                    PNL_MaterialList.Hide();
-
-                if(!LBL_FilterWarn.Visible)
-                    LBL_FilterWarn.Show();
-            }
-        }
-        finally
-        {
-            PNL_MaterialList.ResumeLayout();
-        }
-    }
-
-    private void SortMaterialControls()
-    {
-        _materialControls.Sort(static (left, right) =>
-        {
-            var stateComparison = GetStateSortOrder(left.Material.State)
-                .CompareTo(GetStateSortOrder(right.Material.State));
-
-            return stateComparison != 0
-                ? stateComparison
-                : right.Material.RequiredAmount.CompareTo(left.Material.RequiredAmount);
-        });
-
-        PNL_MaterialList.SuspendLayout();
-
-        try
-        {
-            for(var i = 0; i < _materialControls.Count; i++)
-                PNL_MaterialList.Controls.SetChildIndex(_materialControls[i], i);
-        }
-        finally
-        {
-            PNL_MaterialList.ResumeLayout();
-        }
+        UpdateScrollBar();
     }
 
     private bool ShouldShowMaterial(ProjectMaterial material)
@@ -231,13 +156,6 @@ public partial class FRM_MaterialList : Form
         };
     }
 
-    private IEnumerable<ProjectMaterial> GetSortedMaterials()
-    {
-        return _materials
-            .OrderBy(x => GetStateSortOrder(x.State))
-            .ThenByDescending(x => x.RequiredAmount);
-    }
-
     private static int GetStateSortOrder(ProjectMaterialState state)
     {
         return state switch
@@ -249,39 +167,93 @@ public partial class FRM_MaterialList : Form
         };
     }
 
+    private void UpdateScrollBar()
+    {
+        var totalRows = PNL_MaterialList.TotalRows;
+        var viewportRows = Math.Max(1, PNL_MaterialList.ViewportRows);
+
+        VSB_Main.Minimum = 0;
+        VSB_Main.Maximum = Math.Max(0, totalRows - 1);
+        VSB_Main.LargeChange = viewportRows;
+        VSB_Main.SmallChange = 1;
+
+        var maximumValue =
+            PNL_MaterialList.MaximumScrollRow;
+
+        var scrollValue = Math.Clamp(PNL_MaterialList.ScrollRow, 0, maximumValue);
+
+        if(VSB_Main.Value != scrollValue)
+            VSB_Main.Value = scrollValue;
+
+        VSB_Main.Visible =
+            PNL_MaterialList.Visible &&
+            maximumValue > 0;
+    }
+
+    private void VSB_Main_Scroll(object? sender, ScrollEventArgs e)
+    {
+        PNL_MaterialList.SetScrollRow(e.NewValue);
+    }
+
+    private void PNL_MaterialList_MouseWheelScrollRequested(int rowDelta)
+    {
+        var newValue = Math.Clamp(VSB_Main.Value + rowDelta, VSB_Main.Minimum, PNL_MaterialList.MaximumScrollRow);
+
+        if(newValue == VSB_Main.Value)
+            return;
+
+        VSB_Main.Value = newValue;
+        PNL_MaterialList.SetScrollRow(newValue);
+    }
+
+    private void PNL_MaterialList_ScrollMetricsChanged(object? sender, EventArgs e)
+    {
+        UpdateScrollBar();
+    }
+
+    private void PNL_MaterialList_ScrollPositionChanged(object? sender, EventArgs e)
+    {
+        var scrollValue = Math.Clamp(PNL_MaterialList.ScrollRow, 0, PNL_MaterialList.MaximumScrollRow);
+
+        if(VSB_Main.Value != scrollValue)
+            VSB_Main.Value = scrollValue;
+    }
+
     private void CHB_ShowMissing_CheckedChanged(object sender, EventArgs e)
     {
-        ApplyMaterialFilter();
+        ApplyMaterialView(resetScrollPosition: true);
     }
 
     private void CBX_ShowReplaced_CheckedChanged(object sender, EventArgs e)
     {
-        ApplyMaterialFilter();
+        ApplyMaterialView(resetScrollPosition: true);
     }
 
     private void CBX_ShowCollected_CheckedChanged(object sender, EventArgs e)
     {
-        ApplyMaterialFilter();
+        ApplyMaterialView(resetScrollPosition: true);
     }
 
     private void CBX_ShowIgnored_CheckedChanged(object sender, EventArgs e)
     {
-        ApplyMaterialFilter();
+        ApplyMaterialView(resetScrollPosition: true);
     }
 
     private void IBN_About_Click(object sender, EventArgs e)
     {
-        FRM_About aboutForm = new();
-        _ = aboutForm.ShowDialog();
+        using FRM_About aboutForm = new();
+
+        _ = aboutForm.ShowDialog(this);
     }
 
     private void FRM_MaterialList_ResizeBegin(object sender, EventArgs e)
     {
-        PNL_MaterialList.SuspendLayout();
+        PNL_MaterialList.SuspendVirtualLayout();
     }
 
     private void FRM_MaterialList_ResizeEnd(object sender, EventArgs e)
     {
-        PNL_MaterialList.ResumeLayout(true);
+        PNL_MaterialList.ResumeVirtualLayout();
+        UpdateScrollBar();
     }
 }

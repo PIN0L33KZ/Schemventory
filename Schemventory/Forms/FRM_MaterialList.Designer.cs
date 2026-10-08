@@ -17,6 +17,7 @@ partial class FRM_MaterialList
         {
             components.Dispose();
         }
+
         base.Dispose(disposing);
     }
 
@@ -37,7 +38,7 @@ partial class FRM_MaterialList
         LBL_DifferentMaterialsCount = new Label();
         LBL_TotalBlocks = new Label();
         LBL_ProjectName = new Label();
-        PNL_MaterialList = new FlowLayoutPanel();
+        PNL_MaterialList = new Schemventory.Controls.VirtualMaterialPanel();
         VSB_Main = new Guna.UI2.WinForms.Guna2VScrollBar();
         CHB_ShowMissing = new Guna.UI2.WinForms.Guna2CheckBox();
         CBX_ShowReplaced = new Guna.UI2.WinForms.Guna2CheckBox();
@@ -110,29 +111,31 @@ partial class FRM_MaterialList
         // PNL_MaterialList
         // 
         PNL_MaterialList.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-        PNL_MaterialList.AutoScroll = true;
+        PNL_MaterialList.BackColor = Color.Transparent;
         PNL_MaterialList.Location = new Point(12, 73);
         PNL_MaterialList.Name = "PNL_MaterialList";
-        PNL_MaterialList.Size = new Size(975, 416);
+        PNL_MaterialList.Size = new Size(967, 416);
         PNL_MaterialList.TabIndex = 0;
+        PNL_MaterialList.TabStop = true;
         // 
         // VSB_Main
         // 
+        VSB_Main.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Right;
         VSB_Main.BackColor = Color.Transparent;
-        VSB_Main.BindingContainer = PNL_MaterialList;
         VSB_Main.BorderRadius = 5;
         VSB_Main.FillColor = Color.FromArgb(80, 76, 76);
         VSB_Main.InUpdate = false;
         VSB_Main.LargeChange = 10;
-        VSB_Main.Location = new Point(969, 73);
+        VSB_Main.Location = new Point(985, 73);
         VSB_Main.Name = "VSB_Main";
-        VSB_Main.ScrollbarSize = 18;
-        VSB_Main.Size = new Size(18, 416);
+        VSB_Main.ScrollbarSize = 14;
+        VSB_Main.Size = new Size(14, 416);
         VSB_Main.TabIndex = 0;
         VSB_Main.TabStop = false;
         VSB_Main.ThumbColor = Color.FromArgb(103, 99, 99);
         VSB_Main.ThumbSize = 5F;
         VSB_Main.ThumbStyle = Guna.UI2.WinForms.Enums.ThumbStyle.Inset;
+        VSB_Main.Visible = false;
         // 
         // CHB_ShowMissing
         // 
@@ -326,7 +329,7 @@ partial class FRM_MaterialList
     private Label LBL_ProjectName;
     private Label LBL_TotalBlocks;
     private Label LBL_DifferentMaterialsCount;
-    private FlowLayoutPanel PNL_MaterialList;
+    private Schemventory.Controls.VirtualMaterialPanel PNL_MaterialList;
     private Guna.UI2.WinForms.Guna2VScrollBar VSB_Main;
     private Guna.UI2.WinForms.Guna2CheckBox CHB_ShowMissing;
     private Guna.UI2.WinForms.Guna2CheckBox CBX_ShowReplaced;
