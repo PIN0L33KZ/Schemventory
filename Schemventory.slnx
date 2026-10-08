@@ -6,6 +6,9 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
+  <Project Path="Schemventory Store Package/Schemventory Store Package.wapproj" Type="c7167f0d-bc9f-4e6e-afe1-012c56b48db5" Id="f5b69086-3dac-4b1a-a84b-39bfabf68051">
+    <Deploy />
+  </Project>
   <Project Path="Schemventory/Schemventory.csproj">
     <Platform Solution="Release|x64" Project="x64" />
   </Project>
