@@ -15,8 +15,8 @@ public sealed class ItemIconService
 
     private readonly string _cacheDirectory;
     private readonly SemaphoreSlim _downloadSemaphore = new(6);
-    private readonly ConcurrentDictionary<string, SemaphoreSlim> _itemLocks =
-        new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, SemaphoreSlim> _itemLocks = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, Bitmap> _memoryCache = new(StringComparer.Ordinal);
 
     public ItemIconService()
     {
@@ -25,18 +25,21 @@ public sealed class ItemIconService
         _ = Directory.CreateDirectory(_cacheDirectory);
     }
 
-    public async Task<Image> GetItemIconAsync(
-        string itemId,
-        int size = 64,
-        CancellationToken cancellationToken = default)
+    public async Task<Image> GetItemIconAsync(string itemId, int size = 64, CancellationToken cancellationToken = default)
     {
         var normalizedItemId = NormalizeItemId(itemId);
+        var cacheKey = $"{normalizedItemId}:{size}";
         var cacheFilePath = GetCacheFilePath(normalizedItemId, size);
         var missingCacheFilePath = GetMissingCacheFilePath(normalizedItemId, size);
 
-        Image? cachedImage = await TryLoadCachedImageAsync(
-            cacheFilePath,
-            cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        Image? memoryCachedImage = TryGetMemoryCachedImage(cacheKey);
+
+        if(memoryCachedImage is not null)
+            return memoryCachedImage;
+
+        Image? cachedImage = await TryLoadCachedImageAsync(cacheKey, cacheFilePath, cancellationToken);
 
         if(cachedImage is not null)
             return cachedImage;
@@ -44,18 +47,18 @@ public sealed class ItemIconService
         if(IsMissingCacheValid(missingCacheFilePath))
             return new Bitmap(Properties.Resources.MissingIcon);
 
-        var cacheKey = $"{normalizedItemId}:{size}";
-        SemaphoreSlim itemLock = _itemLocks.GetOrAdd(
-            cacheKey,
-            _ => new SemaphoreSlim(1, 1));
+        SemaphoreSlim itemLock = _itemLocks.GetOrAdd(cacheKey, _ => new SemaphoreSlim(1, 1));
 
         await itemLock.WaitAsync(cancellationToken);
 
         try
         {
-            cachedImage = await TryLoadCachedImageAsync(
-                cacheFilePath,
-                cancellationToken);
+            memoryCachedImage = TryGetMemoryCachedImage(cacheKey);
+
+            if(memoryCachedImage is not null)
+                return memoryCachedImage;
+
+            cachedImage = await TryLoadCachedImageAsync(cacheKey, cacheFilePath, cancellationToken);
 
             if(cachedImage is not null)
                 return cachedImage;
@@ -63,29 +66,20 @@ public sealed class ItemIconService
             if(IsMissingCacheValid(missingCacheFilePath))
                 return new Bitmap(Properties.Resources.MissingIcon);
 
-            var imageData = await DownloadIconAsync(
-                normalizedItemId,
-                size,
-                cancellationToken);
+            var imageData = await DownloadIconAsync(normalizedItemId, size, cancellationToken);
 
             if(imageData is null)
             {
-                await File.WriteAllTextAsync(
-                    missingCacheFilePath,
-                    string.Empty,
-                    cancellationToken);
+                await File.WriteAllTextAsync(missingCacheFilePath, string.Empty, cancellationToken);
 
                 return new Bitmap(Properties.Resources.MissingIcon);
             }
 
             TryDeleteFile(missingCacheFilePath);
 
-            await File.WriteAllBytesAsync(
-                cacheFilePath,
-                imageData,
-                cancellationToken);
+            await File.WriteAllBytesAsync(cacheFilePath, imageData, cancellationToken);
 
-            return LoadImage(imageData);
+            return CacheAndCloneImage(cacheKey, imageData);
         }
         finally
         {
@@ -93,28 +87,15 @@ public sealed class ItemIconService
         }
     }
 
-    private async Task<byte[]?> DownloadIconAsync(
-        string itemId,
-        int size,
-        CancellationToken cancellationToken)
+    private async Task<byte[]?> DownloadIconAsync(string itemId, int size, CancellationToken cancellationToken)
     {
         await _downloadSemaphore.WaitAsync(cancellationToken);
 
         try
         {
-            var imageData = await TryDownloadIconAsync(
-                "item",
-                itemId,
-                size,
-                cancellationToken);
+            var imageData = await TryDownloadIconAsync("item", itemId, size, cancellationToken);
 
-            return imageData is not null
-                ? imageData
-                : await TryDownloadIconAsync(
-                    "block",
-                    itemId,
-                    size,
-                    cancellationToken);
+            return imageData is not null ? imageData : await TryDownloadIconAsync("block", itemId, size, cancellationToken);
         }
         finally
         {
@@ -122,53 +103,45 @@ public sealed class ItemIconService
         }
     }
 
-    private static async Task<byte[]?> TryDownloadIconAsync(
-        string type,
-        string itemId,
-        int size,
-        CancellationToken cancellationToken)
+    private static async Task<byte[]?> TryDownloadIconAsync(string type, string itemId, int size, CancellationToken cancellationToken)
     {
-        var url =
-            $"https://blockrender.dev/render/{type}/{Uri.EscapeDataString(itemId)}.png?size={size}";
+        var url = $"https://blockrender.dev/render/{type}/{Uri.EscapeDataString(itemId)}.png?size={size}";
 
         using HttpRequestMessage request = new(HttpMethod.Get, url);
         request.Headers.UserAgent.ParseAdd("Schemventory/1.0");
 
-        using HttpResponseMessage response = await HttpClient.SendAsync(
-            request,
-            HttpCompletionOption.ResponseHeadersRead,
-            cancellationToken);
+        using HttpResponseMessage response = await HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
 
         if(response.StatusCode == HttpStatusCode.NotFound)
             return null;
 
         if(response.StatusCode == HttpStatusCode.TooManyRequests)
-        {
-            throw new HttpRequestException(
-                "Item icon request was rate limited.",
-                null,
-                response.StatusCode);
-        }
+            throw new HttpRequestException("Item icon request was rate limited.", null, response.StatusCode);
 
         _ = response.EnsureSuccessStatusCode();
 
         return await response.Content.ReadAsByteArrayAsync(cancellationToken);
     }
 
-    private async Task<Image?> TryLoadCachedImageAsync(
-        string filePath,
-        CancellationToken cancellationToken)
+    private Image? TryGetMemoryCachedImage(string cacheKey)
+    {
+        if(!_memoryCache.TryGetValue(cacheKey, out Bitmap? cachedBitmap))
+            return null;
+
+        lock(cachedBitmap)
+            return new Bitmap(cachedBitmap);
+    }
+
+    private async Task<Image?> TryLoadCachedImageAsync(string cacheKey, string filePath, CancellationToken cancellationToken)
     {
         if(!File.Exists(filePath))
             return null;
 
         try
         {
-            var data = await File.ReadAllBytesAsync(
-                filePath,
-                cancellationToken);
+            var data = await File.ReadAllBytesAsync(filePath, cancellationToken);
 
-            return LoadImage(data);
+            return CacheAndCloneImage(cacheKey, data);
         }
         catch(OperationCanceledException)
         {
@@ -179,6 +152,18 @@ public sealed class ItemIconService
             TryDeleteFile(filePath);
             return null;
         }
+    }
+
+    private Image CacheAndCloneImage(string cacheKey, byte[] data)
+    {
+        Bitmap createdBitmap = LoadImage(data);
+        Bitmap cachedBitmap = _memoryCache.GetOrAdd(cacheKey, createdBitmap);
+
+        if(!ReferenceEquals(createdBitmap, cachedBitmap))
+            createdBitmap.Dispose();
+
+        lock(cachedBitmap)
+            return new Bitmap(cachedBitmap);
     }
 
     private static bool IsMissingCacheValid(string filePath)
@@ -219,12 +204,10 @@ public sealed class ItemIconService
     {
         const string prefix = "minecraft:";
 
-        return itemId.StartsWith(prefix, StringComparison.Ordinal)
-            ? itemId[prefix.Length..]
-            : itemId;
+        return itemId.StartsWith(prefix, StringComparison.Ordinal) ? itemId[prefix.Length..] : itemId;
     }
 
-    private static Image LoadImage(byte[] data)
+    private static Bitmap LoadImage(byte[] data)
     {
         using MemoryStream stream = new(data);
         using Bitmap source = new(stream);

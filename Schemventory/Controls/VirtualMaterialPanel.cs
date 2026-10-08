@@ -54,9 +54,11 @@ public sealed class VirtualMaterialPanel : Panel
         ArgumentNullException.ThrowIfNull(materials);
 
         _materials = materials;
-        ScrollRow = resetScrollPosition ? 0 : Math.Min(ScrollRow, MaximumScrollRow);
 
         RecalculateLayout();
+
+        ScrollRow = resetScrollPosition ? 0 : Math.Min(ScrollRow, MaximumScrollRow);
+
         RefreshVisibleControls();
 
         ScrollMetricsChanged?.Invoke(this, EventArgs.Empty);
@@ -70,9 +72,12 @@ public sealed class VirtualMaterialPanel : Panel
         if(newScrollRow == ScrollRow)
             return;
 
+        var oldScrollRow = ScrollRow;
         ScrollRow = newScrollRow;
 
-        RefreshVisibleControls();
+        if(!TryRecycleRows(oldScrollRow, newScrollRow))
+            RefreshVisibleControls();
+
         ScrollPositionChanged?.Invoke(this, EventArgs.Empty);
     }
 
@@ -121,9 +126,7 @@ public sealed class VirtualMaterialPanel : Panel
 
         ViewportRows = Math.Max(1, (availableHeight + VerticalGap) / (MaterialControlHeight + VerticalGap));
 
-        var requiredPoolSize = _columnCount * ViewportRows;
-
-        EnsureControlPoolSize(requiredPoolSize);
+        EnsureControlPoolSize(_columnCount * ViewportRows);
         PositionControlPool();
     }
 
@@ -146,10 +149,17 @@ public sealed class VirtualMaterialPanel : Panel
             Controls.Add(materialControl);
         }
 
-        for(var i = requiredPoolSize; i < _controlPool.Count; i++)
+        while(_controlPool.Count > requiredPoolSize)
         {
-            _controlPool[i].ClearMaterial();
-            _controlPool[i].Visible = false;
+            var lastIndex = _controlPool.Count - 1;
+            MaterialControl materialControl = _controlPool[lastIndex];
+
+            materialControl.StateChanged -= MaterialControl_StateChanged;
+
+            Controls.Remove(materialControl);
+            _controlPool.RemoveAt(lastIndex);
+
+            materialControl.Dispose();
         }
     }
 
@@ -180,6 +190,53 @@ public sealed class VirtualMaterialPanel : Panel
         }
     }
 
+    private bool TryRecycleRows(int oldScrollRow, int newScrollRow)
+    {
+        var rowDelta = newScrollRow - oldScrollRow;
+        var rowsToRecycle = Math.Abs(rowDelta);
+
+        if(rowDelta == 0 || rowsToRecycle >= ViewportRows || _controlPool.Count == 0)
+            return false;
+
+        var controlsToRecycle = rowsToRecycle * _columnCount;
+
+        if(controlsToRecycle <= 0 || controlsToRecycle >= _controlPool.Count)
+            return false;
+
+        if(rowDelta > 0)
+        {
+            List<MaterialControl> recycledControls = _controlPool.GetRange(0, controlsToRecycle);
+
+            _controlPool.RemoveRange(0, controlsToRecycle);
+            _controlPool.AddRange(recycledControls);
+        }
+        else
+        {
+            var startIndex = _controlPool.Count - controlsToRecycle;
+            List<MaterialControl> recycledControls = _controlPool.GetRange(startIndex, controlsToRecycle);
+
+            _controlPool.RemoveRange(startIndex, controlsToRecycle);
+            _controlPool.InsertRange(0, recycledControls);
+        }
+
+        PositionControlPool();
+
+        var refreshVersion = ++_refreshVersion;
+        var firstMaterialIndex = ScrollRow * _columnCount;
+        var firstSlotToBind = rowDelta > 0 ? _controlPool.Count - controlsToRecycle : 0;
+        var lastSlotToBind = rowDelta > 0 ? _controlPool.Count : controlsToRecycle;
+
+        List<Task> bindingTasks = [];
+
+        for(var slotIndex = firstSlotToBind; slotIndex < lastSlotToBind; slotIndex++)
+            BindControl(_controlPool[slotIndex], firstMaterialIndex + slotIndex, bindingTasks);
+
+        if(bindingTasks.Count > 0)
+            _ = CompleteRefreshAsync(bindingTasks, refreshVersion);
+
+        return true;
+    }
+
     private void RefreshVisibleControls()
     {
         if(_itemIconService is null)
@@ -195,26 +252,7 @@ public sealed class VirtualMaterialPanel : Panel
         try
         {
             for(var slotIndex = 0; slotIndex < _controlPool.Count; slotIndex++)
-            {
-                MaterialControl materialControl = _controlPool[slotIndex];
-                var materialIndex = firstMaterialIndex + slotIndex;
-
-                if(materialIndex >= _materials.Count)
-                {
-                    materialControl.ClearMaterial();
-                    materialControl.Visible = false;
-                    continue;
-                }
-
-                ProjectMaterial material = _materials[materialIndex];
-
-                materialControl.Visible = true;
-
-                if(ReferenceEquals(materialControl.BoundMaterial, material))
-                    continue;
-
-                bindingTasks.Add(materialControl.SetMaterialAsync(material));
-            }
+                BindControl(_controlPool[slotIndex], firstMaterialIndex + slotIndex, bindingTasks);
         }
         finally
         {
@@ -223,6 +261,25 @@ public sealed class VirtualMaterialPanel : Panel
 
         if(bindingTasks.Count > 0)
             _ = CompleteRefreshAsync(bindingTasks, refreshVersion);
+    }
+
+    private void BindControl(MaterialControl materialControl, int materialIndex, List<Task> bindingTasks)
+    {
+        if(materialIndex >= _materials.Count)
+        {
+            materialControl.ClearMaterial();
+            materialControl.Visible = false;
+            return;
+        }
+
+        ProjectMaterial material = _materials[materialIndex];
+
+        materialControl.Visible = true;
+
+        if(ReferenceEquals(materialControl.BoundMaterial, material))
+            return;
+
+        bindingTasks.Add(materialControl.SetMaterialAsync(material));
     }
 
     private async Task CompleteRefreshAsync(IReadOnlyCollection<Task> bindingTasks, int refreshVersion)
