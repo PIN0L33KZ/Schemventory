@@ -14,13 +14,15 @@ It reads supported schematic formats, resolves block states into inventory mater
 - Mark materials as missing, collected, replaced or ignored
 - Replace a required material with another Minecraft item
 - Search available Minecraft items when selecting replacements
+- Use virtualised and debounced item search when selecting replacement materials
 - Reset a replacement back to the original material
 - Filter the material list by state
 - Sort materials by state and required amount
+- Virtualise material rendering to keep large material lists responsive
 - Persist projects and material progress with SQLite
 - Display rendered Minecraft item and block icons
 - Respect each item's maximum stack size
-- Cache item metadata and rendered icons locally
+- Cache item metadata and rendered icons in memory and on disk
 - Revalidate cached item metadata and avoid unnecessary repeated downloads
 - Cache missing icon lookups to reduce repeated failed requests
 
@@ -65,7 +67,9 @@ Oak Planks
 Spruce Planks
 ```
 
-The replacement dialog provides a searchable item list with item IDs, stack-size information and an icon preview.
+The replacement dialog provides a searchable, virtualised item list with item IDs, stack-size information and an icon preview.
+
+The search is debounced to avoid unnecessary filtering while typing.
 
 A replacement can also be reset to restore the original material.
 
@@ -110,9 +114,17 @@ Schemventory uses item metadata from [`misode/mcmeta`](https://github.com/misode
 
 Item metadata is stored in a compact local cache. Cached metadata is reused between sessions and periodically revalidated to avoid unnecessary downloads.
 
-Rendered item and block icons are provided by [`blockrender.dev`](https://blockrender.dev/) and cached locally after the first successful request.
+Rendered item and block icons are provided by [`blockrender.dev`](https://blockrender.dev/) and cached both in memory and on disk to avoid repeated downloads and repeated image decoding.
 
 Missing icon lookups are also cached temporarily so unavailable renders are not repeatedly requested.
+
+## Performance
+
+The material list uses virtualised rendering so only the material controls currently visible in the viewport are kept active.
+
+Controls are recycled while scrolling instead of recreating the complete list. Item metadata and icon loading can be cancelled when a control is rebound, preventing unnecessary background work during fast scrolling.
+
+Rendered icons are additionally cached in memory once decoded, which reduces repeated disk reads when scrolling back to previously displayed materials.
 
 ## Technology
 
