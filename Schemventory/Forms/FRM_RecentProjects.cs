@@ -45,7 +45,20 @@ public partial class FRM_RecentProjects : Form
     private void LoadProjects()
     {
         PNL_RecentProjectControls.Controls.Clear();
-        PNL_RecentProjectControls.Controls.AddRange([.. GetProjectControls()]);
+        List<ProjectControl> projectControls = GetProjectControls();
+
+        if(projectControls.Count > 0)
+        {
+            PNL_RecentProjectControls.Show();
+            LBL_NoProjectsWarn.Hide();
+
+            PNL_RecentProjectControls.Controls.AddRange([.. projectControls]);
+        }
+        else
+        {
+            PNL_RecentProjectControls.Hide();
+            LBL_NoProjectsWarn.Show();
+        }
     }
 
     private List<ProjectControl> GetProjectControls()

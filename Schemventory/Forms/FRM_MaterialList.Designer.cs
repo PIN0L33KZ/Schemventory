@@ -45,6 +45,7 @@ partial class FRM_MaterialList
         CBX_ShowIgnored = new Guna.UI2.WinForms.Guna2CheckBox();
         IBN_About = new Guna.UI2.WinForms.Guna2ImageButton();
         TTP_Main = new ToolTip(components);
+        LBL_FilterWarn = new Label();
         PNL_ProjectInfo.SuspendLayout();
         SuspendLayout();
         // 
@@ -271,20 +272,36 @@ partial class FRM_MaterialList
         TTP_Main.ToolTipIcon = ToolTipIcon.Info;
         TTP_Main.ToolTipTitle = "Information";
         // 
+        // LBL_FilterWarn
+        // 
+        LBL_FilterWarn.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+        LBL_FilterWarn.AutoEllipsis = true;
+        LBL_FilterWarn.Font = new Font("Leelawadee UI", 11.25F, FontStyle.Regular, GraphicsUnit.Point, 0);
+        LBL_FilterWarn.ForeColor = Color.FromArgb(235, 234, 234);
+        LBL_FilterWarn.Location = new Point(12, 73);
+        LBL_FilterWarn.Name = "LBL_FilterWarn";
+        LBL_FilterWarn.Size = new Size(975, 419);
+        LBL_FilterWarn.TabIndex = 6;
+        LBL_FilterWarn.Text = "No materials to display based on the current filters.\r\nTry a different filter!";
+        LBL_FilterWarn.TextAlign = ContentAlignment.MiddleCenter;
+        LBL_FilterWarn.Visible = false;
+        // 
         // FRM_MaterialList
         // 
         AutoScaleDimensions = new SizeF(7F, 17F);
         AutoScaleMode = AutoScaleMode.Font;
         BackColor = Color.FromArgb(38, 34, 34);
         ClientSize = new Size(999, 527);
+        Controls.Add(VSB_Main);
         Controls.Add(IBN_About);
         Controls.Add(CBX_ShowIgnored);
         Controls.Add(CBX_ShowCollected);
         Controls.Add(CBX_ShowReplaced);
         Controls.Add(CHB_ShowMissing);
-        Controls.Add(VSB_Main);
-        Controls.Add(PNL_MaterialList);
         Controls.Add(PNL_ProjectInfo);
+        Controls.Add(PNL_MaterialList);
+        Controls.Add(LBL_FilterWarn);
+        DoubleBuffered = true;
         Font = new Font("Leelawadee UI", 9.75F, FontStyle.Regular, GraphicsUnit.Point, 0);
         ForeColor = Color.FromArgb(235, 234, 234);
         Icon = (Icon)resources.GetObject("$this.Icon");
@@ -295,6 +312,8 @@ partial class FRM_MaterialList
         StartPosition = FormStartPosition.CenterScreen;
         Text = "FRM_MaterialList";
         Load += FRM_MaterialList_Load;
+        ResizeBegin += FRM_MaterialList_ResizeBegin;
+        ResizeEnd += FRM_MaterialList_ResizeEnd;
         PNL_ProjectInfo.ResumeLayout(false);
         PNL_ProjectInfo.PerformLayout();
         ResumeLayout(false);
@@ -315,4 +334,5 @@ partial class FRM_MaterialList
     private Guna.UI2.WinForms.Guna2CheckBox CBX_ShowIgnored;
     private Guna.UI2.WinForms.Guna2ImageButton IBN_About;
     private ToolTip TTP_Main;
+    private Label LBL_FilterWarn;
 }

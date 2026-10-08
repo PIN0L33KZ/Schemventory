@@ -39,6 +39,7 @@ partial class FRM_RecentProjects
         LBL_AppTitle = new Label();
         PNL_RecentProjectControls = new FlowLayoutPanel();
         VSB_Main = new Guna.UI2.WinForms.Guna2VScrollBar();
+        LBL_NoProjectsWarn = new Label();
         ((System.ComponentModel.ISupportInitialize)PBX_AppLogo).BeginInit();
         SuspendLayout();
         // 
@@ -145,6 +146,20 @@ partial class FRM_RecentProjects
         VSB_Main.ThumbSize = 5F;
         VSB_Main.ThumbStyle = Guna.UI2.WinForms.Enums.ThumbStyle.Inset;
         // 
+        // LBL_NoProjectsWarn
+        // 
+        LBL_NoProjectsWarn.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+        LBL_NoProjectsWarn.AutoEllipsis = true;
+        LBL_NoProjectsWarn.Font = new Font("Leelawadee UI", 11.25F, FontStyle.Regular, GraphicsUnit.Point, 0);
+        LBL_NoProjectsWarn.ForeColor = Color.FromArgb(235, 234, 234);
+        LBL_NoProjectsWarn.Location = new Point(12, 161);
+        LBL_NoProjectsWarn.Name = "LBL_NoProjectsWarn";
+        LBL_NoProjectsWarn.Size = new Size(383, 414);
+        LBL_NoProjectsWarn.TabIndex = 7;
+        LBL_NoProjectsWarn.Text = "No projects. Create a new project!";
+        LBL_NoProjectsWarn.TextAlign = ContentAlignment.MiddleCenter;
+        LBL_NoProjectsWarn.Visible = false;
+        // 
         // FRM_RecentProjects
         // 
         AutoScaleDimensions = new SizeF(8F, 20F);
@@ -152,11 +167,12 @@ partial class FRM_RecentProjects
         BackColor = Color.FromArgb(38, 34, 34);
         ClientSize = new Size(407, 625);
         Controls.Add(VSB_Main);
-        Controls.Add(PNL_RecentProjectControls);
         Controls.Add(LBL_AppTitle);
         Controls.Add(PBX_AppLogo);
         Controls.Add(BTN_CloseApp);
         Controls.Add(BTN_NewProject);
+        Controls.Add(PNL_RecentProjectControls);
+        Controls.Add(LBL_NoProjectsWarn);
         Font = new Font("Leelawadee UI", 11.25F, FontStyle.Regular, GraphicsUnit.Point, 0);
         ForeColor = Color.FromArgb(235, 234, 234);
         FormBorderStyle = FormBorderStyle.FixedSingle;
@@ -179,4 +195,5 @@ partial class FRM_RecentProjects
     private Label LBL_AppTitle;
     private FlowLayoutPanel PNL_RecentProjectControls;
     private Guna.UI2.WinForms.Guna2VScrollBar VSB_Main;
+    private Label LBL_NoProjectsWarn;
 }

@@ -132,21 +132,41 @@ public partial class FRM_MaterialList : Form
     private void ApplyMaterialView()
     {
         List<MaterialControl> controls = [.. PNL_MaterialList.Controls
-            .OfType<MaterialControl>()];
+        .OfType<MaterialControl>()];
+
+        var hasVisibleControls = false;
 
         PNL_MaterialList.SuspendLayout();
 
         try
         {
             foreach(MaterialControl materialControl in controls)
-                materialControl.Visible = ShouldShowMaterial(materialControl.Material);
+            {
+                var isVisible = ShouldShowMaterial(materialControl.Material);
+
+                materialControl.Visible = isVisible;
+
+                if(isVisible)
+                    hasVisibleControls = true;
+            }
 
             List<MaterialControl> sortedControls = [.. controls
-                .OrderBy(x => GetStateSortOrder(x.Material.State))
-                .ThenByDescending(x => x.Material.RequiredAmount)];
+            .OrderBy(x => GetStateSortOrder(x.Material.State))
+            .ThenByDescending(x => x.Material.RequiredAmount)];
 
             for(var i = 0; i < sortedControls.Count; i++)
                 PNL_MaterialList.Controls.SetChildIndex(sortedControls[i], i);
+
+            if(!hasVisibleControls)
+            {
+                LBL_FilterWarn.Show();
+                PNL_MaterialList.Hide();
+            }
+            else
+            {
+                LBL_FilterWarn.Hide();
+                PNL_MaterialList.Show();
+            }
         }
         finally
         {
@@ -208,5 +228,15 @@ public partial class FRM_MaterialList : Form
     {
         FRM_About aboutForm = new();
         _ = aboutForm.ShowDialog();
+    }
+
+    private void FRM_MaterialList_ResizeBegin(object sender, EventArgs e)
+    {
+        PNL_MaterialList.SuspendLayout();
+    }
+
+    private void FRM_MaterialList_ResizeEnd(object sender, EventArgs e)
+    {
+        PNL_MaterialList.ResumeLayout(true);
     }
 }

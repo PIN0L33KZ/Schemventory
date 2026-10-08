@@ -58,6 +58,7 @@ partial class AppTheme
         TSW_Toggle = new Guna.UI2.WinForms.Guna2ToggleSwitch();
         CHB_Check = new Guna.UI2.WinForms.Guna2CheckBox();
         NUD_Number = new Guna.UI2.WinForms.Guna2NumericUpDown();
+        SEP_1 = new Guna.UI2.WinForms.Guna2Separator();
         ((System.ComponentModel.ISupportInitialize)NUD_Number).BeginInit();
         SuspendLayout();
         // 
@@ -345,11 +346,24 @@ partial class AppTheme
         NUD_Number.UpDownButtonFillColor = Color.FromArgb(162, 123, 90);
         NUD_Number.UpDownButtonForeColor = Color.FromArgb(235, 234, 234);
         // 
+        // SEP_1
+        // 
+        SEP_1.BackColor = Color.Transparent;
+        SEP_1.FillColor = Color.FromArgb(103, 99, 99);
+        SEP_1.FillThickness = 2;
+        SEP_1.Location = new Point(30, 338);
+        SEP_1.Name = "SEP_1";
+        SEP_1.Size = new Size(200, 10);
+        SEP_1.TabIndex = 0;
+        SEP_1.TabStop = false;
+        SEP_1.UseTransparentBackground = true;
+        // 
         // AppTheme
         // 
         AutoScaleDimensions = new SizeF(7F, 15F);
         AutoScaleMode = AutoScaleMode.Font;
         BackColor = Color.Black;
+        Controls.Add(SEP_1);
         Controls.Add(NUD_Number);
         Controls.Add(CHB_Check);
         Controls.Add(TSW_Toggle);
@@ -395,4 +409,5 @@ partial class AppTheme
     private Guna.UI2.WinForms.Guna2ToggleSwitch TSW_Toggle;
     private Guna.UI2.WinForms.Guna2CheckBox CHB_Check;
     private Guna.UI2.WinForms.Guna2NumericUpDown NUD_Number;
+    private Guna.UI2.WinForms.Guna2Separator SEP_1;
 }
