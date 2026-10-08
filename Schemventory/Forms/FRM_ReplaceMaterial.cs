@@ -7,17 +7,24 @@ namespace Schemventory.Forms;
 public partial class FRM_ReplaceMaterial : Form
 {
     private const string WindowName = $"Replace material - {Constants.AppName}";
+
     private readonly ProjectMaterial _material;
     private readonly ItemDataProvider _itemDataProvider;
     private readonly ItemIconService _itemIconService;
-    private List<ItemData> _items = [];
-    private List<ItemData> _filteredItems = [];
+    private readonly System.Windows.Forms.Timer _searchTimer;
+
+    private List<ItemSearchEntry> _items = [];
+    private List<ItemSearchEntry> _filteredItems = [];
     private CancellationTokenSource? _previewCancellationTokenSource;
+
     public ItemData? SelectedItem { get; private set; }
     public string? ReplacementItemId => SelectedItem?.Id;
     public bool ResetRequested { get; private set; }
 
-    public FRM_ReplaceMaterial(ProjectMaterial material, ItemDataProvider itemDataProvider, ItemIconService itemIconService)
+    public FRM_ReplaceMaterial(
+        ProjectMaterial material,
+        ItemDataProvider itemDataProvider,
+        ItemIconService itemIconService)
     {
         InitializeComponent();
 
@@ -25,16 +32,27 @@ public partial class FRM_ReplaceMaterial : Form
         _itemDataProvider = itemDataProvider;
         _itemIconService = itemIconService;
 
+        _searchTimer = new System.Windows.Forms.Timer
+        {
+            Interval = 150
+        };
+
+        _searchTimer.Tick += SearchTimer_Tick;
+
         Text = WindowName;
 
         InitializeListView();
         InitializeForm();
-        RegisterEvents();
+
+        // These events are not wired in the designer.
+        LST_Items.RetrieveVirtualItem += LST_Items_RetrieveVirtualItem;
+        FormClosed += FRM_ReplaceMaterial_FormClosed;
     }
 
     private void InitializeForm()
     {
-        LBL_Description.Text = $"Choose a material to replace {GetDisplayName(_material.ItemId)} with.";
+        LBL_Description.Text =
+            $"Choose a material to replace {GetDisplayName(_material.ItemId)} with.";
 
         LBL_ItemName.Text = "No material selected";
         LBL_ItemId.Text = string.Empty;
@@ -43,32 +61,16 @@ public partial class FRM_ReplaceMaterial : Form
         PBX_Icon.Image = null;
 
         BTN_Replace.Enabled = false;
-
         BTN_Reset.Visible = !string.IsNullOrWhiteSpace(_material.ReplacementItemId);
     }
 
     private void InitializeListView()
     {
+        LST_Items.Sorting = SortOrder.None;
         LST_Items.Columns.Clear();
 
         _ = LST_Items.Columns.Add("Material", 180);
         _ = LST_Items.Columns.Add("Item ID", 250);
-    }
-
-    private void RegisterEvents()
-    {
-        Load += FRM_ReplaceMaterial_Load;
-
-        TBX_Search.TextChanged += TBX_Search_TextChanged;
-
-        LST_Items.RetrieveVirtualItem += LST_Items_RetrieveVirtualItem;
-        LST_Items.SelectedIndexChanged += LST_Items_SelectedIndexChanged;
-        LST_Items.DoubleClick += LST_Items_DoubleClick;
-
-        BTN_Replace.Click += BTN_Replace_Click;
-        BTN_Cancel.Click += BTN_Cancel_Click;
-
-        FormClosed += FRM_ReplaceMaterial_FormClosed;
     }
 
     private async void FRM_ReplaceMaterial_Load(object? sender, EventArgs e)
@@ -82,12 +84,18 @@ public partial class FRM_ReplaceMaterial : Form
             IReadOnlyCollection<ItemData> items =
                 await _itemDataProvider.GetItemsAsync();
 
+            var originalItemId = NormalizeItemId(_material.ItemId);
+
             _items = items
                 .Where(x => !string.Equals(
                     x.Id,
-                    NormalizeItemId(_material.ItemId),
+                    originalItemId,
                     StringComparison.Ordinal))
-                .OrderBy(x => GetDisplayName(x.Id), StringComparer.CurrentCultureIgnoreCase)
+                .Select(x => new ItemSearchEntry(
+                    x,
+                    GetDisplayName(x.Id),
+                    GetFullItemId(x.Id)))
+                .OrderBy(x => x.DisplayName, StringComparer.CurrentCultureIgnoreCase)
                 .ToList();
 
             _filteredItems = [.. _items];
@@ -111,6 +119,13 @@ public partial class FRM_ReplaceMaterial : Form
 
     private void TBX_Search_TextChanged(object? sender, EventArgs e)
     {
+        _searchTimer.Stop();
+        _searchTimer.Start();
+    }
+
+    private void SearchTimer_Tick(object? sender, EventArgs e)
+    {
+        _searchTimer.Stop();
         ApplyFilter();
     }
 
@@ -122,15 +137,16 @@ public partial class FRM_ReplaceMaterial : Form
             ? [.. _items]
             : _items
                 .Where(x =>
-                    x.Id.Contains(
+                    x.Item.Id.Contains(
                         searchText,
                         StringComparison.OrdinalIgnoreCase) ||
-                    GetDisplayName(x.Id).Contains(
+                    x.FullItemId.Contains(
+                        searchText,
+                        StringComparison.OrdinalIgnoreCase) ||
+                    x.DisplayName.Contains(
                         searchText,
                         StringComparison.CurrentCultureIgnoreCase))
                 .ToList();
-
-        SelectedItem = null;
 
         ClearPreview();
         UpdateVirtualList();
@@ -153,7 +169,9 @@ public partial class FRM_ReplaceMaterial : Form
         LST_Items.Invalidate();
     }
 
-    private void LST_Items_RetrieveVirtualItem(object? sender, RetrieveVirtualItemEventArgs e)
+    private void LST_Items_RetrieveVirtualItem(
+        object? sender,
+        RetrieveVirtualItemEventArgs e)
     {
         if(e.ItemIndex < 0 || e.ItemIndex >= _filteredItems.Count)
         {
@@ -161,11 +179,11 @@ public partial class FRM_ReplaceMaterial : Form
             return;
         }
 
-        ItemData item = _filteredItems[e.ItemIndex];
+        ItemSearchEntry entry = _filteredItems[e.ItemIndex];
 
-        ListViewItem listViewItem = new(GetDisplayName(item.Id));
+        ListViewItem listViewItem = new(entry.DisplayName);
 
-        _ = listViewItem.SubItems.Add(GetFullItemId(item.Id));
+        _ = listViewItem.SubItems.Add(entry.FullItemId);
 
         e.Item = listViewItem;
     }
@@ -174,7 +192,6 @@ public partial class FRM_ReplaceMaterial : Form
     {
         if(LST_Items.SelectedIndices.Count == 0)
         {
-            SelectedItem = null;
             ClearPreview();
             return;
         }
@@ -183,20 +200,21 @@ public partial class FRM_ReplaceMaterial : Form
 
         if(selectedIndex < 0 || selectedIndex >= _filteredItems.Count)
         {
-            SelectedItem = null;
             ClearPreview();
             return;
         }
 
-        SelectedItem = _filteredItems[selectedIndex];
+        ItemSearchEntry entry = _filteredItems[selectedIndex];
+
+        SelectedItem = entry.Item;
 
         BTN_Replace.Enabled = true;
 
-        LBL_ItemName.Text = GetDisplayName(SelectedItem.Id);
-        LBL_ItemId.Text = GetFullItemId(SelectedItem.Id);
-        LBL_StackSize.Text = $"Stack size: {SelectedItem.MaxStackSize}";
+        LBL_ItemName.Text = entry.DisplayName;
+        LBL_ItemId.Text = entry.FullItemId;
+        LBL_StackSize.Text = $"Stack size: {entry.Item.MaxStackSize}";
 
-        await LoadPreviewIconAsync(SelectedItem.Id);
+        await LoadPreviewIconAsync(entry.Item.Id);
     }
 
     private async Task LoadPreviewIconAsync(string itemId)
@@ -292,6 +310,9 @@ public partial class FRM_ReplaceMaterial : Form
 
     private void FRM_ReplaceMaterial_FormClosed(object? sender, FormClosedEventArgs e)
     {
+        _searchTimer.Stop();
+        _searchTimer.Dispose();
+
         _previewCancellationTokenSource?.Cancel();
         _previewCancellationTokenSource?.Dispose();
 
@@ -325,4 +346,9 @@ public partial class FRM_ReplaceMaterial : Form
             .TextInfo
             .ToTitleCase(name);
     }
+
+    private sealed record ItemSearchEntry(
+        ItemData Item,
+        string DisplayName,
+        string FullItemId);
 }

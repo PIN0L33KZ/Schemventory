@@ -1,4 +1,4 @@
-using Schemventory.App;
+﻿using Schemventory.App;
 using Schemventory.Forms;
 using Schemventory.Services;
 
@@ -15,7 +15,11 @@ public partial class MaterialControl : UserControl
     public event EventHandler? StateChanged;
     public ProjectMaterial Material { get; }
 
-    public MaterialControl(ProjectMaterial material, ItemIconService itemIconService, ItemDataProvider itemDataProvider, ProjectMaterialService projectMaterialService)
+    public MaterialControl(
+        ProjectMaterial material,
+        ItemIconService itemIconService,
+        ItemDataProvider itemDataProvider,
+        ProjectMaterialService projectMaterialService)
     {
         InitializeComponent();
 
@@ -24,14 +28,15 @@ public partial class MaterialControl : UserControl
         _itemDataProvider = itemDataProvider;
         _projectMaterialService = projectMaterialService;
 
-        RegisterEvents(this);
-
         _hoverTimer = new System.Windows.Forms.Timer
         {
             Interval = 50
         };
 
         _hoverTimer.Tick += HoverTimer_Tick;
+        Disposed += MaterialControl_Disposed;
+
+        RegisterEvents(this);
 
         PBX_StateIcon.Parent = PBX_MaterialIcon;
         PBX_StateIcon.Location = new Point(
@@ -53,8 +58,9 @@ public partial class MaterialControl : UserControl
     {
         FillMaterialData();
 
-        await LoadItemDataAsync();
-        await LoadMaterialIconAsync();
+        await Task.WhenAll(
+            LoadItemDataAsync(),
+            LoadMaterialIconAsync());
     }
 
     private void MaterialControl_DoubleClick(object? sender, EventArgs e)
@@ -82,7 +88,11 @@ public partial class MaterialControl : UserControl
         }
         catch(Exception exception)
         {
-            _ = MessageBox.Show($"The material state could not be changed.\n\n{exception.Message}", "Schemventory", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            _ = MessageBox.Show(
+                $"The material state could not be changed.\n\n{exception.Message}",
+                Constants.AppName,
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
         }
     }
 
@@ -98,7 +108,10 @@ public partial class MaterialControl : UserControl
     {
         if(!string.IsNullOrWhiteSpace(Material.ReplacementItemId))
         {
-            _projectMaterialService.MarkReplaced(Material.ProjectId, Material.ItemId, Material.ReplacementItemId);
+            _projectMaterialService.MarkReplaced(
+                Material.ProjectId,
+                Material.ItemId,
+                Material.ReplacementItemId);
 
             Material.State = ProjectMaterialState.Replaced;
             Material.CollectedAmount = 0;
@@ -124,20 +137,6 @@ public partial class MaterialControl : UserControl
         PNL_Background.FillColor3 = GetStateColor();
 
         _hoverTimer.Start();
-    }
-
-    private void HoverEnd(object? sender, EventArgs e)
-    {
-        _ = BeginInvoke(() =>
-        {
-            if(IsDisposed)
-                return;
-
-            if(RectangleToScreen(ClientRectangle).Contains(Cursor.Position))
-                return;
-
-            EndHover();
-        });
     }
 
     private void MouseRightClick(object? sender, MouseEventArgs e)
@@ -245,7 +244,7 @@ public partial class MaterialControl : UserControl
     {
         var displayName = GetDisplayName(Material.DisplayItemId);
 
-        return Material.State == ProjectMaterialState.Replaced
+        return !string.IsNullOrWhiteSpace(Material.ReplacementItemId)
             ? $"{displayName} (replaced)"
             : displayName;
     }
@@ -261,7 +260,9 @@ public partial class MaterialControl : UserControl
 
         return stacks > 0 && blocks > 0
             ? $"Missing: {stacks} {stackText} + {blocks} {blockText}"
-            : stacks > 0 ? $"Missing: {stacks} {stackText}" : $"Missing: {blocks} {blockText}";
+            : stacks > 0
+                ? $"Missing: {stacks} {stackText}"
+                : $"Missing: {blocks} {blockText}";
     }
 
     private async Task LoadMaterialIconAsync()
@@ -282,6 +283,10 @@ public partial class MaterialControl : UserControl
         }
         catch
         {
+            if(IsDisposed)
+                return;
+
+            PBX_MaterialIcon.Image?.Dispose();
             PBX_MaterialIcon.Image = null;
         }
     }
@@ -297,14 +302,10 @@ public partial class MaterialControl : UserControl
     private void RegisterEvents(Control control)
     {
         control.MouseEnter += HoverStart;
-        control.MouseLeave += HoverEnd;
         control.MouseDown += MouseRightClick;
 
-        // Skip Buttons
         if(control != this && control is not Guna.UI2.WinForms.Guna2ImageButton)
-        {
             control.DoubleClick += MaterialControl_DoubleClick;
-        }
 
         foreach(Control child in control.Controls)
             RegisterEvents(child);
@@ -312,7 +313,6 @@ public partial class MaterialControl : UserControl
 
     private void RegisterToolTips(Control control, string toolTip)
     {
-        // Skip Buttons
         if(control != this && control is not Guna.UI2.WinForms.Guna2ImageButton)
             TTP_Main.SetToolTip(control, toolTip);
 
@@ -324,7 +324,9 @@ public partial class MaterialControl : UserControl
     {
         UpdateContextMenuState();
 
-        CMS_MaterialOptions.Show(IBN_MoreOptions, new Point(0, IBN_MoreOptions.Height));
+        CMS_MaterialOptions.Show(
+            IBN_MoreOptions,
+            new Point(0, IBN_MoreOptions.Height));
     }
 
     private void UpdateContextMenuState()
@@ -332,7 +334,8 @@ public partial class MaterialControl : UserControl
         TMI_SetStateMissing.Visible = Material.State != ProjectMaterialState.Missing;
         TMI_SetStateCollected.Visible = Material.State != ProjectMaterialState.Collected;
         TMI_SetStateIgnore.Visible = Material.State != ProjectMaterialState.Ignored;
-        TMI_SetCollectedAmount.Visible = Material.State is not ProjectMaterialState.Collected and not ProjectMaterialState.Ignored;
+        TMI_SetCollectedAmount.Visible =
+            Material.State is not ProjectMaterialState.Collected and not ProjectMaterialState.Ignored;
     }
 
     private void TMI_SetStateCollected_Click(object sender, EventArgs e)
@@ -384,7 +387,11 @@ public partial class MaterialControl : UserControl
         }
         catch(Exception exception)
         {
-            _ = MessageBox.Show($"The material state could not be changed.\n\n{exception.Message}", "Schemventory", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            _ = MessageBox.Show(
+                $"The material state could not be changed.\n\n{exception.Message}",
+                Constants.AppName,
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
         }
     }
 
@@ -413,20 +420,29 @@ public partial class MaterialControl : UserControl
     {
         try
         {
-            _projectMaterialService.UpdateCollectedAmount(Material.ProjectId, Material.ItemId, collectedAmount);
+            _projectMaterialService.UpdateCollectedAmount(
+                Material.ProjectId,
+                Material.ItemId,
+                collectedAmount);
 
             Material.CollectedAmount = collectedAmount;
 
             Material.State = Material.CollectedAmount >= Material.RequiredAmount
                 ? ProjectMaterialState.Collected
-                : !string.IsNullOrWhiteSpace(Material.ReplacementItemId) ? ProjectMaterialState.Replaced : ProjectMaterialState.Missing;
+                : !string.IsNullOrWhiteSpace(Material.ReplacementItemId)
+                    ? ProjectMaterialState.Replaced
+                    : ProjectMaterialState.Missing;
 
             ApplyMaterialState();
             StateChanged?.Invoke(this, EventArgs.Empty);
         }
         catch(Exception exception)
         {
-            _ = MessageBox.Show($"The collected amount could not be changed.\n\n{exception.Message}", "Schemventory", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            _ = MessageBox.Show(
+                $"The collected amount could not be changed.\n\n{exception.Message}",
+                Constants.AppName,
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
         }
     }
 
@@ -434,7 +450,10 @@ public partial class MaterialControl : UserControl
     {
         try
         {
-            using FRM_ReplaceMaterial form = new(Material, _itemDataProvider, _itemIconService);
+            using FRM_ReplaceMaterial form = new(
+                Material,
+                _itemDataProvider,
+                _itemIconService);
 
             if(form.ShowDialog(this) != DialogResult.OK)
                 return;
@@ -452,7 +471,10 @@ public partial class MaterialControl : UserControl
             if(string.IsNullOrWhiteSpace(form.ReplacementItemId))
                 return;
 
-            _projectMaterialService.MarkReplaced(Material.ProjectId, Material.ItemId, form.ReplacementItemId);
+            _projectMaterialService.MarkReplaced(
+                Material.ProjectId,
+                Material.ItemId,
+                form.ReplacementItemId);
 
             Material.State = ProjectMaterialState.Replaced;
             Material.ReplacementItemId = form.ReplacementItemId;
@@ -474,8 +496,9 @@ public partial class MaterialControl : UserControl
 
     private async Task RefreshMaterialAsync()
     {
-        await LoadItemDataAsync();
-        await LoadMaterialIconAsync();
+        await Task.WhenAll(
+            LoadItemDataAsync(),
+            LoadMaterialIconAsync());
     }
 
     private void ResetReplacement()
@@ -485,5 +508,14 @@ public partial class MaterialControl : UserControl
         Material.State = ProjectMaterialState.Missing;
         Material.ReplacementItemId = null;
         Material.CollectedAmount = 0;
+    }
+
+    private void MaterialControl_Disposed(object? sender, EventArgs e)
+    {
+        _hoverTimer.Stop();
+        _hoverTimer.Dispose();
+
+        PBX_MaterialIcon.Image?.Dispose();
+        PBX_MaterialIcon.Image = null;
     }
 }

@@ -1,4 +1,4 @@
-using Schemventory.App;
+﻿using Schemventory.App;
 using Schemventory.Controls;
 using Schemventory.Data;
 using Schemventory.Services;
@@ -10,12 +10,18 @@ public partial class FRM_MaterialList : Form
     private const string WindowName = $"Material list - {Constants.AppName}";
 
     private readonly Project _project;
-    private IReadOnlyCollection<ProjectMaterial> _materials = [];
     private readonly ProjectMaterialService _projectMaterialService;
     private readonly ItemIconService _itemIconService;
     private readonly ItemDataProvider _itemDataProvider;
+    private readonly List<MaterialControl> _materialControls = [];
 
-    public FRM_MaterialList(DatabaseService databaseService, Project project)
+    private IReadOnlyCollection<ProjectMaterial> _materials = [];
+
+    public FRM_MaterialList(
+        DatabaseService databaseService,
+        Project project,
+        ItemIconService itemIconService,
+        ItemDataProvider itemDataProvider)
     {
         InitializeComponent();
 
@@ -23,8 +29,8 @@ public partial class FRM_MaterialList : Form
 
         _project = project;
         _projectMaterialService = new ProjectMaterialService(databaseService);
-        _itemIconService = new ItemIconService();
-        _itemDataProvider = new ItemDataProvider();
+        _itemIconService = itemIconService;
+        _itemDataProvider = itemDataProvider;
     }
 
     private async void FRM_MaterialList_Load(object sender, EventArgs e)
@@ -37,7 +43,7 @@ public partial class FRM_MaterialList : Form
             LoadMaterialList();
             FillProjectData();
             FillMaterialControls();
-            ApplyMaterialView();
+            ApplyMaterialFilter();
 
             await Task.Yield();
         }
@@ -52,7 +58,8 @@ public partial class FRM_MaterialList : Form
 
     private void MaterialControl_StateChanged(object? sender, EventArgs e)
     {
-        ApplyMaterialView();
+        SortMaterialControls();
+        ApplyMaterialFilter();
         UpdateStatistics();
     }
 
@@ -64,37 +71,49 @@ public partial class FRM_MaterialList : Form
 
     private void UpdateStatistics()
     {
-        ProjectMaterial[] relevantMaterials = [.. _materials
-        .Where(x => x.State != ProjectMaterialState.Ignored)];
+        Dictionary<string, (long RequiredAmount, long CollectedAmount)> groupedMaterials =
+            new(StringComparer.Ordinal);
 
-        var groupedMaterials = relevantMaterials
-            .GroupBy(
-                x => NormalizeItemId(x.DisplayItemId),
-                StringComparer.Ordinal)
-            .Select(group => new
+        foreach(ProjectMaterial material in _materials)
+        {
+            if(material.State == ProjectMaterialState.Ignored)
+                continue;
+
+            var itemId = NormalizeItemId(material.DisplayItemId);
+            var collectedAmount = Math.Min(material.CollectedAmount, material.RequiredAmount);
+
+            if(groupedMaterials.TryGetValue(itemId, out (long RequiredAmount, long CollectedAmount) current))
             {
-                RequiredAmount = group.Sum(x => x.RequiredAmount),
-                CollectedAmount = group.Sum(x =>
-                    Math.Min(x.CollectedAmount, x.RequiredAmount))
-            })
-            .ToArray();
+                groupedMaterials[itemId] = (
+                    current.RequiredAmount + material.RequiredAmount,
+                    current.CollectedAmount + collectedAmount);
+            }
+            else
+            {
+                groupedMaterials[itemId] = (
+                    material.RequiredAmount,
+                    collectedAmount);
+            }
+        }
 
-        var collectedBlocks = groupedMaterials
-            .Sum(x => Math.Min(x.CollectedAmount, x.RequiredAmount));
+        long collectedBlocks = 0;
+        long totalBlocks = 0;
+        var collectedMaterials = 0;
 
-        var totalBlocks = groupedMaterials
-            .Sum(x => x.RequiredAmount);
+        foreach((var RequiredAmount, var CollectedAmount) in groupedMaterials.Values)
+        {
+            totalBlocks += RequiredAmount;
+            collectedBlocks += Math.Min(CollectedAmount, RequiredAmount);
 
-        var collectedMaterials = groupedMaterials
-            .Count(x => x.CollectedAmount >= x.RequiredAmount);
-
-        var totalMaterials = groupedMaterials.Length;
+            if(CollectedAmount >= RequiredAmount)
+                collectedMaterials++;
+        }
 
         LBL_TotalBlocks.Text =
             $"{collectedBlocks}/{totalBlocks} Blocks collected";
 
         LBL_DifferentMaterialsCount.Text =
-            $"{collectedMaterials}/{totalMaterials} Materials collected";
+            $"{collectedMaterials}/{groupedMaterials.Count} Materials collected";
     }
 
     private static string NormalizeItemId(string itemId)
@@ -114,6 +133,7 @@ public partial class FRM_MaterialList : Form
     private void FillMaterialControls()
     {
         PNL_MaterialList.Controls.Clear();
+        _materialControls.Clear();
 
         foreach(ProjectMaterial material in GetSortedMaterials())
         {
@@ -125,48 +145,73 @@ public partial class FRM_MaterialList : Form
 
             materialControl.StateChanged += MaterialControl_StateChanged;
 
-            PNL_MaterialList.Controls.Add(materialControl);
+            _materialControls.Add(materialControl);
         }
+
+        if(_materialControls.Count > 0)
+            PNL_MaterialList.Controls.AddRange([.. _materialControls]);
     }
 
-    private void ApplyMaterialView()
+    private void ApplyMaterialFilter()
     {
-        List<MaterialControl> controls = [.. PNL_MaterialList.Controls
-        .OfType<MaterialControl>()];
-
         var hasVisibleControls = false;
 
         PNL_MaterialList.SuspendLayout();
 
         try
         {
-            foreach(MaterialControl materialControl in controls)
+            foreach(MaterialControl materialControl in _materialControls)
             {
                 var isVisible = ShouldShowMaterial(materialControl.Material);
 
-                materialControl.Visible = isVisible;
+                if(materialControl.Visible != isVisible)
+                    materialControl.Visible = isVisible;
 
                 if(isVisible)
                     hasVisibleControls = true;
             }
 
-            List<MaterialControl> sortedControls = [.. controls
-            .OrderBy(x => GetStateSortOrder(x.Material.State))
-            .ThenByDescending(x => x.Material.RequiredAmount)];
-
-            for(var i = 0; i < sortedControls.Count; i++)
-                PNL_MaterialList.Controls.SetChildIndex(sortedControls[i], i);
-
-            if(!hasVisibleControls)
+            if(hasVisibleControls)
             {
-                LBL_FilterWarn.Show();
-                PNL_MaterialList.Hide();
+                if(!PNL_MaterialList.Visible)
+                    PNL_MaterialList.Show();
+
+                if(LBL_FilterWarn.Visible)
+                    LBL_FilterWarn.Hide();
             }
             else
             {
-                LBL_FilterWarn.Hide();
-                PNL_MaterialList.Show();
+                if(PNL_MaterialList.Visible)
+                    PNL_MaterialList.Hide();
+
+                if(!LBL_FilterWarn.Visible)
+                    LBL_FilterWarn.Show();
             }
+        }
+        finally
+        {
+            PNL_MaterialList.ResumeLayout();
+        }
+    }
+
+    private void SortMaterialControls()
+    {
+        _materialControls.Sort(static (left, right) =>
+        {
+            var stateComparison = GetStateSortOrder(left.Material.State)
+                .CompareTo(GetStateSortOrder(right.Material.State));
+
+            return stateComparison != 0
+                ? stateComparison
+                : right.Material.RequiredAmount.CompareTo(left.Material.RequiredAmount);
+        });
+
+        PNL_MaterialList.SuspendLayout();
+
+        try
+        {
+            for(var i = 0; i < _materialControls.Count; i++)
+                PNL_MaterialList.Controls.SetChildIndex(_materialControls[i], i);
         }
         finally
         {
@@ -206,22 +251,22 @@ public partial class FRM_MaterialList : Form
 
     private void CHB_ShowMissing_CheckedChanged(object sender, EventArgs e)
     {
-        ApplyMaterialView();
+        ApplyMaterialFilter();
     }
 
     private void CBX_ShowReplaced_CheckedChanged(object sender, EventArgs e)
     {
-        ApplyMaterialView();
+        ApplyMaterialFilter();
     }
 
     private void CBX_ShowCollected_CheckedChanged(object sender, EventArgs e)
     {
-        ApplyMaterialView();
+        ApplyMaterialFilter();
     }
 
     private void CBX_ShowIgnored_CheckedChanged(object sender, EventArgs e)
     {
-        ApplyMaterialView();
+        ApplyMaterialFilter();
     }
 
     private void IBN_About_Click(object sender, EventArgs e)

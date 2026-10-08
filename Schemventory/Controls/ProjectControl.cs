@@ -5,17 +5,27 @@ namespace Schemventory;
 
 public partial class ProjectControl : UserControl
 {
+    private readonly Project _project;
+    private readonly System.Windows.Forms.Timer _hoverTimer;
+    private bool _isHovered;
+
     public event EventHandler<ProjectControlEventArgs>? ControlClicked;
     public event EventHandler<ProjectControlEventArgs>? EditRequested;
     public event EventHandler<ProjectControlEventArgs>? DeleteRequested;
-
-    private readonly Project _project;
 
     public ProjectControl(Project project)
     {
         InitializeComponent();
 
         _project = project;
+
+        _hoverTimer = new System.Windows.Forms.Timer
+        {
+            Interval = 50
+        };
+
+        _hoverTimer.Tick += HoverTimer_Tick;
+        Disposed += ProjectControl_Disposed;
 
         RegisterEvents(this);
     }
@@ -32,24 +42,34 @@ public partial class ProjectControl : UserControl
 
     private void HoverStart(object? sender, EventArgs e)
     {
+        if(_isHovered)
+            return;
+
+        _isHovered = true;
+
         IBN_EditProject.Show();
         IBN_DeleteProject.Show();
         PNL_Background.BorderColor = Color.FromArgb(162, 123, 90);
+
+        _hoverTimer.Start();
     }
 
-    private void HoverEnd(object? sender, EventArgs e)
+    private void HoverTimer_Tick(object? sender, EventArgs e)
     {
-        _ = BeginInvoke(() =>
-        {
-            Point mousePosition = PointToClient(Cursor.Position);
+        if(RectangleToScreen(ClientRectangle).Contains(Cursor.Position))
+            return;
 
-            if(ClientRectangle.Contains(mousePosition))
-                return;
+        EndHover();
+    }
 
-            IBN_EditProject.Hide();
-            IBN_DeleteProject.Hide();
-            PNL_Background.BorderColor = Color.FromArgb(103, 99, 99);
-        });
+    private void EndHover()
+    {
+        _hoverTimer.Stop();
+        _isHovered = false;
+
+        IBN_EditProject.Hide();
+        IBN_DeleteProject.Hide();
+        PNL_Background.BorderColor = Color.FromArgb(103, 99, 99);
     }
 
     private void LoadProjectData()
@@ -74,7 +94,6 @@ public partial class ProjectControl : UserControl
     private void RegisterEvents(Control control)
     {
         control.MouseEnter += HoverStart;
-        control.MouseLeave += HoverEnd;
 
         if(control != this && control is not Guna.UI2.WinForms.Guna2ImageButton)
             control.Click += ControlClickedHandler;
@@ -91,6 +110,12 @@ public partial class ProjectControl : UserControl
     private void IBN_DeleteProject_Click(object sender, EventArgs e)
     {
         DeleteRequested?.Invoke(this, new ProjectControlEventArgs(_project));
+    }
+
+    private void ProjectControl_Disposed(object? sender, EventArgs e)
+    {
+        _hoverTimer.Stop();
+        _hoverTimer.Dispose();
     }
 
     public void RefreshProject()

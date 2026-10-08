@@ -1,4 +1,4 @@
-using Schemventory.Services;
+﻿using Schemventory.Services;
 
 namespace Schemventory.App;
 
@@ -10,9 +10,14 @@ internal static class Program
         ApplicationConfiguration.Initialize();
 
         DatabaseService databaseService = new();
+        ItemIconService itemIconService = new();
+        ItemDataProvider itemDataProvider = new();
 
         databaseService.InitializeDatabase();
 
-        Application.Run(new FRM_RecentProjects(databaseService));
+        Application.Run(new FRM_RecentProjects(
+            databaseService,
+            itemIconService,
+            itemDataProvider));
     }
 }

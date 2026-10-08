@@ -1,4 +1,4 @@
-using Schemventory.App;
+﻿using Schemventory.App;
 using System.Collections.Concurrent;
 using System.Net;
 
@@ -15,7 +15,8 @@ public sealed class ItemIconService
 
     private readonly string _cacheDirectory;
     private readonly SemaphoreSlim _downloadSemaphore = new(6);
-    private readonly ConcurrentDictionary<string, SemaphoreSlim> _itemLocks = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, SemaphoreSlim> _itemLocks =
+        new(StringComparer.Ordinal);
 
     public ItemIconService()
     {
@@ -33,7 +34,9 @@ public sealed class ItemIconService
         var cacheFilePath = GetCacheFilePath(normalizedItemId, size);
         var missingCacheFilePath = GetMissingCacheFilePath(normalizedItemId, size);
 
-        Image? cachedImage = TryLoadCachedImage(cacheFilePath);
+        Image? cachedImage = await TryLoadCachedImageAsync(
+            cacheFilePath,
+            cancellationToken);
 
         if(cachedImage is not null)
             return cachedImage;
@@ -42,14 +45,17 @@ public sealed class ItemIconService
             return new Bitmap(Properties.Resources.MissingIcon);
 
         var cacheKey = $"{normalizedItemId}:{size}";
-        SemaphoreSlim itemLock = _itemLocks.GetOrAdd(cacheKey, _ => new SemaphoreSlim(1, 1));
+        SemaphoreSlim itemLock = _itemLocks.GetOrAdd(
+            cacheKey,
+            _ => new SemaphoreSlim(1, 1));
 
         await itemLock.WaitAsync(cancellationToken);
 
         try
         {
-            // Another caller may have filled the cache while this one was waiting.
-            cachedImage = TryLoadCachedImage(cacheFilePath);
+            cachedImage = await TryLoadCachedImageAsync(
+                cacheFilePath,
+                cancellationToken);
 
             if(cachedImage is not null)
                 return cachedImage;
@@ -57,20 +63,29 @@ public sealed class ItemIconService
             if(IsMissingCacheValid(missingCacheFilePath))
                 return new Bitmap(Properties.Resources.MissingIcon);
 
-            var imageData = await DownloadIconAsync(normalizedItemId, size, cancellationToken);
+            var imageData = await DownloadIconAsync(
+                normalizedItemId,
+                size,
+                cancellationToken);
 
             if(imageData is null)
             {
-                await File.WriteAllTextAsync(missingCacheFilePath, string.Empty, cancellationToken);
+                await File.WriteAllTextAsync(
+                    missingCacheFilePath,
+                    string.Empty,
+                    cancellationToken);
 
                 return new Bitmap(Properties.Resources.MissingIcon);
             }
 
             TryDeleteFile(missingCacheFilePath);
 
-            await File.WriteAllBytesAsync(cacheFilePath, imageData, cancellationToken);
+            await File.WriteAllBytesAsync(
+                cacheFilePath,
+                imageData,
+                cancellationToken);
 
-            return LoadImage(cacheFilePath);
+            return LoadImage(imageData);
         }
         finally
         {
@@ -87,11 +102,19 @@ public sealed class ItemIconService
 
         try
         {
-            var imageData = await TryDownloadIconAsync("item", itemId, size, cancellationToken);
+            var imageData = await TryDownloadIconAsync(
+                "item",
+                itemId,
+                size,
+                cancellationToken);
 
             return imageData is not null
                 ? imageData
-                : await TryDownloadIconAsync("block", itemId, size, cancellationToken);
+                : await TryDownloadIconAsync(
+                    "block",
+                    itemId,
+                    size,
+                    cancellationToken);
         }
         finally
         {
@@ -105,7 +128,8 @@ public sealed class ItemIconService
         int size,
         CancellationToken cancellationToken)
     {
-        var url = $"https://blockrender.dev/render/{type}/{Uri.EscapeDataString(itemId)}.png?size={size}";
+        var url =
+            $"https://blockrender.dev/render/{type}/{Uri.EscapeDataString(itemId)}.png?size={size}";
 
         using HttpRequestMessage request = new(HttpMethod.Get, url);
         request.Headers.UserAgent.ParseAdd("Schemventory/1.0");
@@ -119,21 +143,36 @@ public sealed class ItemIconService
             return null;
 
         if(response.StatusCode == HttpStatusCode.TooManyRequests)
-            throw new HttpRequestException("Item icon request was rate limited.", null, response.StatusCode);
+        {
+            throw new HttpRequestException(
+                "Item icon request was rate limited.",
+                null,
+                response.StatusCode);
+        }
 
         _ = response.EnsureSuccessStatusCode();
 
         return await response.Content.ReadAsByteArrayAsync(cancellationToken);
     }
 
-    private Image? TryLoadCachedImage(string filePath)
+    private async Task<Image?> TryLoadCachedImageAsync(
+        string filePath,
+        CancellationToken cancellationToken)
     {
         if(!File.Exists(filePath))
             return null;
 
         try
         {
-            return LoadImage(filePath);
+            var data = await File.ReadAllBytesAsync(
+                filePath,
+                cancellationToken);
+
+            return LoadImage(data);
+        }
+        catch(OperationCanceledException)
+        {
+            throw;
         }
         catch
         {
@@ -185,13 +224,12 @@ public sealed class ItemIconService
             : itemId;
     }
 
-    private static Image LoadImage(string filePath)
+    private static Image LoadImage(byte[] data)
     {
-        var data = File.ReadAllBytes(filePath);
-
         using MemoryStream stream = new(data);
+        using Bitmap source = new(stream);
 
-        return new Bitmap(stream);
+        return new Bitmap(source);
     }
 
     private static void TryDeleteFile(string filePath)

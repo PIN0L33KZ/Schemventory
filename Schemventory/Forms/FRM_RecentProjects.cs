@@ -1,4 +1,4 @@
-using Schemventory.App;
+﻿using Schemventory.App;
 using Schemventory.Data;
 using Schemventory.Data.EventArguments;
 using Schemventory.Forms;
@@ -12,8 +12,13 @@ public partial class FRM_RecentProjects : Form
 
     private readonly DatabaseService _databaseService;
     private readonly ProjectService _projectService;
+    private readonly ItemIconService _itemIconService;
+    private readonly ItemDataProvider _itemDataProvider;
 
-    public FRM_RecentProjects(DatabaseService databaseService)
+    public FRM_RecentProjects(
+        DatabaseService databaseService,
+        ItemIconService itemIconService,
+        ItemDataProvider itemDataProvider)
     {
         InitializeComponent();
 
@@ -22,6 +27,8 @@ public partial class FRM_RecentProjects : Form
 
         _databaseService = databaseService;
         _projectService = new ProjectService(databaseService);
+        _itemIconService = itemIconService;
+        _itemDataProvider = itemDataProvider;
     }
 
     private void FRM_RecentProjects_Load(object sender, EventArgs e)
@@ -44,20 +51,29 @@ public partial class FRM_RecentProjects : Form
 
     private void LoadProjects()
     {
-        PNL_RecentProjectControls.Controls.Clear();
-        List<ProjectControl> projectControls = GetProjectControls();
+        PNL_RecentProjectControls.SuspendLayout();
 
-        if(projectControls.Count > 0)
+        try
         {
-            PNL_RecentProjectControls.Show();
-            LBL_NoProjectsWarn.Hide();
+            PNL_RecentProjectControls.Controls.Clear();
+            List<ProjectControl> projectControls = GetProjectControls();
 
-            PNL_RecentProjectControls.Controls.AddRange([.. projectControls]);
+            if(projectControls.Count > 0)
+            {
+                PNL_RecentProjectControls.Show();
+                LBL_NoProjectsWarn.Hide();
+
+                PNL_RecentProjectControls.Controls.AddRange([.. projectControls]);
+            }
+            else
+            {
+                PNL_RecentProjectControls.Hide();
+                LBL_NoProjectsWarn.Show();
+            }
         }
-        else
+        finally
         {
-            PNL_RecentProjectControls.Hide();
-            LBL_NoProjectsWarn.Show();
+            PNL_RecentProjectControls.ResumeLayout();
         }
     }
 
@@ -66,7 +82,7 @@ public partial class FRM_RecentProjects : Form
         List<ProjectControl> projectControls = [];
         IReadOnlyCollection<Project> projects = _projectService.GetAll();
 
-        foreach(Project project in projects.OrderByDescending(x => x.LastOpenedAtUtc))
+        foreach(Project project in projects)
         {
             ProjectControl projectControl = new(project)
             {
@@ -87,7 +103,12 @@ public partial class FRM_RecentProjects : Form
     {
         Hide();
 
-        FRM_MaterialList materialListForm = new(_databaseService, e.Project);
+        using FRM_MaterialList materialListForm = new(
+            _databaseService,
+            e.Project,
+            _itemIconService,
+            _itemDataProvider);
+
         _ = materialListForm.ShowDialog();
 
         Show();

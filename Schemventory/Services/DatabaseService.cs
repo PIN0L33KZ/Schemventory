@@ -1,4 +1,4 @@
-using Microsoft.Data.Sqlite;
+﻿using Microsoft.Data.Sqlite;
 using Schemventory.App;
 
 namespace Schemventory.Services;
@@ -26,7 +26,10 @@ public class DatabaseService
 
         using SqliteCommand command = connection.CreateCommand();
 
-        command.CommandText = @"PRAGMA foreign_keys = ON;";
+        command.CommandText = @"
+            PRAGMA foreign_keys = ON;
+            PRAGMA synchronous = NORMAL;";
+
         _ = command.ExecuteNonQuery();
 
         return connection;
@@ -36,9 +39,19 @@ public class DatabaseService
     {
         using SqliteConnection connection = CreateConnection();
 
+        ConfigureDatabase(connection);
         CreateProjectsTable(connection);
         CreateProjectMaterialsTable(connection);
         MigrateProjectMaterialsTable(connection);
+    }
+
+    private static void ConfigureDatabase(SqliteConnection connection)
+    {
+        using SqliteCommand command = connection.CreateCommand();
+
+        command.CommandText = "PRAGMA journal_mode = WAL;";
+
+        _ = command.ExecuteScalar();
     }
 
     private static void CreateProjectsTable(SqliteConnection connection)
@@ -89,7 +102,9 @@ public class DatabaseService
         if(!ColumnExists(connection, "ProjectMaterials", "State"))
         {
             using SqliteCommand command = connection.CreateCommand();
-            command.CommandText = "ALTER TABLE ProjectMaterials ADD COLUMN State INTEGER NOT NULL DEFAULT 0;";
+            command.CommandText =
+                "ALTER TABLE ProjectMaterials ADD COLUMN State INTEGER NOT NULL DEFAULT 0;";
+
             _ = command.ExecuteNonQuery();
             stateColumnAdded = true;
         }
@@ -97,7 +112,9 @@ public class DatabaseService
         if(!ColumnExists(connection, "ProjectMaterials", "ReplacementItemId"))
         {
             using SqliteCommand command = connection.CreateCommand();
-            command.CommandText = "ALTER TABLE ProjectMaterials ADD COLUMN ReplacementItemId TEXT NULL;";
+            command.CommandText =
+                "ALTER TABLE ProjectMaterials ADD COLUMN ReplacementItemId TEXT NULL;";
+
             _ = command.ExecuteNonQuery();
         }
 
@@ -109,12 +126,18 @@ public class DatabaseService
                 SET State = $collectedState
                 WHERE CollectedAmount >= RequiredAmount;";
 
-            _ = command.Parameters.AddWithValue("$collectedState", (int)ProjectMaterialState.Collected);
+            _ = command.Parameters.AddWithValue(
+                "$collectedState",
+                (int)ProjectMaterialState.Collected);
+
             _ = command.ExecuteNonQuery();
         }
     }
 
-    private static bool ColumnExists(SqliteConnection connection, string tableName, string columnName)
+    private static bool ColumnExists(
+        SqliteConnection connection,
+        string tableName,
+        string columnName)
     {
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText = $"PRAGMA table_info({tableName});";
@@ -123,8 +146,13 @@ public class DatabaseService
 
         while(reader.Read())
         {
-            if(string.Equals(reader.GetString(1), columnName, StringComparison.OrdinalIgnoreCase))
+            if(string.Equals(
+                reader.GetString(1),
+                columnName,
+                StringComparison.OrdinalIgnoreCase))
+            {
                 return true;
+            }
         }
 
         return false;

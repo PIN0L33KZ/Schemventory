@@ -12,7 +12,10 @@ internal class ProjectService
         _databaseService = databaseService;
     }
 
-    internal void Add(Project project, SqliteConnection connection, SqliteTransaction transaction)
+    internal void Add(
+        Project project,
+        SqliteConnection connection,
+        SqliteTransaction transaction)
     {
         using SqliteCommand command = connection.CreateCommand();
         command.Transaction = transaction;
@@ -44,7 +47,10 @@ internal class ProjectService
         _ = command.ExecuteNonQuery();
     }
 
-    internal void Update(Project project, SqliteConnection connection, SqliteTransaction transaction)
+    internal void Update(
+        Project project,
+        SqliteConnection connection,
+        SqliteTransaction transaction)
     {
         using SqliteCommand command = connection.CreateCommand();
         command.Transaction = transaction;
@@ -99,7 +105,8 @@ internal class ProjectService
                 SchematicPath,
                 CreatedAtUtc,
                 LastOpenedAtUtc
-            FROM Projects;";
+            FROM Projects
+            ORDER BY LastOpenedAtUtc DESC;";
 
         using SqliteDataReader reader = command.ExecuteReader();
 
