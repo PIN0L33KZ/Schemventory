@@ -39,6 +39,12 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+	  <Compile Remove="App\Theme\**" />
+	  <EmbeddedResource Remove="App\Theme\**" />
+	  <None Remove="App\Theme\**" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<Content Include="AppIcon.ico" />
 	</ItemGroup>
 
