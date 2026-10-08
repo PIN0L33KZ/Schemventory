@@ -12,10 +12,7 @@ internal class ProjectService
         _databaseService = databaseService;
     }
 
-    internal void Add(
-        Project project,
-        SqliteConnection connection,
-        SqliteTransaction transaction)
+    internal void Add(Project project, SqliteConnection connection, SqliteTransaction transaction)
     {
         using SqliteCommand command = connection.CreateCommand();
         command.Transaction = transaction;
@@ -38,7 +35,9 @@ internal class ProjectService
             $lastOpenedAtUtc
         );";
 
-        _ = command.Parameters.AddWithValue("$id", project.Id);
+        SqliteParameter idParameter = command.Parameters.Add("$id", SqliteType.Text);
+        idParameter.Value = project.Id.ToString("D");
+
         _ = command.Parameters.AddWithValue("$name", project.Name);
         _ = command.Parameters.AddWithValue("$schematicPath", project.SchematicPath);
         _ = command.Parameters.AddWithValue("$createdAtUtc", project.CreatedAtUtc.ToString("O"));
@@ -47,10 +46,7 @@ internal class ProjectService
         _ = command.ExecuteNonQuery();
     }
 
-    internal void Update(
-        Project project,
-        SqliteConnection connection,
-        SqliteTransaction transaction)
+    internal void Update(Project project, SqliteConnection connection, SqliteTransaction transaction)
     {
         using SqliteCommand command = connection.CreateCommand();
         command.Transaction = transaction;
@@ -63,7 +59,9 @@ internal class ProjectService
             LastOpenedAtUtc = $lastOpenedAtUtc
         WHERE Id = $id;";
 
-        _ = command.Parameters.AddWithValue("$id", project.Id);
+        SqliteParameter idParameter = command.Parameters.Add("$id", SqliteType.Text);
+        idParameter.Value = project.Id.ToString("D");
+
         _ = command.Parameters.AddWithValue("$name", project.Name);
         _ = command.Parameters.AddWithValue("$schematicPath", project.SchematicPath);
         _ = command.Parameters.AddWithValue("$lastOpenedAtUtc", project.LastOpenedAtUtc.ToString("O"));
@@ -83,7 +81,8 @@ internal class ProjectService
             DELETE FROM Projects
             WHERE Id = $id;";
 
-        _ = command.Parameters.AddWithValue("$id", projectId);
+        SqliteParameter idParameter = command.Parameters.Add("$id", SqliteType.Text);
+        idParameter.Value = projectId.ToString("D");
 
         var affectedRows = command.ExecuteNonQuery();
 
