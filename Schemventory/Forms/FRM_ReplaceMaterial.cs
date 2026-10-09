@@ -1,4 +1,5 @@
-﻿using Schemventory.App;
+﻿using Serilog;
+using Schemventory.App;
 using Schemventory.Data;
 using Schemventory.Services;
 
@@ -6,6 +7,7 @@ namespace Schemventory.Forms;
 
 public partial class FRM_ReplaceMaterial : Form
 {
+    private const string LogContext = "(FRM_ReplaceMaterial)";
     private const string WindowName = $"Replace material - {Constants.AppName}";
 
     private readonly ProjectMaterial _material;
@@ -21,10 +23,7 @@ public partial class FRM_ReplaceMaterial : Form
     public string? ReplacementItemId => SelectedItem?.Id;
     public bool ResetRequested { get; private set; }
 
-    public FRM_ReplaceMaterial(
-        ProjectMaterial material,
-        ItemDataProvider itemDataProvider,
-        ItemIconService itemIconService)
+    public FRM_ReplaceMaterial(ProjectMaterial material, ItemDataProvider itemDataProvider, ItemIconService itemIconService)
     {
         InitializeComponent();
 
@@ -44,22 +43,17 @@ public partial class FRM_ReplaceMaterial : Form
         InitializeListView();
         InitializeForm();
 
-        // These events are not wired in the designer.
         LST_Items.RetrieveVirtualItem += LST_Items_RetrieveVirtualItem;
         FormClosed += FRM_ReplaceMaterial_FormClosed;
     }
 
     private void InitializeForm()
     {
-        LBL_Description.Text =
-            $"Choose a material to replace {GetDisplayName(_material.ItemId)} with.";
-
+        LBL_Description.Text = $"Choose a material to replace {GetDisplayName(_material.ItemId)} with.";
         LBL_ItemName.Text = "No material selected";
         LBL_ItemId.Text = string.Empty;
         LBL_StackSize.Text = string.Empty;
-
         PBX_Icon.Image = null;
-
         BTN_Replace.Enabled = false;
         BTN_Reset.Visible = !string.IsNullOrWhiteSpace(_material.ReplacementItemId);
     }
@@ -75,26 +69,20 @@ public partial class FRM_ReplaceMaterial : Form
 
     private async void FRM_ReplaceMaterial_Load(object? sender, EventArgs e)
     {
+        Log.Debug("{LogContext} Replace material dialogue opened. ProjectId={ProjectId}, ItemId={ItemId}", LogContext, _material.ProjectId, _material.ItemId);
+
         try
         {
             BTN_Replace.Enabled = false;
             TBX_Search.Enabled = false;
             LST_Items.Enabled = false;
 
-            IReadOnlyCollection<ItemData> items =
-                await _itemDataProvider.GetItemsAsync();
+            IReadOnlyCollection<ItemData> items = await _itemDataProvider.GetItemsAsync();
 
             var originalItemId = NormalizeItemId(_material.ItemId);
 
-            _items = items
-                .Where(x => !string.Equals(
-                    x.Id,
-                    originalItemId,
-                    StringComparison.Ordinal))
-                .Select(x => new ItemSearchEntry(
-                    x,
-                    GetDisplayName(x.Id),
-                    GetFullItemId(x.Id)))
+            _items = items.Where(x => !string.Equals(x.Id, originalItemId, StringComparison.Ordinal))
+                .Select(x => new ItemSearchEntry(x, GetDisplayName(x.Id), GetFullItemId(x.Id)))
                 .OrderBy(x => x.DisplayName, StringComparer.CurrentCultureIgnoreCase)
                 .ToList();
 
@@ -104,16 +92,15 @@ public partial class FRM_ReplaceMaterial : Form
 
             TBX_Search.Enabled = true;
             LST_Items.Enabled = true;
-
             TBX_Search.Focus();
+
+            Log.Debug("{LogContext} Replacement items loaded. Count={Count}", LogContext, _items.Count);
         }
         catch(Exception exception)
         {
-            _ = MessageBox.Show(
-                $"The material list could not be loaded.\n\n{exception.Message}",
-                Constants.AppName,
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Error);
+            Log.Error(exception, "{LogContext} Failed to load replacement material list. ItemId={ItemId}", LogContext, _material.ItemId);
+
+            _ = MessageBox.Show($"The material list could not be loaded.\n\n{exception.Message}", Constants.AppName, MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
@@ -135,21 +122,12 @@ public partial class FRM_ReplaceMaterial : Form
 
         _filteredItems = string.IsNullOrWhiteSpace(searchText)
             ? [.. _items]
-            : _items
-                .Where(x =>
-                    x.Item.Id.Contains(
-                        searchText,
-                        StringComparison.OrdinalIgnoreCase) ||
-                    x.FullItemId.Contains(
-                        searchText,
-                        StringComparison.OrdinalIgnoreCase) ||
-                    x.DisplayName.Contains(
-                        searchText,
-                        StringComparison.CurrentCultureIgnoreCase))
-                .ToList();
+            : _items.Where(x => x.Item.Id.Contains(searchText, StringComparison.OrdinalIgnoreCase) || x.FullItemId.Contains(searchText, StringComparison.OrdinalIgnoreCase) || x.DisplayName.Contains(searchText, StringComparison.CurrentCultureIgnoreCase)).ToList();
 
         ClearPreview();
         UpdateVirtualList();
+
+        Log.Debug("{LogContext} Replacement search applied. Search={Search}, ResultCount={ResultCount}", LogContext, searchText, _filteredItems.Count);
     }
 
     private void UpdateVirtualList()
@@ -169,9 +147,7 @@ public partial class FRM_ReplaceMaterial : Form
         LST_Items.Invalidate();
     }
 
-    private void LST_Items_RetrieveVirtualItem(
-        object? sender,
-        RetrieveVirtualItemEventArgs e)
+    private void LST_Items_RetrieveVirtualItem(object? sender, RetrieveVirtualItemEventArgs e)
     {
         if(e.ItemIndex < 0 || e.ItemIndex >= _filteredItems.Count)
         {
@@ -180,7 +156,6 @@ public partial class FRM_ReplaceMaterial : Form
         }
 
         ItemSearchEntry entry = _filteredItems[e.ItemIndex];
-
         ListViewItem listViewItem = new(entry.DisplayName);
 
         _ = listViewItem.SubItems.Add(entry.FullItemId);
@@ -209,10 +184,11 @@ public partial class FRM_ReplaceMaterial : Form
         SelectedItem = entry.Item;
 
         BTN_Replace.Enabled = true;
-
         LBL_ItemName.Text = entry.DisplayName;
         LBL_ItemId.Text = entry.FullItemId;
         LBL_StackSize.Text = $"Stack size: {entry.Item.MaxStackSize}";
+
+        Log.Debug("{LogContext} Replacement item selected. ItemId={ItemId}", LogContext, entry.FullItemId);
 
         await LoadPreviewIconAsync(entry.Item.Id);
     }
@@ -224,15 +200,11 @@ public partial class FRM_ReplaceMaterial : Form
 
         _previewCancellationTokenSource = new CancellationTokenSource();
 
-        CancellationToken cancellationToken =
-            _previewCancellationTokenSource.Token;
+        CancellationToken cancellationToken = _previewCancellationTokenSource.Token;
 
         try
         {
-            Image image = await _itemIconService.GetItemIconAsync(
-                itemId,
-                64,
-                cancellationToken);
+            Image image = await _itemIconService.GetItemIconAsync(itemId, 64, cancellationToken);
 
             if(cancellationToken.IsCancellationRequested || IsDisposed)
             {
@@ -246,9 +218,12 @@ public partial class FRM_ReplaceMaterial : Form
         }
         catch(OperationCanceledException)
         {
+            Log.Debug("{LogContext} Preview icon loading cancelled. ItemId={ItemId}", LogContext, itemId);
         }
-        catch
+        catch(Exception exception)
         {
+            Log.Warning(exception, "{LogContext} Failed to load preview icon. ItemId={ItemId}", LogContext, itemId);
+
             if(IsDisposed)
                 return;
 
@@ -263,9 +238,7 @@ public partial class FRM_ReplaceMaterial : Form
         _previewCancellationTokenSource?.Cancel();
 
         SelectedItem = null;
-
         BTN_Replace.Enabled = false;
-
         LBL_ItemName.Text = "No material selected";
         LBL_ItemId.Text = string.Empty;
         LBL_StackSize.Text = string.Empty;
@@ -286,6 +259,8 @@ public partial class FRM_ReplaceMaterial : Form
 
     private void BTN_Reset_Click(object? sender, EventArgs e)
     {
+        Log.Debug("{LogContext} Replacement reset requested. ProjectId={ProjectId}, ItemId={ItemId}", LogContext, _material.ProjectId, _material.ItemId);
+
         ResetRequested = true;
         SelectedItem = null;
 
@@ -298,12 +273,16 @@ public partial class FRM_ReplaceMaterial : Form
         if(SelectedItem is null)
             return;
 
+        Log.Debug("{LogContext} Replacement confirmed. ProjectId={ProjectId}, OriginalItemId={OriginalItemId}, ReplacementItemId={ReplacementItemId}", LogContext, _material.ProjectId, _material.ItemId, SelectedItem.Id);
+
         DialogResult = DialogResult.OK;
         Close();
     }
 
     private void BTN_Cancel_Click(object? sender, EventArgs e)
     {
+        Log.Debug("{LogContext} Replace material dialogue cancelled. ItemId={ItemId}", LogContext, _material.ItemId);
+
         DialogResult = DialogResult.Cancel;
         Close();
     }
@@ -324,16 +303,12 @@ public partial class FRM_ReplaceMaterial : Form
     {
         const string prefix = "minecraft:";
 
-        return itemId.StartsWith(prefix, StringComparison.Ordinal)
-            ? itemId[prefix.Length..]
-            : itemId;
+        return itemId.StartsWith(prefix, StringComparison.Ordinal) ? itemId[prefix.Length..] : itemId;
     }
 
     private static string GetFullItemId(string itemId)
     {
-        return itemId.StartsWith("minecraft:", StringComparison.Ordinal)
-            ? itemId
-            : $"minecraft:{itemId}";
+        return itemId.StartsWith("minecraft:", StringComparison.Ordinal) ? itemId : $"minecraft:{itemId}";
     }
 
     private static string GetDisplayName(string itemId)
@@ -342,13 +317,8 @@ public partial class FRM_ReplaceMaterial : Form
 
         name = name.Replace('_', ' ');
 
-        return System.Globalization.CultureInfo.CurrentCulture
-            .TextInfo
-            .ToTitleCase(name);
+        return System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(name);
     }
 
-    private sealed record ItemSearchEntry(
-        ItemData Item,
-        string DisplayName,
-        string FullItemId);
+    private sealed record ItemSearchEntry(ItemData Item, string DisplayName, string FullItemId);
 }

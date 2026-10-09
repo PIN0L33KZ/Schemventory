@@ -1,10 +1,12 @@
-﻿using Schemventory.Data;
+﻿using Serilog;
+using Schemventory.Data;
 using Schemventory.Data.EventArguments;
 
 namespace Schemventory;
 
 public partial class ProjectControl : UserControl
 {
+    private const string LogContext = "(ProjectControl)";
     private readonly Project _project;
     private readonly System.Windows.Forms.Timer _hoverTimer;
     private bool _isHovered;
@@ -33,10 +35,12 @@ public partial class ProjectControl : UserControl
     private void ProjectControl_Load(object sender, EventArgs e)
     {
         LoadProjectData();
+        Log.Debug("{LogContext} Project control initialised. ProjectId={ProjectId}, Name={ProjectName}", LogContext, _project.Id, _project.Name);
     }
 
     private void ControlClickedHandler(object? sender, EventArgs e)
     {
+        Log.Debug("{LogContext} Project control clicked. ProjectId={ProjectId}", LogContext, _project.Id);
         ControlClicked?.Invoke(this, new ProjectControlEventArgs(_project));
     }
 
@@ -104,11 +108,13 @@ public partial class ProjectControl : UserControl
 
     private void IBN_EditProject_Click(object sender, EventArgs e)
     {
+        Log.Debug("{LogContext} Project edit requested. ProjectId={ProjectId}", LogContext, _project.Id);
         EditRequested?.Invoke(this, new ProjectControlEventArgs(_project));
     }
 
     private void IBN_DeleteProject_Click(object sender, EventArgs e)
     {
+        Log.Debug("{LogContext} Project deletion requested. ProjectId={ProjectId}", LogContext, _project.Id);
         DeleteRequested?.Invoke(this, new ProjectControlEventArgs(_project));
     }
 
@@ -121,5 +127,6 @@ public partial class ProjectControl : UserControl
     public void RefreshProject()
     {
         LoadProjectData();
+        Log.Debug("{LogContext} Project control refreshed. ProjectId={ProjectId}", LogContext, _project.Id);
     }
 }

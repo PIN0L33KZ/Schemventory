@@ -1,4 +1,5 @@
 ﻿using fNbt;
+using Serilog;
 using Schemventory.Data;
 using Schemventory.Interfaces;
 
@@ -6,6 +7,8 @@ namespace Schemventory.Services;
 
 public sealed class LitematicReader : ISchematicReader
 {
+    private const string LogContext = "(LitematicReader)";
+
     public bool CanRead(string filePath)
     {
         return Path.GetExtension(filePath).Equals(".litematic", StringComparison.OrdinalIgnoreCase);
@@ -13,41 +16,48 @@ public sealed class LitematicReader : ISchematicReader
 
     public SchematicData Read(string filePath)
     {
-        NbtFile nbtFile = new();
-        _ = nbtFile.LoadFromFile(filePath);
+        Log.Debug("{LogContext} Reading litematic file. Path={Path}", LogContext, filePath);
 
-        NbtCompound regions = nbtFile.RootTag.Get<NbtCompound>("Regions") ??
-            throw new InvalidDataException("Regions compound is missing.");
-
-        Dictionary<string, BlockStateCounter> blockStates = new(StringComparer.Ordinal);
-
-        foreach(NbtTag tag in regions)
+        try
         {
-            if(tag is NbtCompound region)
-                ReadRegion(region, blockStates);
-        }
+            NbtFile nbtFile = new();
+            _ = nbtFile.LoadFromFile(filePath);
 
-        return new SchematicData
-        {
-            Format = "Litematic",
-            BlockStates = blockStates.Values.Select(x => new BlockStateCount
+            NbtCompound regions = nbtFile.RootTag.Get<NbtCompound>("Regions") ?? throw new InvalidDataException("Regions compound is missing.");
+            Dictionary<string, BlockStateCounter> blockStates = new(StringComparer.Ordinal);
+
+            foreach(NbtTag tag in regions)
             {
-                BlockState = x.BlockState,
-                Count = x.Count
-            }).ToList()
-        };
+                if(tag is NbtCompound region)
+                    ReadRegion(region, blockStates);
+            }
+
+            SchematicData result = new()
+            {
+                Format = "Litematic",
+                BlockStates = blockStates.Values.Select(x => new BlockStateCount
+                {
+                    BlockState = x.BlockState,
+                    Count = x.Count
+                }).ToList()
+            };
+
+            Log.Debug("{LogContext} Litematic file read successfully. Path={Path}, BlockStateCount={BlockStateCount}", LogContext, filePath, result.BlockStates.Count);
+
+            return result;
+        }
+        catch(Exception exception)
+        {
+            Log.Error(exception, "{LogContext} Failed to read litematic file. Path={Path}", LogContext, filePath);
+            throw;
+        }
     }
 
     private static void ReadRegion(NbtCompound region, Dictionary<string, BlockStateCounter> result)
     {
-        NbtList paletteTag = region.Get<NbtList>("BlockStatePalette") ??
-            throw new InvalidDataException("BlockStatePalette is missing.");
-
-        NbtLongArray blockStatesTag = region.Get<NbtLongArray>("BlockStates") ??
-            throw new InvalidDataException("BlockStates is missing.");
-
-        NbtCompound size = region.Get<NbtCompound>("Size") ??
-            throw new InvalidDataException("Size is missing.");
+        NbtList paletteTag = region.Get<NbtList>("BlockStatePalette") ?? throw new InvalidDataException("BlockStatePalette is missing.");
+        NbtLongArray blockStatesTag = region.Get<NbtLongArray>("BlockStates") ?? throw new InvalidDataException("BlockStates is missing.");
+        NbtCompound size = region.Get<NbtCompound>("Size") ?? throw new InvalidDataException("Size is missing.");
 
         List<BlockStateEntry> palette = ReadPalette(paletteTag);
 
@@ -84,8 +94,7 @@ public sealed class LitematicReader : ISchematicReader
             if(tag is not NbtCompound blockState)
                 continue;
 
-            NbtString name = blockState.Get<NbtString>("Name") ??
-                throw new InvalidDataException("Palette entry does not contain a Name.");
+            NbtString name = blockState.Get<NbtString>("Name") ?? throw new InvalidDataException("Palette entry does not contain a Name.");
 
             Dictionary<string, string> properties = new(StringComparer.Ordinal);
             NbtCompound? propertiesTag = blockState.Get<NbtCompound>("Properties");
@@ -158,8 +167,7 @@ public sealed class LitematicReader : ISchematicReader
 
     private static int ReadInt(NbtCompound compound, string name)
     {
-        return compound.Get<NbtInt>(name)?.Value ??
-            throw new InvalidDataException($"Missing tag '{name}'.");
+        return compound.Get<NbtInt>(name)?.Value ?? throw new InvalidDataException($"Missing tag '{name}'.");
     }
 
     private sealed class BlockStateCounter

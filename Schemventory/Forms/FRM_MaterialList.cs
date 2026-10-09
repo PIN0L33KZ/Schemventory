@@ -1,4 +1,5 @@
-﻿using Schemventory.App;
+﻿using Serilog;
+using Schemventory.App;
 using Schemventory.Data;
 using Schemventory.Services;
 
@@ -6,6 +7,7 @@ namespace Schemventory.Forms;
 
 public partial class FRM_MaterialList : Form
 {
+    private const string LogContext = "(FRM_MaterialList)";
     private const string WindowName = $"Material list - {Constants.AppName}";
 
     private readonly Project _project;
@@ -39,6 +41,8 @@ public partial class FRM_MaterialList : Form
 
     private async void FRM_MaterialList_Load(object sender, EventArgs e)
     {
+        Log.Debug("{LogContext} Material list window opened. ProjectId={ProjectId}, ProjectName={ProjectName}", LogContext, _project.Id, _project.Name);
+
         SuspendLayout();
 
         try
@@ -48,6 +52,13 @@ public partial class FRM_MaterialList : Form
             ApplyMaterialView(resetScrollPosition: true);
 
             await Task.Yield();
+
+            Log.Debug("{LogContext} Material list ready. ProjectId={ProjectId}, MaterialCount={MaterialCount}", LogContext, _project.Id, _materials.Count);
+        }
+        catch(Exception exception)
+        {
+            Log.Error(exception, "{LogContext} Failed to initialise material list. ProjectId={ProjectId}", LogContext, _project.Id);
+            throw;
         }
         finally
         {
@@ -58,6 +69,8 @@ public partial class FRM_MaterialList : Form
 
     private void MaterialControl_StateChanged(object? sender, EventArgs e)
     {
+        Log.Debug("{LogContext} Material state changed. ProjectId={ProjectId}", LogContext, _project.Id);
+
         ApplyMaterialView(resetScrollPosition: false);
         UpdateStatistics();
     }
@@ -70,8 +83,7 @@ public partial class FRM_MaterialList : Form
 
     private void UpdateStatistics()
     {
-        Dictionary<string, (long RequiredAmount, long CollectedAmount)> groupedMaterials =
-            new(StringComparer.Ordinal);
+        Dictionary<string, (long RequiredAmount, long CollectedAmount)> groupedMaterials = new(StringComparer.Ordinal);
 
         foreach(ProjectMaterial material in _materials)
         {
@@ -82,13 +94,9 @@ public partial class FRM_MaterialList : Form
             var collectedAmount = Math.Min(material.CollectedAmount, material.RequiredAmount);
 
             if(groupedMaterials.TryGetValue(itemId, out (long RequiredAmount, long CollectedAmount) current))
-            {
                 groupedMaterials[itemId] = (current.RequiredAmount + material.RequiredAmount, current.CollectedAmount + collectedAmount);
-            }
             else
-            {
                 groupedMaterials[itemId] = (material.RequiredAmount, collectedAmount);
-            }
         }
 
         long collectedBlocks = 0;
@@ -104,35 +112,26 @@ public partial class FRM_MaterialList : Form
                 collectedMaterials++;
         }
 
-        LBL_TotalBlocks.Text =
-            $"{collectedBlocks}/{totalBlocks} Blocks collected";
-
-        LBL_DifferentMaterialsCount.Text =
-            $"{collectedMaterials}/{groupedMaterials.Count} Materials collected";
+        LBL_TotalBlocks.Text = $"{collectedBlocks}/{totalBlocks} Blocks collected";
+        LBL_DifferentMaterialsCount.Text = $"{collectedMaterials}/{groupedMaterials.Count} Materials collected";
     }
 
     private static string NormalizeItemId(string itemId)
     {
         const string prefix = "minecraft:";
 
-        return itemId.StartsWith(prefix, StringComparison.Ordinal)
-            ? itemId[prefix.Length..]
-            : itemId;
+        return itemId.StartsWith(prefix, StringComparison.Ordinal) ? itemId[prefix.Length..] : itemId;
     }
 
     private void LoadMaterialList()
     {
-        _materials =
-            _projectMaterialService.GetByProjectId(_project.Id);
+        _materials = _projectMaterialService.GetByProjectId(_project.Id);
+        Log.Debug("{LogContext} Project materials loaded. ProjectId={ProjectId}, Count={Count}", LogContext, _project.Id, _materials.Count);
     }
 
     private void ApplyMaterialView(bool resetScrollPosition)
     {
-        _viewMaterials = _materials
-            .Where(ShouldShowMaterial)
-            .OrderBy(x => GetStateSortOrder(x.State))
-            .ThenByDescending(x => x.RequiredAmount)
-            .ToList();
+        _viewMaterials = _materials.Where(ShouldShowMaterial).OrderBy(x => GetStateSortOrder(x.State)).ThenByDescending(x => x.RequiredAmount).ToList();
 
         var hasVisibleMaterials = _viewMaterials.Count > 0;
 
@@ -140,8 +139,9 @@ public partial class FRM_MaterialList : Form
         LBL_FilterWarn.Visible = !hasVisibleMaterials;
 
         PNL_MaterialList.SetMaterials(_viewMaterials, resetScrollPosition);
-
         UpdateScrollBar();
+
+        Log.Debug("{LogContext} Material view applied. ProjectId={ProjectId}, VisibleCount={VisibleCount}, ResetScroll={ResetScroll}", LogContext, _project.Id, _viewMaterials.Count, resetScrollPosition);
     }
 
     private bool ShouldShowMaterial(ProjectMaterial material)
@@ -177,17 +177,13 @@ public partial class FRM_MaterialList : Form
         VSB_Main.LargeChange = viewportRows;
         VSB_Main.SmallChange = 1;
 
-        var maximumValue =
-            PNL_MaterialList.MaximumScrollRow;
-
+        var maximumValue = PNL_MaterialList.MaximumScrollRow;
         var scrollValue = Math.Clamp(PNL_MaterialList.ScrollRow, 0, maximumValue);
 
         if(VSB_Main.Value != scrollValue)
             VSB_Main.Value = scrollValue;
 
-        VSB_Main.Visible =
-            PNL_MaterialList.Visible &&
-            maximumValue > 0;
+        VSB_Main.Visible = PNL_MaterialList.Visible && maximumValue > 0;
     }
 
     private void VSB_Main_Scroll(object? sender, ScrollEventArgs e)
@@ -221,26 +217,32 @@ public partial class FRM_MaterialList : Form
 
     private void CHB_ShowMissing_CheckedChanged(object sender, EventArgs e)
     {
+        Log.Debug("{LogContext} Missing filter changed. Checked={Checked}", LogContext, CHB_ShowMissing.Checked);
         ApplyMaterialView(resetScrollPosition: true);
     }
 
     private void CBX_ShowReplaced_CheckedChanged(object sender, EventArgs e)
     {
+        Log.Debug("{LogContext} Replaced filter changed. Checked={Checked}", LogContext, CBX_ShowReplaced.Checked);
         ApplyMaterialView(resetScrollPosition: true);
     }
 
     private void CBX_ShowCollected_CheckedChanged(object sender, EventArgs e)
     {
+        Log.Debug("{LogContext} Collected filter changed. Checked={Checked}", LogContext, CBX_ShowCollected.Checked);
         ApplyMaterialView(resetScrollPosition: true);
     }
 
     private void CBX_ShowIgnored_CheckedChanged(object sender, EventArgs e)
     {
+        Log.Debug("{LogContext} Ignored filter changed. Checked={Checked}", LogContext, CBX_ShowIgnored.Checked);
         ApplyMaterialView(resetScrollPosition: true);
     }
 
     private void IBN_About_Click(object sender, EventArgs e)
     {
+        Log.Debug("{LogContext} About dialogue requested.", LogContext);
+
         using FRM_About aboutForm = new();
 
         _ = aboutForm.ShowDialog(this);

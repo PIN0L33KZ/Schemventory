@@ -1,10 +1,13 @@
 ﻿using Microsoft.Data.Sqlite;
+using Serilog;
 using Schemventory.Data;
 
 namespace Schemventory.Services;
 
 internal class ProjectService
 {
+    private const string LogContext = "(ProjectService)";
+
     private readonly DatabaseService _databaseService;
 
     public ProjectService(DatabaseService databaseService)
@@ -44,6 +47,8 @@ internal class ProjectService
         _ = command.Parameters.AddWithValue("$lastOpenedAtUtc", project.LastOpenedAtUtc.ToString("O"));
 
         _ = command.ExecuteNonQuery();
+
+        Log.Debug("{LogContext} Project added. ProjectId={ProjectId}, Name={ProjectName}", LogContext, project.Id, project.Name);
     }
 
     internal void Update(Project project, SqliteConnection connection, SqliteTransaction transaction)
@@ -69,7 +74,12 @@ internal class ProjectService
         var affectedRows = command.ExecuteNonQuery();
 
         if(affectedRows == 0)
+        {
+            Log.Warning("{LogContext} Project update failed because the project does not exist. ProjectId={ProjectId}", LogContext, project.Id);
             throw new InvalidOperationException($"Project '{project.Id}' does not exist.");
+        }
+
+        Log.Debug("{LogContext} Project updated. ProjectId={ProjectId}, Name={ProjectName}", LogContext, project.Id, project.Name);
     }
 
     public void Delete(Guid projectId)
@@ -87,7 +97,12 @@ internal class ProjectService
         var affectedRows = command.ExecuteNonQuery();
 
         if(affectedRows == 0)
+        {
+            Log.Warning("{LogContext} Project deletion failed because the project does not exist. ProjectId={ProjectId}", LogContext, projectId);
             throw new InvalidOperationException($"Project '{projectId}' does not exist.");
+        }
+
+        Log.Debug("{LogContext} Project deleted. ProjectId={ProjectId}", LogContext, projectId);
     }
 
     public IReadOnlyCollection<Project> GetAll()
@@ -122,6 +137,8 @@ internal class ProjectService
 
             projects.Add(project);
         }
+
+        Log.Debug("{LogContext} Projects loaded. Count={Count}", LogContext, projects.Count);
 
         return projects;
     }

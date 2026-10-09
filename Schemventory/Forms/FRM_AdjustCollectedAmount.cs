@@ -1,17 +1,21 @@
 ﻿using Guna.UI2.WinForms;
+using Serilog;
 using Schemventory.App;
 
 namespace Schemventory.Forms;
 
 public partial class FRM_AdjustCollectedAmount : Form
 {
+    private const string LogContext = "(FRM_AdjustCollectedAmount)";
     private const string WindowName = $"Adjust collected amount - {Constants.AppName}";
+
     private enum AmountDirection
     {
         None,
         Add,
         Remove
     }
+
     private readonly ProjectMaterial _material;
     private AmountDirection _direction = AmountDirection.None;
     private bool _updatingValues;
@@ -27,6 +31,8 @@ public partial class FRM_AdjustCollectedAmount : Form
         Text = WindowName;
 
         InitializeValues();
+
+        Log.Debug("{LogContext} Adjust collected amount dialogue opened. ProjectId={ProjectId}, ItemId={ItemId}, CollectedAmount={CollectedAmount}, RequiredAmount={RequiredAmount}", LogContext, _material.ProjectId, _material.ItemId, _material.CollectedAmount, _material.RequiredAmount);
     }
 
     private void InitializeValues()
@@ -37,7 +43,6 @@ public partial class FRM_AdjustCollectedAmount : Form
         NUD_Blocks.Value = 0;
 
         _updatingValues = false;
-
         _direction = AmountDirection.None;
 
         UpdateLimits();
@@ -210,7 +215,12 @@ public partial class FRM_AdjustCollectedAmount : Form
         AmountChange = (stacks * _material.MaxStackSize) + blocks;
 
         if(AmountChange == 0)
+        {
+            Log.Debug("{LogContext} Save ignored because amount change is zero. ItemId={ItemId}", LogContext, _material.ItemId);
             return;
+        }
+
+        Log.Debug("{LogContext} Collected amount adjustment confirmed. ProjectId={ProjectId}, ItemId={ItemId}, AmountChange={AmountChange}", LogContext, _material.ProjectId, _material.ItemId, AmountChange);
 
         DialogResult = DialogResult.OK;
         Close();
@@ -218,6 +228,8 @@ public partial class FRM_AdjustCollectedAmount : Form
 
     private void BTN_Cancel_Click(object sender, EventArgs e)
     {
+        Log.Debug("{LogContext} Adjust collected amount dialogue cancelled. ItemId={ItemId}", LogContext, _material.ItemId);
+
         DialogResult = DialogResult.Cancel;
         Close();
     }

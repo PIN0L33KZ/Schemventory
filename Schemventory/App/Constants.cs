@@ -7,6 +7,7 @@ internal class Constants
     public const string AppWebsite = "https://pinoleekz.de/";
 
     public static readonly string CacheDirectory = Path.Combine(Helper.GetAppDataPath(), "Cache");
+    public static readonly string LogDirectory = Path.Combine(Helper.GetAppDataPath(), "logs");
     public static readonly string AppDatabasePath = Path.Combine(Helper.GetAppDataPath(), "Schemventory.db");
 
     public static readonly Color MissingColor = Color.FromArgb(217, 74, 74);

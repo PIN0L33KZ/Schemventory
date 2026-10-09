@@ -1,3 +1,4 @@
+﻿using Serilog;
 using Schemventory.App;
 using Schemventory.Data;
 using System.Net;
@@ -8,7 +9,9 @@ namespace Schemventory.Services;
 
 public sealed class ItemDataProvider
 {
+    private const string LogContext = "(ItemDataProvider)";
     private const string DataUrl = @"https://raw.githubusercontent.com/misode/mcmeta/summary/item_components/data.json";
+
     private static readonly TimeSpan CacheLifetime = TimeSpan.FromDays(7);
 
     private static readonly HttpClient HttpClient = new()
@@ -31,6 +34,8 @@ public sealed class ItemDataProvider
         _cacheFilePath = Path.Combine(Constants.CacheDirectory, "items.json");
         _cacheMetadataFilePath = Path.Combine(Constants.CacheDirectory, "items.meta.json");
         _legacyCacheFilePath = Path.Combine(Constants.CacheDirectory, "item_components.json");
+
+        Log.Debug("{LogContext} Item data cache initialised. CachePath={CachePath}", LogContext, _cacheFilePath);
     }
 
     public async Task<int> GetMaxStackSizeAsync(string itemId, CancellationToken cancellationToken = default)
@@ -39,9 +44,7 @@ public sealed class ItemDataProvider
 
         var normalizedId = NormalizeItemId(itemId);
 
-        return _itemsById!.TryGetValue(normalizedId, out ItemData? item)
-            ? item.MaxStackSize
-            : 64;
+        return _itemsById!.TryGetValue(normalizedId, out ItemData? item) ? item.MaxStackSize : 64;
     }
 
     public async Task<IReadOnlyCollection<ItemData>> GetItemsAsync(CancellationToken cancellationToken = default)
@@ -66,7 +69,10 @@ public sealed class ItemDataProvider
             var cacheLoaded = await TryLoadCompactCacheAsync(cancellationToken);
 
             if(cacheLoaded && await IsCacheFreshAsync(cancellationToken))
+            {
+                Log.Debug("{LogContext} Using fresh item data cache. ItemCount={ItemCount}", LogContext, _items?.Count ?? 0);
                 return;
+            }
 
             if(!cacheLoaded)
                 cacheLoaded = await TryMigrateLegacyCacheAsync(cancellationToken);
@@ -80,15 +86,14 @@ public sealed class ItemDataProvider
                 {
                     if(cacheLoaded)
                     {
-                        await WriteCacheMetadataAsync(
-                            new CacheMetadata
-                            {
-                                LastCheckedUtc = DateTime.UtcNow,
-                                ETag = refreshResult.ETag ?? metadata?.ETag,
-                                LastModified = refreshResult.LastModified ?? metadata?.LastModified
-                            },
-                            cancellationToken);
+                        await WriteCacheMetadataAsync(new CacheMetadata
+                        {
+                            LastCheckedUtc = DateTime.UtcNow,
+                            ETag = refreshResult.ETag ?? metadata?.ETag,
+                            LastModified = refreshResult.LastModified ?? metadata?.LastModified
+                        }, cancellationToken);
 
+                        Log.Debug("{LogContext} Item data cache revalidated without changes.", LogContext);
                         return;
                     }
 
@@ -100,32 +105,44 @@ public sealed class ItemDataProvider
                     LoadSourceData(refreshResult.Json);
                     await WriteCompactCacheAsync(cancellationToken);
 
-                    await WriteCacheMetadataAsync(
-                        new CacheMetadata
-                        {
-                            LastCheckedUtc = DateTime.UtcNow,
-                            ETag = refreshResult.ETag,
-                            LastModified = refreshResult.LastModified
-                        },
-                        cancellationToken);
+                    await WriteCacheMetadataAsync(new CacheMetadata
+                    {
+                        LastCheckedUtc = DateTime.UtcNow,
+                        ETag = refreshResult.ETag,
+                        LastModified = refreshResult.LastModified
+                    }, cancellationToken);
 
                     TryDeleteLegacyCache();
+
+                    Log.Information("{LogContext} Item data cache updated from remote source. ItemCount={ItemCount}", LogContext, _items?.Count ?? 0);
                     return;
                 }
             }
-            catch(HttpRequestException)
+            catch(HttpRequestException exception)
             {
                 if(cacheLoaded)
+                {
+                    Log.Warning(exception, "{LogContext} Item data refresh failed. Existing cache will be used.", LogContext);
                     return;
+                }
+
+                Log.Warning(exception, "{LogContext} Item data download failed and no cache is available.", LogContext);
             }
-            catch(OperationCanceledException) when(!cancellationToken.IsCancellationRequested)
+            catch(OperationCanceledException exception) when(!cancellationToken.IsCancellationRequested)
             {
                 if(cacheLoaded)
+                {
+                    Log.Warning(exception, "{LogContext} Item data refresh timed out. Existing cache will be used.", LogContext);
                     return;
+                }
+
+                Log.Warning(exception, "{LogContext} Item data refresh timed out and no cache is available.", LogContext);
             }
 
             _items = [];
             _itemsById = new Dictionary<string, ItemData>(StringComparer.Ordinal);
+
+            Log.Warning("{LogContext} Item data provider initialised with an empty data set.", LogContext);
         }
         finally
         {
@@ -147,20 +164,24 @@ public sealed class ItemDataProvider
                 return false;
 
             LoadCompactData(stackSizes);
+            Log.Debug("{LogContext} Item data loaded from compact cache. ItemCount={ItemCount}", LogContext, stackSizes.Count);
             return true;
         }
-        catch(JsonException)
+        catch(JsonException exception)
         {
+            Log.Warning(exception, "{LogContext} Compact item data cache is invalid and will be removed.", LogContext);
             TryDeleteFile(_cacheFilePath);
             TryDeleteFile(_cacheMetadataFilePath);
             return false;
         }
-        catch(IOException)
+        catch(IOException exception)
         {
+            Log.Warning(exception, "{LogContext} Failed to read compact item data cache.", LogContext);
             return false;
         }
-        catch(UnauthorizedAccessException)
+        catch(UnauthorizedAccessException exception)
         {
+            Log.Warning(exception, "{LogContext} Access to the compact item data cache was denied.", LogContext);
             return false;
         }
     }
@@ -177,27 +198,30 @@ public sealed class ItemDataProvider
             LoadSourceData(json);
             await WriteCompactCacheAsync(cancellationToken);
 
-            await WriteCacheMetadataAsync(
-                new CacheMetadata
-                {
-                    LastCheckedUtc = File.GetLastWriteTimeUtc(_legacyCacheFilePath)
-                },
-                cancellationToken);
+            await WriteCacheMetadataAsync(new CacheMetadata
+            {
+                LastCheckedUtc = File.GetLastWriteTimeUtc(_legacyCacheFilePath)
+            }, cancellationToken);
 
             TryDeleteLegacyCache();
+
+            Log.Information("{LogContext} Legacy item data cache migrated. ItemCount={ItemCount}", LogContext, _items?.Count ?? 0);
             return true;
         }
-        catch(JsonException)
+        catch(JsonException exception)
         {
+            Log.Warning(exception, "{LogContext} Legacy item data cache is invalid and will be removed.", LogContext);
             TryDeleteLegacyCache();
             return false;
         }
-        catch(IOException)
+        catch(IOException exception)
         {
+            Log.Warning(exception, "{LogContext} Failed to migrate legacy item data cache.", LogContext);
             return false;
         }
-        catch(UnauthorizedAccessException)
+        catch(UnauthorizedAccessException exception)
         {
+            Log.Warning(exception, "{LogContext} Access to the legacy item data cache was denied.", LogContext);
             return false;
         }
     }
@@ -221,11 +245,8 @@ public sealed class ItemDataProvider
         {
             var maxStackSize = 64;
 
-            if(item.Value.TryGetProperty("minecraft:max_stack_size", out JsonElement stackSizeElement) &&
-               stackSizeElement.TryGetInt32(out var parsedMaxStackSize))
-            {
+            if(item.Value.TryGetProperty("minecraft:max_stack_size", out JsonElement stackSizeElement) && stackSizeElement.TryGetInt32(out var parsedMaxStackSize))
                 maxStackSize = parsedMaxStackSize;
-            }
 
             stackSizes[NormalizeItemId(item.Name)] = maxStackSize;
         }
@@ -250,18 +271,13 @@ public sealed class ItemDataProvider
             itemsById[itemData.Id] = itemData;
         }
 
-        _items = items
-            .OrderBy(x => x.Id, StringComparer.Ordinal)
-            .ToArray();
-
+        _items = items.OrderBy(x => x.Id, StringComparer.Ordinal).ToArray();
         _itemsById = itemsById;
     }
 
     private async Task WriteCompactCacheAsync(CancellationToken cancellationToken)
     {
-        Dictionary<string, int> stackSizes = _items!
-            .ToDictionary(x => x.Id, x => x.MaxStackSize, StringComparer.Ordinal);
-
+        Dictionary<string, int> stackSizes = _items!.ToDictionary(x => x.Id, x => x.MaxStackSize, StringComparer.Ordinal);
         var json = JsonSerializer.Serialize(stackSizes);
 
         await File.WriteAllTextAsync(_cacheFilePath, json, cancellationToken);
@@ -278,17 +294,20 @@ public sealed class ItemDataProvider
 
             return JsonSerializer.Deserialize<CacheMetadata>(json);
         }
-        catch(JsonException)
+        catch(JsonException exception)
         {
+            Log.Warning(exception, "{LogContext} Item data cache metadata is invalid and will be removed.", LogContext);
             TryDeleteFile(_cacheMetadataFilePath);
             return null;
         }
-        catch(IOException)
+        catch(IOException exception)
         {
+            Log.Debug(exception, "{LogContext} Failed to read item data cache metadata.", LogContext);
             return null;
         }
-        catch(UnauthorizedAccessException)
+        catch(UnauthorizedAccessException exception)
         {
+            Log.Debug(exception, "{LogContext} Access to item data cache metadata was denied.", LogContext);
             return null;
         }
     }
@@ -304,14 +323,10 @@ public sealed class ItemDataProvider
     {
         const string prefix = "minecraft:";
 
-        return itemId.StartsWith(prefix, StringComparison.Ordinal)
-            ? itemId[prefix.Length..]
-            : itemId;
+        return itemId.StartsWith(prefix, StringComparison.Ordinal) ? itemId[prefix.Length..] : itemId;
     }
 
-    private static async Task<DownloadResult> DownloadDataAsync(
-        CacheMetadata? metadata,
-        CancellationToken cancellationToken)
+    private static async Task<DownloadResult> DownloadDataAsync(CacheMetadata? metadata, CancellationToken cancellationToken)
     {
         const int maxAttempts = 3;
 
@@ -319,6 +334,8 @@ public sealed class ItemDataProvider
         {
             try
             {
+                Log.Debug("{LogContext} Requesting item data. Attempt={Attempt}", LogContext, attempt);
+
                 using HttpRequestMessage request = new(HttpMethod.Get, DataUrl);
 
                 request.Headers.UserAgent.ParseAdd("Schemventory/1.0");
@@ -329,25 +346,17 @@ public sealed class ItemDataProvider
                 if(metadata?.LastModified is not null)
                     request.Headers.IfModifiedSince = metadata.LastModified;
 
-                using HttpResponseMessage response = await HttpClient.SendAsync(
-                    request,
-                    HttpCompletionOption.ResponseHeadersRead,
-                    cancellationToken);
+                using HttpResponseMessage response = await HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
 
                 if(response.StatusCode == HttpStatusCode.NotModified)
-                {
-                    return new DownloadResult(
-                        null,
-                        true,
-                        response.Headers.ETag?.Tag,
-                        response.Content.Headers.LastModified);
-                }
+                    return new DownloadResult(null, true, response.Headers.ETag?.Tag, response.Content.Headers.LastModified);
 
                 if(response.StatusCode == HttpStatusCode.TooManyRequests)
                     throw new HttpRequestException("Item data request was rate limited.", null, response.StatusCode);
 
                 if((int)response.StatusCode >= 500 && attempt < maxAttempts)
                 {
+                    Log.Warning("{LogContext} Item data request returned a server error. StatusCode={StatusCode}, Attempt={Attempt}", LogContext, (int)response.StatusCode, attempt);
                     await Task.Delay(TimeSpan.FromMilliseconds(500 * attempt), cancellationToken);
                     continue;
                 }
@@ -356,16 +365,11 @@ public sealed class ItemDataProvider
 
                 var json = await response.Content.ReadAsStringAsync(cancellationToken);
 
-                return new DownloadResult(
-                    json,
-                    false,
-                    response.Headers.ETag?.Tag,
-                    response.Content.Headers.LastModified);
+                return new DownloadResult(json, false, response.Headers.ETag?.Tag, response.Content.Headers.LastModified);
             }
-            catch(HttpRequestException exception) when(
-                attempt < maxAttempts &&
-                exception.StatusCode != HttpStatusCode.TooManyRequests)
+            catch(HttpRequestException exception) when(attempt < maxAttempts && exception.StatusCode != HttpStatusCode.TooManyRequests)
             {
+                Log.Warning(exception, "{LogContext} Item data request failed. Retrying. Attempt={Attempt}", LogContext, attempt);
                 await Task.Delay(TimeSpan.FromMilliseconds(500 * attempt), cancellationToken);
             }
         }
@@ -385,9 +389,9 @@ public sealed class ItemDataProvider
             if(File.Exists(filePath))
                 File.Delete(filePath);
         }
-        catch
+        catch(Exception exception)
         {
-            // Cache cleanup must never prevent the application from working.
+            Log.Debug(exception, "{LogContext} Cache cleanup failed. Path={Path}", LogContext, filePath);
         }
     }
 
@@ -398,9 +402,5 @@ public sealed class ItemDataProvider
         public DateTimeOffset? LastModified { get; set; }
     }
 
-    private sealed record DownloadResult(
-        string? Json,
-        bool NotModified,
-        string? ETag,
-        DateTimeOffset? LastModified);
+    private sealed record DownloadResult(string? Json, bool NotModified, string? ETag, DateTimeOffset? LastModified);
 }

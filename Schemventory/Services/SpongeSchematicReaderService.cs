@@ -1,4 +1,5 @@
 ﻿using fNbt;
+using Serilog;
 using Schemventory.Data;
 using Schemventory.Interfaces;
 
@@ -6,6 +7,8 @@ namespace Schemventory.Services;
 
 public sealed class SpongeSchematicReader : ISchematicReader
 {
+    private const string LogContext = "(SpongeSchematicReader)";
+
     private readonly BlockStateParser _blockStateParser;
 
     public SpongeSchematicReader(BlockStateParser blockStateParser)
@@ -20,41 +23,47 @@ public sealed class SpongeSchematicReader : ISchematicReader
 
     public SchematicData Read(string filePath)
     {
-        NbtFile nbtFile = new();
-        _ = nbtFile.LoadFromFile(filePath);
+        Log.Debug("{LogContext} Reading Sponge schematic file. Path={Path}", LogContext, filePath);
 
-        NbtCompound schematic = GetSchematicCompound(nbtFile.RootTag);
-        var version = ReadInt(schematic, "Version");
-
-        return version switch
+        try
         {
-            2 => ReadVersion2(schematic),
-            3 => ReadVersion3(schematic),
-            _ => throw new NotSupportedException($"Sponge Schematic version {version} is not supported.")
-        };
+            NbtFile nbtFile = new();
+            _ = nbtFile.LoadFromFile(filePath);
+
+            NbtCompound schematic = GetSchematicCompound(nbtFile.RootTag);
+            var version = ReadInt(schematic, "Version");
+
+            SchematicData result = version switch
+            {
+                2 => ReadVersion2(schematic),
+                3 => ReadVersion3(schematic),
+                _ => throw new NotSupportedException($"Sponge Schematic version {version} is not supported.")
+            };
+
+            Log.Debug("{LogContext} Sponge schematic read successfully. Path={Path}, Version={Version}, BlockStateCount={BlockStateCount}", LogContext, filePath, version, result.BlockStates.Count);
+
+            return result;
+        }
+        catch(Exception exception)
+        {
+            Log.Error(exception, "{LogContext} Failed to read Sponge schematic file. Path={Path}", LogContext, filePath);
+            throw;
+        }
     }
 
     private SchematicData ReadVersion2(NbtCompound schematic)
     {
-        NbtCompound palette = schematic.Get<NbtCompound>("Palette") ??
-            throw new InvalidDataException("Palette is missing.");
-
-        NbtByteArray blockData = schematic.Get<NbtByteArray>("BlockData") ??
-            throw new InvalidDataException("BlockData is missing.");
+        NbtCompound palette = schematic.Get<NbtCompound>("Palette") ?? throw new InvalidDataException("Palette is missing.");
+        NbtByteArray blockData = schematic.Get<NbtByteArray>("BlockData") ?? throw new InvalidDataException("BlockData is missing.");
 
         return CreateResult("Sponge Schematic v2", palette, blockData.Value, schematic);
     }
 
     private SchematicData ReadVersion3(NbtCompound schematic)
     {
-        NbtCompound blocks = schematic.Get<NbtCompound>("Blocks") ??
-            throw new InvalidDataException("Blocks compound is missing.");
-
-        NbtCompound palette = blocks.Get<NbtCompound>("Palette") ??
-            throw new InvalidDataException("Palette is missing.");
-
-        NbtByteArray blockData = blocks.Get<NbtByteArray>("Data") ??
-            throw new InvalidDataException("Block data is missing.");
+        NbtCompound blocks = schematic.Get<NbtCompound>("Blocks") ?? throw new InvalidDataException("Blocks compound is missing.");
+        NbtCompound palette = blocks.Get<NbtCompound>("Palette") ?? throw new InvalidDataException("Palette is missing.");
+        NbtByteArray blockData = blocks.Get<NbtByteArray>("Data") ?? throw new InvalidDataException("Block data is missing.");
 
         return CreateResult("Sponge Schematic v3", palette, blockData.Value, schematic);
     }
@@ -149,16 +158,14 @@ public sealed class SpongeSchematicReader : ISchematicReader
 
     private static int ReadUnsignedShort(NbtCompound compound, string name)
     {
-        NbtShort tag = compound.Get<NbtShort>(name) ??
-            throw new InvalidDataException($"Missing tag '{name}'.");
+        NbtShort tag = compound.Get<NbtShort>(name) ?? throw new InvalidDataException($"Missing tag '{name}'.");
 
         return unchecked((ushort)tag.Value);
     }
 
     private static int ReadInt(NbtCompound compound, string name)
     {
-        return compound.Get<NbtInt>(name)?.Value ??
-            throw new InvalidDataException($"Missing tag '{name}'.");
+        return compound.Get<NbtInt>(name)?.Value ?? throw new InvalidDataException($"Missing tag '{name}'.");
     }
 
     private static NbtCompound GetSchematicCompound(NbtCompound root)

@@ -1,15 +1,19 @@
 ﻿using Microsoft.Data.Sqlite;
+using Serilog;
 using Schemventory.App;
 
 namespace Schemventory.Services;
 
 public class DatabaseService
 {
+    private const string LogContext = "(DatabaseService)";
+
     private readonly string _databaseFilePath = Constants.AppDatabasePath;
 
     public DatabaseService()
     {
         Helper.EnsureAppDataPath();
+        Log.Debug("{LogContext} Database path: {DatabasePath}", LogContext, _databaseFilePath);
     }
 
     public SqliteConnection CreateConnection()
@@ -37,12 +41,16 @@ public class DatabaseService
 
     public void InitializeDatabase()
     {
+        Log.Debug("{LogContext} Initialising database.", LogContext);
+
         using SqliteConnection connection = CreateConnection();
 
         ConfigureDatabase(connection);
         CreateProjectsTable(connection);
         CreateProjectMaterialsTable(connection);
         MigrateProjectMaterialsTable(connection);
+
+        Log.Debug("{LogContext} Database initialisation completed.", LogContext);
     }
 
     private static void ConfigureDatabase(SqliteConnection connection)
@@ -52,6 +60,8 @@ public class DatabaseService
         command.CommandText = "PRAGMA journal_mode = WAL;";
 
         _ = command.ExecuteScalar();
+
+        Log.Debug("{LogContext} WAL journal mode configured.", LogContext);
     }
 
     private static void CreateProjectsTable(SqliteConnection connection)
@@ -102,20 +112,22 @@ public class DatabaseService
         if(!ColumnExists(connection, "ProjectMaterials", "State"))
         {
             using SqliteCommand command = connection.CreateCommand();
-            command.CommandText =
-                "ALTER TABLE ProjectMaterials ADD COLUMN State INTEGER NOT NULL DEFAULT 0;";
+            command.CommandText = "ALTER TABLE ProjectMaterials ADD COLUMN State INTEGER NOT NULL DEFAULT 0;";
 
             _ = command.ExecuteNonQuery();
             stateColumnAdded = true;
+
+            Log.Information("{LogContext} Added ProjectMaterials.State column.", LogContext);
         }
 
         if(!ColumnExists(connection, "ProjectMaterials", "ReplacementItemId"))
         {
             using SqliteCommand command = connection.CreateCommand();
-            command.CommandText =
-                "ALTER TABLE ProjectMaterials ADD COLUMN ReplacementItemId TEXT NULL;";
+            command.CommandText = "ALTER TABLE ProjectMaterials ADD COLUMN ReplacementItemId TEXT NULL;";
 
             _ = command.ExecuteNonQuery();
+
+            Log.Information("{LogContext} Added ProjectMaterials.ReplacementItemId column.", LogContext);
         }
 
         if(stateColumnAdded)
@@ -126,18 +138,14 @@ public class DatabaseService
                 SET State = $collectedState
                 WHERE CollectedAmount >= RequiredAmount;";
 
-            _ = command.Parameters.AddWithValue(
-                "$collectedState",
-                (int)ProjectMaterialState.Collected);
-
+            _ = command.Parameters.AddWithValue("$collectedState", (int)ProjectMaterialState.Collected);
             _ = command.ExecuteNonQuery();
+
+            Log.Information("{LogContext} Existing material states migrated.", LogContext);
         }
     }
 
-    private static bool ColumnExists(
-        SqliteConnection connection,
-        string tableName,
-        string columnName)
+    private static bool ColumnExists(SqliteConnection connection, string tableName, string columnName)
     {
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText = $"PRAGMA table_info({tableName});";
@@ -146,13 +154,8 @@ public class DatabaseService
 
         while(reader.Read())
         {
-            if(string.Equals(
-                reader.GetString(1),
-                columnName,
-                StringComparison.OrdinalIgnoreCase))
-            {
+            if(string.Equals(reader.GetString(1), columnName, StringComparison.OrdinalIgnoreCase))
                 return true;
-            }
         }
 
         return false;

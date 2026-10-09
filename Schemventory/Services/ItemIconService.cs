@@ -1,4 +1,5 @@
-﻿using Schemventory.App;
+﻿using Serilog;
+using Schemventory.App;
 using System.Collections.Concurrent;
 using System.Net;
 
@@ -6,6 +7,8 @@ namespace Schemventory.Services;
 
 public sealed class ItemIconService
 {
+    private const string LogContext = "(ItemIconService)";
+
     private static readonly TimeSpan MissingCacheLifetime = TimeSpan.FromDays(7);
 
     private static readonly HttpClient HttpClient = new()
@@ -23,6 +26,8 @@ public sealed class ItemIconService
         _cacheDirectory = Path.Combine(Constants.CacheDirectory, "ItemIcons");
 
         _ = Directory.CreateDirectory(_cacheDirectory);
+
+        Log.Debug("{LogContext} Item icon cache initialised. CacheDirectory={CacheDirectory}", LogContext, _cacheDirectory);
     }
 
     public async Task<Image> GetItemIconAsync(string itemId, int size = 64, CancellationToken cancellationToken = default)
@@ -66,12 +71,15 @@ public sealed class ItemIconService
             if(IsMissingCacheValid(missingCacheFilePath))
                 return new Bitmap(Properties.Resources.MissingIcon);
 
+            Log.Debug("{LogContext} Downloading item icon. ItemId={ItemId}, Size={Size}", LogContext, normalizedItemId, size);
+
             var imageData = await DownloadIconAsync(normalizedItemId, size, cancellationToken);
 
             if(imageData is null)
             {
                 await File.WriteAllTextAsync(missingCacheFilePath, string.Empty, cancellationToken);
 
+                Log.Debug("{LogContext} No remote icon available. ItemId={ItemId}, Size={Size}", LogContext, normalizedItemId, size);
                 return new Bitmap(Properties.Resources.MissingIcon);
             }
 
@@ -80,6 +88,15 @@ public sealed class ItemIconService
             await File.WriteAllBytesAsync(cacheFilePath, imageData, cancellationToken);
 
             return CacheAndCloneImage(cacheKey, imageData);
+        }
+        catch(OperationCanceledException)
+        {
+            throw;
+        }
+        catch(Exception exception)
+        {
+            Log.Warning(exception, "{LogContext} Failed to obtain item icon. ItemId={ItemId}, Size={Size}", LogContext, normalizedItemId, size);
+            throw;
         }
         finally
         {
@@ -147,8 +164,9 @@ public sealed class ItemIconService
         {
             throw;
         }
-        catch
+        catch(Exception exception)
         {
+            Log.Debug(exception, "{LogContext} Cached icon could not be loaded and will be removed. Path={Path}", LogContext, filePath);
             TryDeleteFile(filePath);
             return null;
         }
@@ -178,9 +196,9 @@ public sealed class ItemIconService
 
             File.Delete(filePath);
         }
-        catch
+        catch(Exception exception)
         {
-            // If the marker cannot be inspected or removed, allow a fresh request.
+            Log.Debug(exception, "{LogContext} Missing-icon cache marker could not be inspected or removed. Path={Path}", LogContext, filePath);
         }
 
         return false;
@@ -222,9 +240,9 @@ public sealed class ItemIconService
             if(File.Exists(filePath))
                 File.Delete(filePath);
         }
-        catch
+        catch(Exception exception)
         {
-            // Cache cleanup must never prevent the application from working.
+            Log.Debug(exception, "{LogContext} Cache cleanup failed. Path={Path}", LogContext, filePath);
         }
     }
 }

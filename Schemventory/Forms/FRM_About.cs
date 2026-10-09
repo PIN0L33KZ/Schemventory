@@ -1,9 +1,11 @@
-﻿using Schemventory.App;
+﻿using Serilog;
+using Schemventory.App;
 
 namespace Schemventory.Forms;
 
 public partial class FRM_About : Form
 {
+    private const string LogContext = "(FRM_About)";
     private const string WindowName = $"About - {Constants.AppName}";
 
     public FRM_About()
@@ -29,5 +31,7 @@ Minecraft textures © Mojang Studios. Render by blockrender.dev.
 This software is an independent project and is not an official Minecraft product. It is not approved by, endorsed by, or associated with Mojang Studios or Microsoft.
 
 Minecraft is a trademark of Mojang AB.";
+
+        Log.Debug("{LogContext} About dialogue opened. Version={Version}", LogContext, Application.ProductVersion);
     }
 }
