@@ -1,7 +1,7 @@
-﻿using Serilog;
-using Schemventory.App;
+﻿using Schemventory.App;
 using Schemventory.Data;
 using Schemventory.Services;
+using Serilog;
 
 namespace Schemventory.Forms;
 
@@ -21,7 +21,6 @@ public partial class FRM_MaterialList : Form
     public FRM_MaterialList(DatabaseService databaseService, Project project, ItemIconService itemIconService, ItemDataProvider itemDataProvider)
     {
         InitializeComponent();
-        InitializeAddMaterialControls();
 
         Text = WindowName;
 
@@ -36,8 +35,6 @@ public partial class FRM_MaterialList : Form
         PNL_MaterialList.ScrollMetricsChanged += PNL_MaterialList_ScrollMetricsChanged;
         PNL_MaterialList.ScrollPositionChanged += PNL_MaterialList_ScrollPositionChanged;
         PNL_MaterialList.MouseWheelScrollRequested += PNL_MaterialList_MouseWheelScrollRequested;
-
-        VSB_Main.Scroll += VSB_Main_Scroll;
     }
 
     private async void FRM_MaterialList_Load(object sender, EventArgs e)
@@ -258,5 +255,60 @@ public partial class FRM_MaterialList : Form
     {
         PNL_MaterialList.ResumeVirtualLayout();
         UpdateScrollBar();
+    }
+
+    private void BTN_AddMaterial_Click(object? sender, EventArgs e)
+    {
+        Log.Debug(
+            "{LogContext} Add material dialog requested. ProjectId={ProjectId}",
+            LogContext,
+            _project.Id);
+
+        using FRM_AddMaterial addMaterialForm = new(_itemDataProvider, _itemIconService);
+
+        if(addMaterialForm.ShowDialog(this) != DialogResult.OK ||
+           string.IsNullOrWhiteSpace(addMaterialForm.SelectedItemId))
+        {
+            Log.Debug(
+                "{LogContext} Add material dialog cancelled. ProjectId={ProjectId}",
+                LogContext,
+                _project.Id);
+
+            return;
+        }
+
+        try
+        {
+            _projectMaterialService.Add(
+                _project.Id,
+                addMaterialForm.SelectedItemId,
+                addMaterialForm.RequiredAmount);
+
+            LoadMaterialList();
+            ApplyMaterialView(resetScrollPosition: false);
+            UpdateStatistics();
+
+            Log.Information(
+                "{LogContext} Material added manually. ProjectId={ProjectId}, ItemId={ItemId}, RequiredAmount={RequiredAmount}",
+                LogContext,
+                _project.Id,
+                addMaterialForm.SelectedItemId,
+                addMaterialForm.RequiredAmount);
+        }
+        catch(Exception exception)
+        {
+            Log.Error(
+                exception,
+                "{LogContext} Failed to add material manually. ProjectId={ProjectId}, ItemId={ItemId}",
+                LogContext,
+                _project.Id,
+                addMaterialForm.SelectedItemId);
+
+            _ = MessageBox.Show(
+                $"The material could not be added.\n\n{exception.Message}",
+                Constants.AppName,
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
+        }
     }
 }

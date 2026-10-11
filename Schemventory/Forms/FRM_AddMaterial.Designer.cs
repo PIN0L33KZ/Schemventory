@@ -22,13 +22,13 @@ partial class FRM_AddMaterial
         Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges4 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
         Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges8 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
         Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges9 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
+        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges5 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
         Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges6 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
         Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges7 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
         Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges10 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
         Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges11 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
         Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges12 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
         Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges13 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
-        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges5 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
         System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FRM_AddMaterial));
         LBL_Heading = new Label();
         LBL_Description = new Label();
@@ -37,6 +37,7 @@ partial class FRM_AddMaterial
         VSB_Main = new Guna.UI2.WinForms.Guna2VScrollBar();
         LST_Items = new ListView();
         PNL_Preview = new Guna.UI2.WinForms.Guna2Panel();
+        PGI_Loading = new Guna.UI2.WinForms.Guna2WinProgressIndicator();
         LBL_AmountPreview = new Label();
         NUD_RequiredAmount = new Guna.UI2.WinForms.Guna2NumericUpDown();
         LBL_RequiredAmount = new Label();
@@ -46,7 +47,6 @@ partial class FRM_AddMaterial
         PBX_Icon = new PictureBox();
         BTN_Add = new Guna.UI2.WinForms.Guna2Button();
         BTN_Cancel = new Guna.UI2.WinForms.Guna2Button();
-        PGI_Loading = new Guna.UI2.WinForms.Guna2WinProgressIndicator();
         PNL_ItemsBackground.SuspendLayout();
         PNL_Preview.SuspendLayout();
         ((System.ComponentModel.ISupportInitialize)NUD_RequiredAmount).BeginInit();
@@ -127,16 +127,17 @@ partial class FRM_AddMaterial
         // 
         // VSB_Main
         // 
+        VSB_Main.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Right;
         VSB_Main.BackColor = Color.Transparent;
         VSB_Main.BindingContainer = LST_Items;
         VSB_Main.BorderRadius = 5;
         VSB_Main.FillColor = Color.FromArgb(80, 76, 76);
         VSB_Main.InUpdate = false;
         VSB_Main.LargeChange = 10;
-        VSB_Main.Location = new Point(561, 3);
+        VSB_Main.Location = new Point(555, 3);
         VSB_Main.Name = "VSB_Main";
-        VSB_Main.ScrollbarSize = 12;
-        VSB_Main.Size = new Size(12, 281);
+        VSB_Main.ScrollbarSize = 18;
+        VSB_Main.Size = new Size(18, 281);
         VSB_Main.TabIndex = 1;
         VSB_Main.TabStop = false;
         VSB_Main.ThumbColor = Color.FromArgb(103, 99, 99);
@@ -184,6 +185,21 @@ partial class FRM_AddMaterial
         PNL_Preview.ShadowDecoration.CustomizableEdges = customizableEdges9;
         PNL_Preview.Size = new Size(231, 287);
         PNL_Preview.TabIndex = 3;
+        // 
+        // PGI_Loading
+        // 
+        PGI_Loading.AutoStart = true;
+        PGI_Loading.BackColor = Color.Transparent;
+        PGI_Loading.CircleSize = 1F;
+        PGI_Loading.Location = new Point(84, 48);
+        PGI_Loading.Name = "PGI_Loading";
+        PGI_Loading.ProgressColor = Color.FromArgb(162, 123, 90);
+        PGI_Loading.ShadowDecoration.CustomizableEdges = customizableEdges5;
+        PGI_Loading.Size = new Size(64, 64);
+        PGI_Loading.TabIndex = 4;
+        PGI_Loading.TabStop = false;
+        PGI_Loading.UseTransparentBackground = true;
+        PGI_Loading.Visible = false;
         // 
         // LBL_AmountPreview
         // 
@@ -327,21 +343,6 @@ partial class FRM_AddMaterial
         BTN_Cancel.Text = "Cancel";
         BTN_Cancel.UseTransparentBackground = true;
         BTN_Cancel.Click += BTN_Cancel_Click;
-        // 
-        // PGI_Loading
-        // 
-        PGI_Loading.AutoStart = true;
-        PGI_Loading.BackColor = Color.Transparent;
-        PGI_Loading.CircleSize = 1F;
-        PGI_Loading.Location = new Point(84, 48);
-        PGI_Loading.Name = "PGI_Loading";
-        PGI_Loading.ProgressColor = Color.FromArgb(162, 123, 90);
-        PGI_Loading.ShadowDecoration.CustomizableEdges = customizableEdges5;
-        PGI_Loading.Size = new Size(64, 64);
-        PGI_Loading.TabIndex = 4;
-        PGI_Loading.TabStop = false;
-        PGI_Loading.UseTransparentBackground = true;
-        PGI_Loading.Visible = false;
         // 
         // FRM_AddMaterial
         // 

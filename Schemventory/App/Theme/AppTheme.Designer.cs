@@ -265,10 +265,10 @@ partial class AppTheme
         VSB_Main.FillColor = Color.FromArgb(80, 76, 76);
         VSB_Main.InUpdate = false;
         VSB_Main.LargeChange = 10;
-        VSB_Main.Location = new Point(12, 282);
+        VSB_Main.Location = new Point(6, 282);
         VSB_Main.Name = "VSB_Main";
-        VSB_Main.ScrollbarSize = 12;
-        VSB_Main.Size = new Size(12, 300);
+        VSB_Main.ScrollbarSize = 18;
+        VSB_Main.Size = new Size(18, 300);
         VSB_Main.TabIndex = 0;
         VSB_Main.TabStop = false;
         VSB_Main.ThumbColor = Color.FromArgb(103, 99, 99);
