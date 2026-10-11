@@ -1,19 +1,21 @@
-﻿using Serilog;
-using Schemventory.App;
+﻿using Schemventory.App;
 using Schemventory.Data;
 using Schemventory.Services;
+using Serilog;
 
 namespace Schemventory.Forms;
 
 public partial class FRM_ReplaceMaterial : Form
 {
     private const string LogContext = "(FRM_ReplaceMaterial)";
+    private const int MinimumThumbHeight = 24;
     private const string WindowName = $"Replace material - {Constants.AppName}";
 
     private readonly ProjectMaterial _material;
     private readonly ItemDataProvider _itemDataProvider;
     private readonly ItemIconService _itemIconService;
     private readonly System.Windows.Forms.Timer _searchTimer;
+
 
     private List<ItemSearchEntry> _items = [];
     private List<ItemSearchEntry> _filteredItems = [];
@@ -38,12 +40,14 @@ public partial class FRM_ReplaceMaterial : Form
 
         _searchTimer.Tick += SearchTimer_Tick;
 
+
         Text = WindowName;
 
         InitializeListView();
         InitializeForm();
 
         LST_Items.RetrieveVirtualItem += LST_Items_RetrieveVirtualItem;
+        LST_Items.SizeChanged += LST_Items_SizeChanged;
         FormClosed += FRM_ReplaceMaterial_FormClosed;
     }
 
@@ -63,7 +67,7 @@ public partial class FRM_ReplaceMaterial : Form
         LST_Items.Sorting = SortOrder.None;
         LST_Items.Columns.Clear();
 
-        _ = LST_Items.Columns.Add("Material", 180);
+        _ = LST_Items.Columns.Add("Material", 280);
         _ = LST_Items.Columns.Add("Item ID", 250);
     }
 
@@ -145,6 +149,8 @@ public partial class FRM_ReplaceMaterial : Form
         }
 
         LST_Items.Invalidate();
+
+        UpdateScrollBarThumbSize();
     }
 
     private void LST_Items_RetrieveVirtualItem(object? sender, RetrieveVirtualItemEventArgs e)
@@ -180,6 +186,7 @@ public partial class FRM_ReplaceMaterial : Form
         }
 
         ItemSearchEntry entry = _filteredItems[selectedIndex];
+
 
         SelectedItem = entry.Item;
 
@@ -287,8 +294,52 @@ public partial class FRM_ReplaceMaterial : Form
         Close();
     }
 
+    private void LST_Items_SizeChanged(object? sender, EventArgs e)
+    {
+        UpdateScrollBarThumbSize();
+    }
+
+    private void UpdateScrollBarThumbSize()
+    {
+        var totalItems = _filteredItems.Count;
+
+        if(totalItems <= 0 || LST_Items.ClientSize.Height <= 0 || VSB_Main.ClientSize.Height <= 0)
+            return;
+
+        var itemHeight = GetListViewItemHeight();
+        var visibleItems = Math.Max(1, LST_Items.ClientSize.Height / itemHeight);
+
+        var proportionalThumbSize = VSB_Main.ClientSize.Height * Math.Min(1F, (float)visibleItems / totalItems);
+        var maximumThumbSize = Math.Max(1F, VSB_Main.ClientSize.Height);
+
+        VSB_Main.ThumbSize = Math.Clamp(proportionalThumbSize, MinimumThumbHeight, maximumThumbSize);
+    }
+
+    private int GetListViewItemHeight()
+    {
+        if(LST_Items.VirtualListSize > 0)
+        {
+            try
+            {
+                var itemHeight = LST_Items.Items[0].Bounds.Height;
+
+                if(itemHeight > 0)
+                    return itemHeight;
+            }
+            catch(InvalidOperationException)
+            {
+                // The ListView handle may not be ready yet.
+            }
+        }
+
+        return Math.Max(1, LST_Items.Font.Height + 4);
+    }
+
     private void FRM_ReplaceMaterial_FormClosed(object? sender, FormClosedEventArgs e)
     {
+        LST_Items.SizeChanged -= LST_Items_SizeChanged;
+
+
         _searchTimer.Stop();
         _searchTimer.Dispose();
 

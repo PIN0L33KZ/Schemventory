@@ -21,6 +21,7 @@ public partial class FRM_MaterialList : Form
     public FRM_MaterialList(DatabaseService databaseService, Project project, ItemIconService itemIconService, ItemDataProvider itemDataProvider)
     {
         InitializeComponent();
+        InitializeAddMaterialControls();
 
         Text = WindowName;
 

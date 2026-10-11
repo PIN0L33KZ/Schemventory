@@ -226,10 +226,10 @@ partial class FRM_ReplaceMaterial
         VSB_Main.FillColor = Color.FromArgb(80, 76, 76);
         VSB_Main.InUpdate = false;
         VSB_Main.LargeChange = 10;
-        VSB_Main.Location = new Point(556, 3);
+        VSB_Main.Location = new Point(562, 3);
         VSB_Main.Name = "VSB_Main";
-        VSB_Main.ScrollbarSize = 18;
-        VSB_Main.Size = new Size(18, 281);
+        VSB_Main.ScrollbarSize = 12;
+        VSB_Main.Size = new Size(12, 281);
         VSB_Main.TabIndex = 1;
         VSB_Main.TabStop = false;
         VSB_Main.ThumbColor = Color.FromArgb(103, 99, 99);
@@ -332,6 +332,7 @@ partial class FRM_ReplaceMaterial
         Controls.Add(TBX_Search);
         Controls.Add(LBL_Description);
         Controls.Add(LBL_Heading);
+        DoubleBuffered = true;
         Font = new Font("Leelawadee UI", 11.25F, FontStyle.Regular, GraphicsUnit.Point, 0);
         ForeColor = Color.FromArgb(235, 234, 234);
         FormBorderStyle = FormBorderStyle.FixedSingle;

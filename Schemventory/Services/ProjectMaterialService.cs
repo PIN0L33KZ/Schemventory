@@ -57,6 +57,58 @@ public class ProjectMaterialService
         return materials;
     }
 
+    public void Add(Guid projectId, string itemId, long requiredAmount)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(itemId);
+
+        if(requiredAmount <= 0)
+            throw new ArgumentOutOfRangeException(nameof(requiredAmount));
+
+        using SqliteConnection connection = _databaseService.CreateConnection();
+        using SqliteCommand command = connection.CreateCommand();
+
+        command.CommandText = @"
+            INSERT INTO ProjectMaterials
+            (
+                ProjectId,
+                ItemId,
+                RequiredAmount,
+                CollectedAmount,
+                State,
+                ReplacementItemId
+            )
+            VALUES
+            (
+                $projectId,
+                $itemId,
+                $requiredAmount,
+                0,
+                $missingState,
+                NULL
+            )
+            ON CONFLICT(ProjectId, ItemId)
+            DO UPDATE SET
+                RequiredAmount = ProjectMaterials.RequiredAmount + excluded.RequiredAmount,
+                State = CASE
+                    WHEN ProjectMaterials.CollectedAmount >= ProjectMaterials.RequiredAmount + excluded.RequiredAmount THEN $collectedState
+                    WHEN ProjectMaterials.ReplacementItemId IS NOT NULL THEN $replacedState
+                    ELSE $missingState
+                END;";
+
+        SqliteParameter projectIdParameter = command.Parameters.Add("$projectId", SqliteType.Text);
+        projectIdParameter.Value = projectId.ToString("D");
+
+        _ = command.Parameters.AddWithValue("$itemId", itemId);
+        _ = command.Parameters.AddWithValue("$requiredAmount", requiredAmount);
+        _ = command.Parameters.AddWithValue("$missingState", (int)ProjectMaterialState.Missing);
+        _ = command.Parameters.AddWithValue("$replacedState", (int)ProjectMaterialState.Replaced);
+        _ = command.Parameters.AddWithValue("$collectedState", (int)ProjectMaterialState.Collected);
+
+        _ = command.ExecuteNonQuery();
+
+        Log.Debug("{LogContext} Material added manually. ProjectId={ProjectId}, ItemId={ItemId}, RequiredAmount={RequiredAmount}", LogContext, projectId, itemId, requiredAmount);
+    }
+
     internal void Replace(Guid projectId, IReadOnlyCollection<MaterialEntry> materials, SqliteConnection connection, SqliteTransaction transaction)
     {
         Log.Debug("{LogContext} Replacing project material set. ProjectId={ProjectId}, MaterialCount={MaterialCount}", LogContext, projectId, materials.Count);
