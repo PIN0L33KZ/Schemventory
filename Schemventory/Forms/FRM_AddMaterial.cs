@@ -216,9 +216,16 @@ public partial class FRM_AddMaterial : Form
         _previewCancellationTokenSource?.Cancel();
         _previewCancellationTokenSource?.Dispose();
 
-        _previewCancellationTokenSource = new CancellationTokenSource();
+        CancellationTokenSource cancellationTokenSource = new();
+        _previewCancellationTokenSource = cancellationTokenSource;
 
-        CancellationToken cancellationToken = _previewCancellationTokenSource.Token;
+        CancellationToken cancellationToken = cancellationTokenSource.Token;
+
+        PBX_Icon.Image?.Dispose();
+        PBX_Icon.Image = null;
+
+        PGI_Loading.Visible = true;
+        PGI_Loading.Start();
 
         try
         {
@@ -236,11 +243,18 @@ public partial class FRM_AddMaterial : Form
         }
         catch(OperationCanceledException)
         {
-            Log.Debug("{LogContext} Preview icon loading cancelled. ItemId={ItemId}", LogContext, itemId);
+            Log.Debug(
+                "{LogContext} Preview icon loading cancelled. ItemId={ItemId}",
+                LogContext,
+                itemId);
         }
         catch(Exception exception)
         {
-            Log.Warning(exception, "{LogContext} Failed to load preview icon. ItemId={ItemId}", LogContext, itemId);
+            Log.Warning(
+                exception,
+                "{LogContext} Failed to load preview icon. ItemId={ItemId}",
+                LogContext,
+                itemId);
 
             if(IsDisposed)
                 return;
@@ -248,6 +262,14 @@ public partial class FRM_AddMaterial : Form
             PBX_Icon.Image?.Dispose();
             PBX_Icon.Image = new Bitmap(Properties.Resources.MissingIcon);
             PBX_Icon.SizeMode = PictureBoxSizeMode.Zoom;
+        }
+        finally
+        {
+            if(ReferenceEquals(_previewCancellationTokenSource, cancellationTokenSource))
+            {
+                PGI_Loading.Stop();
+                PGI_Loading.Visible = false;
+            }
         }
     }
 

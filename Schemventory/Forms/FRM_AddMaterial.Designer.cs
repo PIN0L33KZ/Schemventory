@@ -20,14 +20,15 @@ partial class FRM_AddMaterial
         Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges2 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
         Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges3 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
         Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges4 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
-        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges7 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
         Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges8 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
-        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges5 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
-        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges6 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
         Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges9 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
+        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges6 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
+        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges7 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
         Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges10 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
         Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges11 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
         Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges12 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
+        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges13 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
+        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges5 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
         System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FRM_AddMaterial));
         LBL_Heading = new Label();
         LBL_Description = new Label();
@@ -45,6 +46,7 @@ partial class FRM_AddMaterial
         PBX_Icon = new PictureBox();
         BTN_Add = new Guna.UI2.WinForms.Guna2Button();
         BTN_Cancel = new Guna.UI2.WinForms.Guna2Button();
+        PGI_Loading = new Guna.UI2.WinForms.Guna2WinProgressIndicator();
         PNL_ItemsBackground.SuspendLayout();
         PNL_Preview.SuspendLayout();
         ((System.ComponentModel.ISupportInitialize)NUD_RequiredAmount).BeginInit();
@@ -167,6 +169,7 @@ partial class FRM_AddMaterial
         PNL_Preview.BorderColor = Color.FromArgb(103, 99, 99);
         PNL_Preview.BorderRadius = 5;
         PNL_Preview.BorderThickness = 2;
+        PNL_Preview.Controls.Add(PGI_Loading);
         PNL_Preview.Controls.Add(LBL_AmountPreview);
         PNL_Preview.Controls.Add(NUD_RequiredAmount);
         PNL_Preview.Controls.Add(LBL_RequiredAmount);
@@ -174,11 +177,11 @@ partial class FRM_AddMaterial
         PNL_Preview.Controls.Add(LBL_ItemId);
         PNL_Preview.Controls.Add(LBL_ItemName);
         PNL_Preview.Controls.Add(PBX_Icon);
-        PNL_Preview.CustomizableEdges = customizableEdges7;
+        PNL_Preview.CustomizableEdges = customizableEdges8;
         PNL_Preview.FillColor = Color.FromArgb(58, 55, 55);
         PNL_Preview.Location = new Point(594, 155);
         PNL_Preview.Name = "PNL_Preview";
-        PNL_Preview.ShadowDecoration.CustomizableEdges = customizableEdges8;
+        PNL_Preview.ShadowDecoration.CustomizableEdges = customizableEdges9;
         PNL_Preview.Size = new Size(231, 287);
         PNL_Preview.TabIndex = 3;
         // 
@@ -199,7 +202,7 @@ partial class FRM_AddMaterial
         NUD_RequiredAmount.BorderColor = Color.FromArgb(103, 99, 99);
         NUD_RequiredAmount.BorderRadius = 5;
         NUD_RequiredAmount.BorderThickness = 2;
-        NUD_RequiredAmount.CustomizableEdges = customizableEdges5;
+        NUD_RequiredAmount.CustomizableEdges = customizableEdges6;
         NUD_RequiredAmount.FillColor = Color.FromArgb(58, 55, 55);
         NUD_RequiredAmount.FocusedState.BorderColor = Color.FromArgb(162, 123, 90);
         NUD_RequiredAmount.Font = new Font("Leelawadee UI", 11.25F, FontStyle.Regular, GraphicsUnit.Point, 0);
@@ -208,7 +211,7 @@ partial class FRM_AddMaterial
         NUD_RequiredAmount.Maximum = new decimal(new int[] { 999999999, 0, 0, 0 });
         NUD_RequiredAmount.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
         NUD_RequiredAmount.Name = "NUD_RequiredAmount";
-        NUD_RequiredAmount.ShadowDecoration.CustomizableEdges = customizableEdges6;
+        NUD_RequiredAmount.ShadowDecoration.CustomizableEdges = customizableEdges7;
         NUD_RequiredAmount.Size = new Size(111, 36);
         NUD_RequiredAmount.TabIndex = 1;
         NUD_RequiredAmount.UpDownButtonFillColor = Color.FromArgb(162, 123, 90);
@@ -282,7 +285,7 @@ partial class FRM_AddMaterial
         BTN_Add.BackColor = Color.Transparent;
         BTN_Add.BorderRadius = 5;
         BTN_Add.Cursor = Cursors.Hand;
-        BTN_Add.CustomizableEdges = customizableEdges9;
+        BTN_Add.CustomizableEdges = customizableEdges10;
         BTN_Add.DisabledState.BorderColor = Color.FromArgb(80, 76, 76);
         BTN_Add.DisabledState.CustomBorderColor = Color.FromArgb(80, 76, 76);
         BTN_Add.DisabledState.FillColor = Color.FromArgb(80, 76, 76);
@@ -292,7 +295,7 @@ partial class FRM_AddMaterial
         BTN_Add.ForeColor = Color.White;
         BTN_Add.Location = new Point(739, 490);
         BTN_Add.Name = "BTN_Add";
-        BTN_Add.ShadowDecoration.CustomizableEdges = customizableEdges10;
+        BTN_Add.ShadowDecoration.CustomizableEdges = customizableEdges11;
         BTN_Add.Size = new Size(87, 32);
         BTN_Add.TabIndex = 3;
         BTN_Add.Text = "Add";
@@ -308,7 +311,7 @@ partial class FRM_AddMaterial
         BTN_Cancel.BorderRadius = 5;
         BTN_Cancel.BorderThickness = 2;
         BTN_Cancel.Cursor = Cursors.Hand;
-        BTN_Cancel.CustomizableEdges = customizableEdges11;
+        BTN_Cancel.CustomizableEdges = customizableEdges12;
         BTN_Cancel.DisabledState.BorderColor = Color.FromArgb(80, 76, 76);
         BTN_Cancel.DisabledState.CustomBorderColor = Color.FromArgb(80, 76, 76);
         BTN_Cancel.DisabledState.FillColor = Color.FromArgb(80, 76, 76);
@@ -318,12 +321,27 @@ partial class FRM_AddMaterial
         BTN_Cancel.ForeColor = Color.White;
         BTN_Cancel.Location = new Point(12, 490);
         BTN_Cancel.Name = "BTN_Cancel";
-        BTN_Cancel.ShadowDecoration.CustomizableEdges = customizableEdges12;
+        BTN_Cancel.ShadowDecoration.CustomizableEdges = customizableEdges13;
         BTN_Cancel.Size = new Size(119, 32);
         BTN_Cancel.TabIndex = 2;
         BTN_Cancel.Text = "Cancel";
         BTN_Cancel.UseTransparentBackground = true;
         BTN_Cancel.Click += BTN_Cancel_Click;
+        // 
+        // PGI_Loading
+        // 
+        PGI_Loading.AutoStart = true;
+        PGI_Loading.BackColor = Color.Transparent;
+        PGI_Loading.CircleSize = 1F;
+        PGI_Loading.Location = new Point(84, 48);
+        PGI_Loading.Name = "PGI_Loading";
+        PGI_Loading.ProgressColor = Color.FromArgb(162, 123, 90);
+        PGI_Loading.ShadowDecoration.CustomizableEdges = customizableEdges5;
+        PGI_Loading.Size = new Size(64, 64);
+        PGI_Loading.TabIndex = 4;
+        PGI_Loading.TabStop = false;
+        PGI_Loading.UseTransparentBackground = true;
+        PGI_Loading.Visible = false;
         // 
         // FRM_AddMaterial
         // 
@@ -379,4 +397,5 @@ partial class FRM_AddMaterial
     private Guna.UI2.WinForms.Guna2Button BTN_Add;
     private Guna.UI2.WinForms.Guna2Button BTN_Cancel;
     private Guna.UI2.WinForms.Guna2VScrollBar VSB_Main;
+    private Guna.UI2.WinForms.Guna2WinProgressIndicator PGI_Loading;
 }

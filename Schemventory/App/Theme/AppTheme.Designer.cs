@@ -29,20 +29,21 @@ partial class AppTheme
     private void InitializeComponent()
     {
         components = new System.ComponentModel.Container();
-        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges57 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
-        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges58 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
-        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges59 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
-        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges60 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
-        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges61 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
-        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges62 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
-        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges63 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
-        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges64 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
-        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges65 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
-        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges66 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
-        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges67 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
-        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges68 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
-        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges69 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
-        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges70 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
+        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges1 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
+        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges2 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
+        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges3 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
+        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges4 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
+        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges5 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
+        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges6 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
+        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges7 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
+        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges8 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
+        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges9 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
+        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges10 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
+        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges11 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
+        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges12 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
+        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges13 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
+        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges14 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
+        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges15 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
         BTN_Primary = new Guna.UI2.WinForms.Guna2Button();
         BTN_Secondary = new Guna.UI2.WinForms.Guna2Button();
         TBX_Input = new Guna.UI2.WinForms.Guna2TextBox();
@@ -60,6 +61,7 @@ partial class AppTheme
         NUD_Number = new Guna.UI2.WinForms.Guna2NumericUpDown();
         SEP_1 = new Guna.UI2.WinForms.Guna2Separator();
         RBN_Select1 = new Guna.UI2.WinForms.Guna2RadioButton();
+        PGI_Loading = new Guna.UI2.WinForms.Guna2WinProgressIndicator();
         ((System.ComponentModel.ISupportInitialize)NUD_Number).BeginInit();
         SuspendLayout();
         // 
@@ -69,7 +71,7 @@ partial class AppTheme
         BTN_Primary.BackColor = Color.Transparent;
         BTN_Primary.BorderRadius = 5;
         BTN_Primary.Cursor = Cursors.Hand;
-        BTN_Primary.CustomizableEdges = customizableEdges57;
+        BTN_Primary.CustomizableEdges = customizableEdges1;
         BTN_Primary.DialogResult = DialogResult.OK;
         BTN_Primary.DisabledState.BorderColor = Color.FromArgb(80, 76, 76);
         BTN_Primary.DisabledState.CustomBorderColor = Color.FromArgb(80, 76, 76);
@@ -80,7 +82,7 @@ partial class AppTheme
         BTN_Primary.ForeColor = Color.White;
         BTN_Primary.Location = new Point(3, 3);
         BTN_Primary.Name = "BTN_Primary";
-        BTN_Primary.ShadowDecoration.CustomizableEdges = customizableEdges58;
+        BTN_Primary.ShadowDecoration.CustomizableEdges = customizableEdges2;
         BTN_Primary.Size = new Size(119, 32);
         BTN_Primary.TabIndex = 0;
         BTN_Primary.Text = "PrimaryButton";
@@ -94,7 +96,7 @@ partial class AppTheme
         BTN_Secondary.BorderRadius = 5;
         BTN_Secondary.BorderThickness = 2;
         BTN_Secondary.Cursor = Cursors.Hand;
-        BTN_Secondary.CustomizableEdges = customizableEdges59;
+        BTN_Secondary.CustomizableEdges = customizableEdges3;
         BTN_Secondary.DisabledState.BorderColor = Color.FromArgb(80, 76, 76);
         BTN_Secondary.DisabledState.CustomBorderColor = Color.FromArgb(80, 76, 76);
         BTN_Secondary.DisabledState.FillColor = Color.FromArgb(80, 76, 76);
@@ -105,7 +107,7 @@ partial class AppTheme
         BTN_Secondary.HoverState.BorderColor = Color.FromArgb(103, 99, 99);
         BTN_Secondary.Location = new Point(3, 41);
         BTN_Secondary.Name = "BTN_Secondary";
-        BTN_Secondary.ShadowDecoration.CustomizableEdges = customizableEdges60;
+        BTN_Secondary.ShadowDecoration.CustomizableEdges = customizableEdges4;
         BTN_Secondary.Size = new Size(119, 32);
         BTN_Secondary.TabIndex = 0;
         BTN_Secondary.Text = "SecondaryButton";
@@ -118,7 +120,7 @@ partial class AppTheme
         TBX_Input.BorderColor = Color.FromArgb(103, 99, 99);
         TBX_Input.BorderRadius = 5;
         TBX_Input.BorderThickness = 2;
-        TBX_Input.CustomizableEdges = customizableEdges61;
+        TBX_Input.CustomizableEdges = customizableEdges5;
         TBX_Input.DefaultText = "";
         TBX_Input.DisabledState.BorderColor = Color.FromArgb(80, 76, 76);
         TBX_Input.DisabledState.FillColor = Color.FromArgb(80, 76, 76);
@@ -137,7 +139,7 @@ partial class AppTheme
         TBX_Input.PlaceholderForeColor = Color.FromArgb(151, 148, 148);
         TBX_Input.PlaceholderText = "";
         TBX_Input.SelectedText = "";
-        TBX_Input.ShadowDecoration.CustomizableEdges = customizableEdges62;
+        TBX_Input.ShadowDecoration.CustomizableEdges = customizableEdges6;
         TBX_Input.Size = new Size(165, 33);
         TBX_Input.TabIndex = 0;
         // 
@@ -172,7 +174,7 @@ partial class AppTheme
         TBX_FilePath.BorderColor = Color.FromArgb(103, 99, 99);
         TBX_FilePath.BorderRadius = 5;
         TBX_FilePath.BorderThickness = 2;
-        TBX_FilePath.CustomizableEdges = customizableEdges63;
+        TBX_FilePath.CustomizableEdges = customizableEdges7;
         TBX_FilePath.DefaultText = "";
         TBX_FilePath.DisabledState.BorderColor = Color.FromArgb(80, 76, 76);
         TBX_FilePath.DisabledState.FillColor = Color.FromArgb(80, 76, 76);
@@ -191,7 +193,7 @@ partial class AppTheme
         TBX_FilePath.PlaceholderForeColor = Color.FromArgb(151, 148, 148);
         TBX_FilePath.PlaceholderText = "";
         TBX_FilePath.SelectedText = "";
-        TBX_FilePath.ShadowDecoration.CustomizableEdges = customizableEdges64;
+        TBX_FilePath.ShadowDecoration.CustomizableEdges = customizableEdges8;
         TBX_FilePath.Size = new Size(257, 33);
         TBX_FilePath.TabIndex = 0;
         // 
@@ -203,7 +205,7 @@ partial class AppTheme
         BTN_SelectFilePath.BorderRadius = 5;
         BTN_SelectFilePath.BorderThickness = 2;
         BTN_SelectFilePath.Cursor = Cursors.Hand;
-        BTN_SelectFilePath.CustomizableEdges = customizableEdges65;
+        BTN_SelectFilePath.CustomizableEdges = customizableEdges9;
         BTN_SelectFilePath.DialogResult = DialogResult.OK;
         BTN_SelectFilePath.DisabledState.BorderColor = Color.FromArgb(80, 76, 76);
         BTN_SelectFilePath.DisabledState.CustomBorderColor = Color.FromArgb(80, 76, 76);
@@ -215,7 +217,7 @@ partial class AppTheme
         BTN_SelectFilePath.HoverState.BorderColor = Color.FromArgb(103, 99, 99);
         BTN_SelectFilePath.Location = new Point(266, 241);
         BTN_SelectFilePath.Name = "BTN_SelectFilePath";
-        BTN_SelectFilePath.ShadowDecoration.CustomizableEdges = customizableEdges66;
+        BTN_SelectFilePath.ShadowDecoration.CustomizableEdges = customizableEdges10;
         BTN_SelectFilePath.Size = new Size(71, 33);
         BTN_SelectFilePath.TabIndex = 0;
         BTN_SelectFilePath.Text = "Select";
@@ -293,10 +295,10 @@ partial class AppTheme
         TSW_Toggle.CheckedState.InnerBorderColor = Color.FromArgb(194, 165, 142);
         TSW_Toggle.CheckedState.InnerColor = Color.FromArgb(194, 165, 142);
         TSW_Toggle.Cursor = Cursors.Hand;
-        TSW_Toggle.CustomizableEdges = customizableEdges67;
+        TSW_Toggle.CustomizableEdges = customizableEdges11;
         TSW_Toggle.Location = new Point(30, 282);
         TSW_Toggle.Name = "TSW_Toggle";
-        TSW_Toggle.ShadowDecoration.CustomizableEdges = customizableEdges68;
+        TSW_Toggle.ShadowDecoration.CustomizableEdges = customizableEdges12;
         TSW_Toggle.Size = new Size(35, 20);
         TSW_Toggle.TabIndex = 0;
         TSW_Toggle.UncheckedState.BorderColor = Color.FromArgb(103, 99, 99);
@@ -334,14 +336,14 @@ partial class AppTheme
         NUD_Number.BorderColor = Color.FromArgb(103, 99, 99);
         NUD_Number.BorderRadius = 5;
         NUD_Number.BorderThickness = 2;
-        NUD_Number.CustomizableEdges = customizableEdges69;
+        NUD_Number.CustomizableEdges = customizableEdges13;
         NUD_Number.FillColor = Color.FromArgb(58, 55, 55);
         NUD_Number.FocusedState.BorderColor = Color.FromArgb(162, 123, 90);
         NUD_Number.Font = new Font("Leelawadee UI", 11.25F, FontStyle.Regular, GraphicsUnit.Point, 0);
         NUD_Number.ForeColor = Color.FromArgb(235, 234, 234);
         NUD_Number.Location = new Point(353, 238);
         NUD_Number.Name = "NUD_Number";
-        NUD_Number.ShadowDecoration.CustomizableEdges = customizableEdges70;
+        NUD_Number.ShadowDecoration.CustomizableEdges = customizableEdges14;
         NUD_Number.Size = new Size(73, 36);
         NUD_Number.TabIndex = 0;
         NUD_Number.UpDownButtonFillColor = Color.FromArgb(162, 123, 90);
@@ -383,11 +385,27 @@ partial class AppTheme
         RBN_Select1.UncheckedState.InnerColor = Color.Transparent;
         RBN_Select1.UseVisualStyleBackColor = false;
         // 
+        // PGI_Loading
+        // 
+        PGI_Loading.AutoStart = true;
+        PGI_Loading.BackColor = Color.Transparent;
+        PGI_Loading.CircleSize = 1F;
+        PGI_Loading.Location = new Point(30, 395);
+        PGI_Loading.Name = "PGI_Loading";
+        PGI_Loading.ProgressColor = Color.FromArgb(162, 123, 90);
+        PGI_Loading.ShadowDecoration.CustomizableEdges = customizableEdges15;
+        PGI_Loading.Size = new Size(64, 64);
+        PGI_Loading.TabIndex = 0;
+        PGI_Loading.TabStop = false;
+        PGI_Loading.UseTransparentBackground = true;
+        PGI_Loading.Visible = false;
+        // 
         // AppTheme
         // 
         AutoScaleDimensions = new SizeF(7F, 15F);
         AutoScaleMode = AutoScaleMode.Font;
         BackColor = Color.Black;
+        Controls.Add(PGI_Loading);
         Controls.Add(RBN_Select1);
         Controls.Add(SEP_1);
         Controls.Add(NUD_Number);
@@ -437,4 +455,5 @@ partial class AppTheme
     private Guna.UI2.WinForms.Guna2NumericUpDown NUD_Number;
     private Guna.UI2.WinForms.Guna2Separator SEP_1;
     private Guna.UI2.WinForms.Guna2RadioButton RBN_Select1;
+    private Guna.UI2.WinForms.Guna2WinProgressIndicator PGI_Loading;
 }
