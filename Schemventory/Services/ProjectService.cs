@@ -41,8 +41,10 @@ internal class ProjectService
         SqliteParameter idParameter = command.Parameters.Add("$id", SqliteType.Text);
         idParameter.Value = project.Id.ToString("D");
 
+        SqliteParameter schematicPathParameter = command.Parameters.Add("$schematicPath", SqliteType.Text);
+        schematicPathParameter.Value = (object?)project.SchematicPath ?? DBNull.Value;
+
         _ = command.Parameters.AddWithValue("$name", project.Name);
-        _ = command.Parameters.AddWithValue("$schematicPath", project.SchematicPath);
         _ = command.Parameters.AddWithValue("$createdAtUtc", project.CreatedAtUtc.ToString("O"));
         _ = command.Parameters.AddWithValue("$lastOpenedAtUtc", project.LastOpenedAtUtc.ToString("O"));
 
@@ -67,8 +69,10 @@ internal class ProjectService
         SqliteParameter idParameter = command.Parameters.Add("$id", SqliteType.Text);
         idParameter.Value = project.Id.ToString("D");
 
+        SqliteParameter schematicPathParameter = command.Parameters.Add("$schematicPath", SqliteType.Text);
+        schematicPathParameter.Value = (object?)project.SchematicPath ?? DBNull.Value;
+
         _ = command.Parameters.AddWithValue("$name", project.Name);
-        _ = command.Parameters.AddWithValue("$schematicPath", project.SchematicPath);
         _ = command.Parameters.AddWithValue("$lastOpenedAtUtc", project.LastOpenedAtUtc.ToString("O"));
 
         var affectedRows = command.ExecuteNonQuery();
@@ -130,7 +134,7 @@ internal class ProjectService
             {
                 Id = reader.GetGuid(0),
                 Name = reader.GetString(1),
-                SchematicPath = reader.GetString(2),
+                SchematicPath = reader.IsDBNull(2) ? null : reader.GetString(2),
                 CreatedAtUtc = reader.GetDateTime(3),
                 LastOpenedAtUtc = reader.GetDateTime(4)
             };

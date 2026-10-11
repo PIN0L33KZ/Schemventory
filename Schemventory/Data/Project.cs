@@ -6,7 +6,7 @@ public sealed class Project
 
     public required string Name { get; set; }
 
-    public required string SchematicPath { get; set; }
+    public string? SchematicPath { get; set; }
 
     public DateTime CreatedAtUtc { get; init; }
 

@@ -241,7 +241,7 @@ public partial class FRM_MaterialList : Form
 
     private void IBN_About_Click(object sender, EventArgs e)
     {
-        Log.Debug("{LogContext} About dialogue requested.", LogContext);
+        Log.Debug("{LogContext} About dialog requested.", LogContext);
 
         using FRM_About aboutForm = new();
 

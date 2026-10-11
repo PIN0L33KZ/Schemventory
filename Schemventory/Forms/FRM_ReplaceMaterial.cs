@@ -69,7 +69,7 @@ public partial class FRM_ReplaceMaterial : Form
 
     private async void FRM_ReplaceMaterial_Load(object? sender, EventArgs e)
     {
-        Log.Debug("{LogContext} Replace material dialogue opened. ProjectId={ProjectId}, ItemId={ItemId}", LogContext, _material.ProjectId, _material.ItemId);
+        Log.Debug("{LogContext} Replace material dialog opened. ProjectId={ProjectId}, ItemId={ItemId}", LogContext, _material.ProjectId, _material.ItemId);
 
         try
         {
@@ -281,7 +281,7 @@ public partial class FRM_ReplaceMaterial : Form
 
     private void BTN_Cancel_Click(object? sender, EventArgs e)
     {
-        Log.Debug("{LogContext} Replace material dialogue cancelled. ItemId={ItemId}", LogContext, _material.ItemId);
+        Log.Debug("{LogContext} Replace material dialog cancelled. ItemId={ItemId}", LogContext, _material.ItemId);
 
         DialogResult = DialogResult.Cancel;
         Close();

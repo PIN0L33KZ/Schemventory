@@ -32,6 +32,6 @@ This software is an independent project and is not an official Minecraft product
 
 Minecraft is a trademark of Mojang AB.";
 
-        Log.Debug("{LogContext} About dialogue opened. Version={Version}", LogContext, Application.ProductVersion);
+        Log.Debug("{LogContext} About dialog opened. Version={Version}", LogContext, Application.ProductVersion);
     }
 }

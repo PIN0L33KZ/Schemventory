@@ -163,6 +163,16 @@ namespace Schemventory.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap ProjectIconC {
+            get {
+                object obj = ResourceManager.GetObject("ProjectIconC", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap ProjectIconL {
             get {
                 object obj = ResourceManager.GetObject("ProjectIconL", resourceCulture);

@@ -46,6 +46,11 @@ partial class FRM_NewProject
         LBL_SchematicFile = new Label();
         BTN_CreateProject = new Guna.UI2.WinForms.Guna2Button();
         BTN_Cancel = new Guna.UI2.WinForms.Guna2Button();
+        RBN_TypeSchematic = new Guna.UI2.WinForms.Guna2RadioButton();
+        LBL_SchematicHint = new Label();
+        RBN_TypeEmpty = new Guna.UI2.WinForms.Guna2RadioButton();
+        LBL_EmptyHint = new Label();
+        LBL_ProjectType = new Label();
         SuspendLayout();
         // 
         // LBL_ProjectName
@@ -110,7 +115,7 @@ partial class FRM_NewProject
         TBX_SchematicFilePath.HoverState.BorderColor = Color.FromArgb(194, 165, 142);
         TBX_SchematicFilePath.IconLeft = Properties.Resources.Filepath;
         TBX_SchematicFilePath.IconLeftSize = new Size(25, 25);
-        TBX_SchematicFilePath.Location = new Point(12, 123);
+        TBX_SchematicFilePath.Location = new Point(12, 285);
         TBX_SchematicFilePath.Margin = new Padding(3, 5, 3, 5);
         TBX_SchematicFilePath.Name = "TBX_SchematicFilePath";
         TBX_SchematicFilePath.PlaceholderForeColor = Color.FromArgb(151, 148, 148);
@@ -119,7 +124,7 @@ partial class FRM_NewProject
         TBX_SchematicFilePath.SelectedText = "";
         TBX_SchematicFilePath.ShadowDecoration.CustomizableEdges = customizableEdges4;
         TBX_SchematicFilePath.Size = new Size(413, 33);
-        TBX_SchematicFilePath.TabIndex = 2;
+        TBX_SchematicFilePath.TabIndex = 4;
         // 
         // BTN_SelectSchematicFilePath
         // 
@@ -138,11 +143,11 @@ partial class FRM_NewProject
         BTN_SelectSchematicFilePath.Font = new Font("Leelawadee UI", 11.25F, FontStyle.Regular, GraphicsUnit.Point, 0);
         BTN_SelectSchematicFilePath.ForeColor = Color.White;
         BTN_SelectSchematicFilePath.HoverState.BorderColor = Color.FromArgb(103, 99, 99);
-        BTN_SelectSchematicFilePath.Location = new Point(431, 123);
+        BTN_SelectSchematicFilePath.Location = new Point(431, 285);
         BTN_SelectSchematicFilePath.Name = "BTN_SelectSchematicFilePath";
         BTN_SelectSchematicFilePath.ShadowDecoration.CustomizableEdges = customizableEdges6;
         BTN_SelectSchematicFilePath.Size = new Size(71, 33);
-        BTN_SelectSchematicFilePath.TabIndex = 3;
+        BTN_SelectSchematicFilePath.TabIndex = 5;
         BTN_SelectSchematicFilePath.Text = "Select";
         BTN_SelectSchematicFilePath.UseTransparentBackground = true;
         BTN_SelectSchematicFilePath.Click += BTN_SelectSchematicFilePath_Click;
@@ -152,7 +157,7 @@ partial class FRM_NewProject
         LBL_SchematicFile.AutoSize = true;
         LBL_SchematicFile.Font = new Font("Leelawadee UI", 11.25F, FontStyle.Regular, GraphicsUnit.Point, 0);
         LBL_SchematicFile.ForeColor = Color.FromArgb(235, 234, 234);
-        LBL_SchematicFile.Location = new Point(12, 99);
+        LBL_SchematicFile.Location = new Point(12, 261);
         LBL_SchematicFile.Name = "LBL_SchematicFile";
         LBL_SchematicFile.Size = new Size(105, 20);
         LBL_SchematicFile.TabIndex = 0;
@@ -166,7 +171,6 @@ partial class FRM_NewProject
         BTN_CreateProject.BorderRadius = 5;
         BTN_CreateProject.Cursor = Cursors.Hand;
         BTN_CreateProject.CustomizableEdges = customizableEdges7;
-        BTN_CreateProject.DialogResult = DialogResult.OK;
         BTN_CreateProject.DisabledState.BorderColor = Color.FromArgb(80, 76, 76);
         BTN_CreateProject.DisabledState.CustomBorderColor = Color.FromArgb(80, 76, 76);
         BTN_CreateProject.DisabledState.FillColor = Color.FromArgb(80, 76, 76);
@@ -174,11 +178,11 @@ partial class FRM_NewProject
         BTN_CreateProject.FillColor = Color.FromArgb(162, 123, 90);
         BTN_CreateProject.Font = new Font("Leelawadee UI", 11.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
         BTN_CreateProject.ForeColor = Color.White;
-        BTN_CreateProject.Location = new Point(364, 196);
+        BTN_CreateProject.Location = new Point(364, 347);
         BTN_CreateProject.Name = "BTN_CreateProject";
         BTN_CreateProject.ShadowDecoration.CustomizableEdges = customizableEdges8;
         BTN_CreateProject.Size = new Size(144, 32);
-        BTN_CreateProject.TabIndex = 5;
+        BTN_CreateProject.TabIndex = 7;
         BTN_CreateProject.Text = "Create project";
         BTN_CreateProject.UseTransparentBackground = true;
         BTN_CreateProject.Click += BTN_CreateProject_Click;
@@ -202,21 +206,113 @@ partial class FRM_NewProject
         BTN_Cancel.Font = new Font("Leelawadee UI", 11.25F, FontStyle.Regular, GraphicsUnit.Point, 0);
         BTN_Cancel.ForeColor = Color.White;
         BTN_Cancel.HoverState.BorderColor = Color.FromArgb(103, 99, 99);
-        BTN_Cancel.Location = new Point(12, 196);
+        BTN_Cancel.Location = new Point(12, 347);
         BTN_Cancel.Name = "BTN_Cancel";
         BTN_Cancel.ShadowDecoration.CustomizableEdges = customizableEdges10;
         BTN_Cancel.Size = new Size(119, 32);
-        BTN_Cancel.TabIndex = 4;
+        BTN_Cancel.TabIndex = 6;
         BTN_Cancel.Text = "Cancel";
         BTN_Cancel.UseTransparentBackground = true;
         BTN_Cancel.Click += BTN_Cancel_Click;
+        // 
+        // RBN_TypeSchematic
+        // 
+        RBN_TypeSchematic.Animated = true;
+        RBN_TypeSchematic.AutoSize = true;
+        RBN_TypeSchematic.BackColor = Color.Transparent;
+        RBN_TypeSchematic.Checked = true;
+        RBN_TypeSchematic.CheckedState.BorderColor = Color.FromArgb(162, 123, 90);
+        RBN_TypeSchematic.CheckedState.BorderThickness = 0;
+        RBN_TypeSchematic.CheckedState.FillColor = Color.FromArgb(162, 123, 90);
+        RBN_TypeSchematic.CheckedState.InnerColor = Color.White;
+        RBN_TypeSchematic.CheckedState.InnerOffset = -4;
+        RBN_TypeSchematic.Cursor = Cursors.Hand;
+        RBN_TypeSchematic.Font = new Font("Leelawadee UI", 11.25F, FontStyle.Regular, GraphicsUnit.Point, 0);
+        RBN_TypeSchematic.ForeColor = Color.FromArgb(235, 234, 234);
+        RBN_TypeSchematic.Location = new Point(12, 145);
+        RBN_TypeSchematic.Name = "RBN_TypeSchematic";
+        RBN_TypeSchematic.Size = new Size(120, 24);
+        RBN_TypeSchematic.TabIndex = 2;
+        RBN_TypeSchematic.TabStop = true;
+        RBN_TypeSchematic.Text = "Schematic file";
+        RBN_TypeSchematic.UncheckedState.BorderColor = Color.FromArgb(103, 99, 99);
+        RBN_TypeSchematic.UncheckedState.BorderThickness = 2;
+        RBN_TypeSchematic.UncheckedState.FillColor = Color.FromArgb(58, 55, 55);
+        RBN_TypeSchematic.UncheckedState.InnerColor = Color.Transparent;
+        RBN_TypeSchematic.UseVisualStyleBackColor = false;
+        RBN_TypeSchematic.CheckedChanged += RBN_TypeSchematic_CheckedChanged;
+        // 
+        // LBL_SchematicHint
+        // 
+        LBL_SchematicHint.AutoSize = true;
+        LBL_SchematicHint.Font = new Font("Leelawadee UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
+        LBL_SchematicHint.ForeColor = Color.FromArgb(151, 148, 148);
+        LBL_SchematicHint.Location = new Point(33, 172);
+        LBL_SchematicHint.Name = "LBL_SchematicHint";
+        LBL_SchematicHint.Size = new Size(240, 15);
+        LBL_SchematicHint.TabIndex = 0;
+        LBL_SchematicHint.Text = "Import the material list from schematic files.";
+        // 
+        // RBN_TypeEmpty
+        // 
+        RBN_TypeEmpty.Animated = true;
+        RBN_TypeEmpty.AutoSize = true;
+        RBN_TypeEmpty.BackColor = Color.Transparent;
+        RBN_TypeEmpty.CheckedState.BorderColor = Color.FromArgb(162, 123, 90);
+        RBN_TypeEmpty.CheckedState.BorderThickness = 0;
+        RBN_TypeEmpty.CheckedState.FillColor = Color.FromArgb(162, 123, 90);
+        RBN_TypeEmpty.CheckedState.InnerColor = Color.White;
+        RBN_TypeEmpty.CheckedState.InnerOffset = -4;
+        RBN_TypeEmpty.Cursor = Cursors.Hand;
+        RBN_TypeEmpty.Font = new Font("Leelawadee UI", 11.25F, FontStyle.Regular, GraphicsUnit.Point, 0);
+        RBN_TypeEmpty.ForeColor = Color.FromArgb(235, 234, 234);
+        RBN_TypeEmpty.Location = new Point(12, 196);
+        RBN_TypeEmpty.Name = "RBN_TypeEmpty";
+        RBN_TypeEmpty.Size = new Size(120, 24);
+        RBN_TypeEmpty.TabIndex = 3;
+        RBN_TypeEmpty.Text = "Empty project";
+        RBN_TypeEmpty.UncheckedState.BorderColor = Color.FromArgb(103, 99, 99);
+        RBN_TypeEmpty.UncheckedState.BorderThickness = 2;
+        RBN_TypeEmpty.UncheckedState.FillColor = Color.FromArgb(58, 55, 55);
+        RBN_TypeEmpty.UncheckedState.InnerColor = Color.Transparent;
+        RBN_TypeEmpty.UseVisualStyleBackColor = false;
+        RBN_TypeEmpty.CheckedChanged += RBN_TypeEmpty_CheckedChanged;
+        // 
+        // LBL_EmptyHint
+        // 
+        LBL_EmptyHint.AutoSize = true;
+        LBL_EmptyHint.Font = new Font("Leelawadee UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
+        LBL_EmptyHint.ForeColor = Color.FromArgb(151, 148, 148);
+        LBL_EmptyHint.Location = new Point(33, 223);
+        LBL_EmptyHint.Name = "LBL_EmptyHint";
+        LBL_EmptyHint.Size = new Size(286, 15);
+        LBL_EmptyHint.TabIndex = 0;
+        LBL_EmptyHint.Text = "Create an empty project and add materials manually.";
+        // 
+        // LBL_ProjectType
+        // 
+        LBL_ProjectType.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+        LBL_ProjectType.AutoSize = true;
+        LBL_ProjectType.Font = new Font("Leelawadee UI", 12F, FontStyle.Bold, GraphicsUnit.Point, 0);
+        LBL_ProjectType.ForeColor = Color.FromArgb(194, 165, 142);
+        LBL_ProjectType.Location = new Point(12, 121);
+        LBL_ProjectType.Name = "LBL_ProjectType";
+        LBL_ProjectType.Size = new Size(158, 21);
+        LBL_ProjectType.TabIndex = 0;
+        LBL_ProjectType.Text = "Create project from";
+        LBL_ProjectType.TextAlign = ContentAlignment.MiddleCenter;
         // 
         // FRM_NewProject
         // 
         AutoScaleDimensions = new SizeF(8F, 20F);
         AutoScaleMode = AutoScaleMode.Font;
         BackColor = Color.FromArgb(38, 34, 34);
-        ClientSize = new Size(520, 240);
+        ClientSize = new Size(520, 391);
+        Controls.Add(LBL_ProjectType);
+        Controls.Add(LBL_EmptyHint);
+        Controls.Add(RBN_TypeEmpty);
+        Controls.Add(LBL_SchematicHint);
+        Controls.Add(RBN_TypeSchematic);
         Controls.Add(BTN_Cancel);
         Controls.Add(BTN_CreateProject);
         Controls.Add(TBX_SchematicFilePath);
@@ -246,4 +342,10 @@ partial class FRM_NewProject
     private Label LBL_SchematicFile;
     private Guna.UI2.WinForms.Guna2Button BTN_CreateProject;
     private Guna.UI2.WinForms.Guna2Button BTN_Cancel;
+    private Label LBL_CreateProjectFrom;
+    private Guna.UI2.WinForms.Guna2RadioButton RBN_TypeSchematic;
+    private Label LBL_SchematicHint;
+    private Guna.UI2.WinForms.Guna2RadioButton RBN_TypeEmpty;
+    private Label LBL_EmptyHint;
+    private Label LBL_ProjectType;
 }

@@ -29,20 +29,20 @@ partial class AppTheme
     private void InitializeComponent()
     {
         components = new System.ComponentModel.Container();
-        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges15 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
-        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges16 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
-        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges17 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
-        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges18 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
-        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges19 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
-        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges20 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
-        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges21 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
-        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges22 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
-        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges23 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
-        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges24 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
-        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges25 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
-        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges26 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
-        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges27 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
-        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges28 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
+        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges57 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
+        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges58 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
+        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges59 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
+        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges60 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
+        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges61 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
+        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges62 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
+        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges63 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
+        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges64 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
+        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges65 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
+        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges66 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
+        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges67 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
+        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges68 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
+        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges69 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
+        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges70 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
         BTN_Primary = new Guna.UI2.WinForms.Guna2Button();
         BTN_Secondary = new Guna.UI2.WinForms.Guna2Button();
         TBX_Input = new Guna.UI2.WinForms.Guna2TextBox();
@@ -59,6 +59,7 @@ partial class AppTheme
         CHB_Check = new Guna.UI2.WinForms.Guna2CheckBox();
         NUD_Number = new Guna.UI2.WinForms.Guna2NumericUpDown();
         SEP_1 = new Guna.UI2.WinForms.Guna2Separator();
+        RBN_Select1 = new Guna.UI2.WinForms.Guna2RadioButton();
         ((System.ComponentModel.ISupportInitialize)NUD_Number).BeginInit();
         SuspendLayout();
         // 
@@ -68,7 +69,7 @@ partial class AppTheme
         BTN_Primary.BackColor = Color.Transparent;
         BTN_Primary.BorderRadius = 5;
         BTN_Primary.Cursor = Cursors.Hand;
-        BTN_Primary.CustomizableEdges = customizableEdges15;
+        BTN_Primary.CustomizableEdges = customizableEdges57;
         BTN_Primary.DialogResult = DialogResult.OK;
         BTN_Primary.DisabledState.BorderColor = Color.FromArgb(80, 76, 76);
         BTN_Primary.DisabledState.CustomBorderColor = Color.FromArgb(80, 76, 76);
@@ -79,7 +80,7 @@ partial class AppTheme
         BTN_Primary.ForeColor = Color.White;
         BTN_Primary.Location = new Point(3, 3);
         BTN_Primary.Name = "BTN_Primary";
-        BTN_Primary.ShadowDecoration.CustomizableEdges = customizableEdges16;
+        BTN_Primary.ShadowDecoration.CustomizableEdges = customizableEdges58;
         BTN_Primary.Size = new Size(119, 32);
         BTN_Primary.TabIndex = 0;
         BTN_Primary.Text = "PrimaryButton";
@@ -93,7 +94,7 @@ partial class AppTheme
         BTN_Secondary.BorderRadius = 5;
         BTN_Secondary.BorderThickness = 2;
         BTN_Secondary.Cursor = Cursors.Hand;
-        BTN_Secondary.CustomizableEdges = customizableEdges17;
+        BTN_Secondary.CustomizableEdges = customizableEdges59;
         BTN_Secondary.DisabledState.BorderColor = Color.FromArgb(80, 76, 76);
         BTN_Secondary.DisabledState.CustomBorderColor = Color.FromArgb(80, 76, 76);
         BTN_Secondary.DisabledState.FillColor = Color.FromArgb(80, 76, 76);
@@ -104,7 +105,7 @@ partial class AppTheme
         BTN_Secondary.HoverState.BorderColor = Color.FromArgb(103, 99, 99);
         BTN_Secondary.Location = new Point(3, 41);
         BTN_Secondary.Name = "BTN_Secondary";
-        BTN_Secondary.ShadowDecoration.CustomizableEdges = customizableEdges18;
+        BTN_Secondary.ShadowDecoration.CustomizableEdges = customizableEdges60;
         BTN_Secondary.Size = new Size(119, 32);
         BTN_Secondary.TabIndex = 0;
         BTN_Secondary.Text = "SecondaryButton";
@@ -117,7 +118,7 @@ partial class AppTheme
         TBX_Input.BorderColor = Color.FromArgb(103, 99, 99);
         TBX_Input.BorderRadius = 5;
         TBX_Input.BorderThickness = 2;
-        TBX_Input.CustomizableEdges = customizableEdges19;
+        TBX_Input.CustomizableEdges = customizableEdges61;
         TBX_Input.DefaultText = "";
         TBX_Input.DisabledState.BorderColor = Color.FromArgb(80, 76, 76);
         TBX_Input.DisabledState.FillColor = Color.FromArgb(80, 76, 76);
@@ -136,7 +137,7 @@ partial class AppTheme
         TBX_Input.PlaceholderForeColor = Color.FromArgb(151, 148, 148);
         TBX_Input.PlaceholderText = "";
         TBX_Input.SelectedText = "";
-        TBX_Input.ShadowDecoration.CustomizableEdges = customizableEdges20;
+        TBX_Input.ShadowDecoration.CustomizableEdges = customizableEdges62;
         TBX_Input.Size = new Size(165, 33);
         TBX_Input.TabIndex = 0;
         // 
@@ -171,7 +172,7 @@ partial class AppTheme
         TBX_FilePath.BorderColor = Color.FromArgb(103, 99, 99);
         TBX_FilePath.BorderRadius = 5;
         TBX_FilePath.BorderThickness = 2;
-        TBX_FilePath.CustomizableEdges = customizableEdges21;
+        TBX_FilePath.CustomizableEdges = customizableEdges63;
         TBX_FilePath.DefaultText = "";
         TBX_FilePath.DisabledState.BorderColor = Color.FromArgb(80, 76, 76);
         TBX_FilePath.DisabledState.FillColor = Color.FromArgb(80, 76, 76);
@@ -190,7 +191,7 @@ partial class AppTheme
         TBX_FilePath.PlaceholderForeColor = Color.FromArgb(151, 148, 148);
         TBX_FilePath.PlaceholderText = "";
         TBX_FilePath.SelectedText = "";
-        TBX_FilePath.ShadowDecoration.CustomizableEdges = customizableEdges22;
+        TBX_FilePath.ShadowDecoration.CustomizableEdges = customizableEdges64;
         TBX_FilePath.Size = new Size(257, 33);
         TBX_FilePath.TabIndex = 0;
         // 
@@ -202,7 +203,7 @@ partial class AppTheme
         BTN_SelectFilePath.BorderRadius = 5;
         BTN_SelectFilePath.BorderThickness = 2;
         BTN_SelectFilePath.Cursor = Cursors.Hand;
-        BTN_SelectFilePath.CustomizableEdges = customizableEdges23;
+        BTN_SelectFilePath.CustomizableEdges = customizableEdges65;
         BTN_SelectFilePath.DialogResult = DialogResult.OK;
         BTN_SelectFilePath.DisabledState.BorderColor = Color.FromArgb(80, 76, 76);
         BTN_SelectFilePath.DisabledState.CustomBorderColor = Color.FromArgb(80, 76, 76);
@@ -214,7 +215,7 @@ partial class AppTheme
         BTN_SelectFilePath.HoverState.BorderColor = Color.FromArgb(103, 99, 99);
         BTN_SelectFilePath.Location = new Point(266, 241);
         BTN_SelectFilePath.Name = "BTN_SelectFilePath";
-        BTN_SelectFilePath.ShadowDecoration.CustomizableEdges = customizableEdges24;
+        BTN_SelectFilePath.ShadowDecoration.CustomizableEdges = customizableEdges66;
         BTN_SelectFilePath.Size = new Size(71, 33);
         BTN_SelectFilePath.TabIndex = 0;
         BTN_SelectFilePath.Text = "Select";
@@ -292,10 +293,10 @@ partial class AppTheme
         TSW_Toggle.CheckedState.InnerBorderColor = Color.FromArgb(194, 165, 142);
         TSW_Toggle.CheckedState.InnerColor = Color.FromArgb(194, 165, 142);
         TSW_Toggle.Cursor = Cursors.Hand;
-        TSW_Toggle.CustomizableEdges = customizableEdges25;
+        TSW_Toggle.CustomizableEdges = customizableEdges67;
         TSW_Toggle.Location = new Point(30, 282);
         TSW_Toggle.Name = "TSW_Toggle";
-        TSW_Toggle.ShadowDecoration.CustomizableEdges = customizableEdges26;
+        TSW_Toggle.ShadowDecoration.CustomizableEdges = customizableEdges68;
         TSW_Toggle.Size = new Size(35, 20);
         TSW_Toggle.TabIndex = 0;
         TSW_Toggle.UncheckedState.BorderColor = Color.FromArgb(103, 99, 99);
@@ -333,14 +334,14 @@ partial class AppTheme
         NUD_Number.BorderColor = Color.FromArgb(103, 99, 99);
         NUD_Number.BorderRadius = 5;
         NUD_Number.BorderThickness = 2;
-        NUD_Number.CustomizableEdges = customizableEdges27;
+        NUD_Number.CustomizableEdges = customizableEdges69;
         NUD_Number.FillColor = Color.FromArgb(58, 55, 55);
         NUD_Number.FocusedState.BorderColor = Color.FromArgb(162, 123, 90);
         NUD_Number.Font = new Font("Leelawadee UI", 11.25F, FontStyle.Regular, GraphicsUnit.Point, 0);
         NUD_Number.ForeColor = Color.FromArgb(235, 234, 234);
         NUD_Number.Location = new Point(353, 238);
         NUD_Number.Name = "NUD_Number";
-        NUD_Number.ShadowDecoration.CustomizableEdges = customizableEdges28;
+        NUD_Number.ShadowDecoration.CustomizableEdges = customizableEdges70;
         NUD_Number.Size = new Size(73, 36);
         NUD_Number.TabIndex = 0;
         NUD_Number.UpDownButtonFillColor = Color.FromArgb(162, 123, 90);
@@ -358,11 +359,36 @@ partial class AppTheme
         SEP_1.TabStop = false;
         SEP_1.UseTransparentBackground = true;
         // 
+        // RBN_Select1
+        // 
+        RBN_Select1.Animated = true;
+        RBN_Select1.AutoSize = true;
+        RBN_Select1.BackColor = Color.Transparent;
+        RBN_Select1.CheckedState.BorderColor = Color.FromArgb(162, 123, 90);
+        RBN_Select1.CheckedState.BorderThickness = 0;
+        RBN_Select1.CheckedState.FillColor = Color.FromArgb(162, 123, 90);
+        RBN_Select1.CheckedState.InnerColor = Color.White;
+        RBN_Select1.CheckedState.InnerOffset = -4;
+        RBN_Select1.Cursor = Cursors.Hand;
+        RBN_Select1.Font = new Font("Leelawadee UI", 11.25F, FontStyle.Regular, GraphicsUnit.Point, 0);
+        RBN_Select1.ForeColor = Color.FromArgb(235, 234, 234);
+        RBN_Select1.Location = new Point(30, 354);
+        RBN_Select1.Name = "RBN_Select1";
+        RBN_Select1.Size = new Size(159, 24);
+        RBN_Select1.TabIndex = 1;
+        RBN_Select1.Text = "guna2RadioButton1";
+        RBN_Select1.UncheckedState.BorderColor = Color.FromArgb(103, 99, 99);
+        RBN_Select1.UncheckedState.BorderThickness = 2;
+        RBN_Select1.UncheckedState.FillColor = Color.FromArgb(58, 55, 55);
+        RBN_Select1.UncheckedState.InnerColor = Color.Transparent;
+        RBN_Select1.UseVisualStyleBackColor = false;
+        // 
         // AppTheme
         // 
         AutoScaleDimensions = new SizeF(7F, 15F);
         AutoScaleMode = AutoScaleMode.Font;
         BackColor = Color.Black;
+        Controls.Add(RBN_Select1);
         Controls.Add(SEP_1);
         Controls.Add(NUD_Number);
         Controls.Add(CHB_Check);
@@ -410,4 +436,5 @@ partial class AppTheme
     private Guna.UI2.WinForms.Guna2CheckBox CHB_Check;
     private Guna.UI2.WinForms.Guna2NumericUpDown NUD_Number;
     private Guna.UI2.WinForms.Guna2Separator SEP_1;
+    private Guna.UI2.WinForms.Guna2RadioButton RBN_Select1;
 }

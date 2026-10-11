@@ -32,7 +32,7 @@ public partial class FRM_AdjustCollectedAmount : Form
 
         InitializeValues();
 
-        Log.Debug("{LogContext} Adjust collected amount dialogue opened. ProjectId={ProjectId}, ItemId={ItemId}, CollectedAmount={CollectedAmount}, RequiredAmount={RequiredAmount}", LogContext, _material.ProjectId, _material.ItemId, _material.CollectedAmount, _material.RequiredAmount);
+        Log.Debug("{LogContext} Adjust collected amount dialog opened. ProjectId={ProjectId}, ItemId={ItemId}, CollectedAmount={CollectedAmount}, RequiredAmount={RequiredAmount}", LogContext, _material.ProjectId, _material.ItemId, _material.CollectedAmount, _material.RequiredAmount);
     }
 
     private void InitializeValues()
@@ -228,7 +228,7 @@ public partial class FRM_AdjustCollectedAmount : Form
 
     private void BTN_Cancel_Click(object sender, EventArgs e)
     {
-        Log.Debug("{LogContext} Adjust collected amount dialogue cancelled. ItemId={ItemId}", LogContext, _material.ItemId);
+        Log.Debug("{LogContext} Adjust collected amount dialog cancelled. ItemId={ItemId}", LogContext, _material.ItemId);
 
         DialogResult = DialogResult.Cancel;
         Close();

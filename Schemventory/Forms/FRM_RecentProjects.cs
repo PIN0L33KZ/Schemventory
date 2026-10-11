@@ -44,18 +44,18 @@ public partial class FRM_RecentProjects : Form
 
     private void BTN_NewProject_Click(object sender, EventArgs e)
     {
-        Log.Debug("{LogContext} New project dialogue requested.", LogContext);
+        Log.Debug("{LogContext} New project dialog requested.", LogContext);
 
         using FRM_NewProject newProjectForm = new(_databaseService);
 
         if(newProjectForm.ShowDialog() == DialogResult.OK)
         {
-            Log.Debug("{LogContext} New project dialogue completed successfully.", LogContext);
+            Log.Debug("{LogContext} New project dialog completed successfully.", LogContext);
             LoadProjects();
         }
         else
         {
-            Log.Debug("{LogContext} New project dialogue cancelled.", LogContext);
+            Log.Debug("{LogContext} New project dialog cancelled.", LogContext);
         }
     }
 

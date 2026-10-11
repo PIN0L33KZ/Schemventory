@@ -47,6 +47,7 @@ public class DatabaseService
 
         ConfigureDatabase(connection);
         CreateProjectsTable(connection);
+        MigrateProjectsTable(connection);
         CreateProjectMaterialsTable(connection);
         MigrateProjectMaterialsTable(connection);
 
@@ -71,7 +72,7 @@ public class DatabaseService
             (
                 Id TEXT NOT NULL PRIMARY KEY,
                 Name TEXT NOT NULL,
-                SchematicPath TEXT NOT NULL,
+                SchematicPath TEXT NULL,
                 CreatedAtUtc TEXT NOT NULL,
                 LastOpenedAtUtc TEXT NOT NULL
             );";
@@ -79,6 +80,97 @@ public class DatabaseService
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText = query;
         _ = command.ExecuteNonQuery();
+    }
+
+    private static void MigrateProjectsTable(SqliteConnection connection)
+    {
+        if(ColumnAllowsNull(connection, "Projects", "SchematicPath"))
+            return;
+
+        Log.Information("{LogContext} Migrating Projects.SchematicPath to nullable.", LogContext);
+
+        SetForeignKeysEnabled(connection, false);
+
+        try
+        {
+            using SqliteTransaction transaction = connection.BeginTransaction();
+
+            try
+            {
+                using(SqliteCommand createCommand = connection.CreateCommand())
+                {
+                    createCommand.Transaction = transaction;
+                    createCommand.CommandText = @"
+                        CREATE TABLE Projects_New
+                        (
+                            Id TEXT NOT NULL PRIMARY KEY,
+                            Name TEXT NOT NULL,
+                            SchematicPath TEXT NULL,
+                            CreatedAtUtc TEXT NOT NULL,
+                            LastOpenedAtUtc TEXT NOT NULL
+                        );";
+
+                    _ = createCommand.ExecuteNonQuery();
+                }
+
+                using(SqliteCommand copyCommand = connection.CreateCommand())
+                {
+                    copyCommand.Transaction = transaction;
+                    copyCommand.CommandText = @"
+                        INSERT INTO Projects_New
+                        (
+                            Id,
+                            Name,
+                            SchematicPath,
+                            CreatedAtUtc,
+                            LastOpenedAtUtc
+                        )
+                        SELECT
+                            Id,
+                            Name,
+                            SchematicPath,
+                            CreatedAtUtc,
+                            LastOpenedAtUtc
+                        FROM Projects;";
+
+                    _ = copyCommand.ExecuteNonQuery();
+                }
+
+                using(SqliteCommand dropCommand = connection.CreateCommand())
+                {
+                    dropCommand.Transaction = transaction;
+                    dropCommand.CommandText = "DROP TABLE Projects;";
+
+                    _ = dropCommand.ExecuteNonQuery();
+                }
+
+                using(SqliteCommand renameCommand = connection.CreateCommand())
+                {
+                    renameCommand.Transaction = transaction;
+                    renameCommand.CommandText = "ALTER TABLE Projects_New RENAME TO Projects;";
+
+                    _ = renameCommand.ExecuteNonQuery();
+                }
+
+                transaction.Commit();
+
+                Log.Information("{LogContext} Projects.SchematicPath migration completed.", LogContext);
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
+        }
+        catch(Exception exception)
+        {
+            Log.Error(exception, "{LogContext} Failed to migrate Projects.SchematicPath to nullable.", LogContext);
+            throw;
+        }
+        finally
+        {
+            SetForeignKeysEnabled(connection, true);
+        }
     }
 
     private static void CreateProjectMaterialsTable(SqliteConnection connection)
@@ -159,5 +251,31 @@ public class DatabaseService
         }
 
         return false;
+    }
+
+    private static bool ColumnAllowsNull(SqliteConnection connection, string tableName, string columnName)
+    {
+        using SqliteCommand command = connection.CreateCommand();
+        command.CommandText = $"PRAGMA table_info({tableName});";
+
+        using SqliteDataReader reader = command.ExecuteReader();
+
+        while(reader.Read())
+        {
+            if(!string.Equals(reader.GetString(1), columnName, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            return reader.GetInt32(3) == 0;
+        }
+
+        return false;
+    }
+
+    private static void SetForeignKeysEnabled(SqliteConnection connection, bool enabled)
+    {
+        using SqliteCommand command = connection.CreateCommand();
+        command.CommandText = enabled ? "PRAGMA foreign_keys = ON;" : "PRAGMA foreign_keys = OFF;";
+
+        _ = command.ExecuteNonQuery();
     }
 }

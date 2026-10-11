@@ -1,13 +1,14 @@
-﻿using Serilog;
-using Schemventory.App;
+﻿using Schemventory.App;
 using Schemventory.Data;
 using Schemventory.Services;
+using Serilog;
 
 namespace Schemventory.Forms;
 
 public partial class FRM_NewProject : Form
 {
     private const string LogContext = "(FRM_NewProject)";
+
     private readonly ProjectPersistenceService _projectPersistenceService;
     private readonly MaterialImportService _materialImportService;
     private readonly Project? _currentProject;
@@ -27,12 +28,14 @@ public partial class FRM_NewProject : Form
 
     private void FRM_NewProject_Load(object sender, EventArgs e)
     {
-        Log.Debug("{LogContext} Project dialogue opened. EditMode={EditMode}, ProjectId={ProjectId}", LogContext, IsEditMode, _currentProject?.Id);
+        Log.Debug("{LogContext} Project dialog opened. EditMode={EditMode}, ProjectId={ProjectId}", LogContext, IsEditMode, _currentProject?.Id);
 
         ConfigureForm();
 
         if(IsEditMode)
             LoadProjectData();
+        else
+            UpdateControls();
     }
 
     private void ConfigureForm()
@@ -46,10 +49,17 @@ public partial class FRM_NewProject : Form
         if(_currentProject is null)
             return;
 
-        TBX_ProjectName.Text = _currentProject.Name;
-        TBX_SchematicFilePath.Text = _currentProject.SchematicPath;
+        var hasSchematic = !string.IsNullOrWhiteSpace(_currentProject.SchematicPath);
 
-        Log.Debug("{LogContext} Existing project data loaded. ProjectId={ProjectId}", LogContext, _currentProject.Id);
+        TBX_ProjectName.Text = _currentProject.Name;
+        TBX_SchematicFilePath.Text = _currentProject.SchematicPath ?? string.Empty;
+
+        RBN_TypeSchematic.Checked = hasSchematic;
+        RBN_TypeEmpty.Checked = !hasSchematic;
+
+        UpdateControls();
+
+        Log.Debug("{LogContext} Existing project data loaded. ProjectId={ProjectId}, HasSchematic={HasSchematic}", LogContext, _currentProject.Id, hasSchematic);
     }
 
     private void BTN_CreateProject_Click(object sender, EventArgs e)
@@ -78,22 +88,26 @@ public partial class FRM_NewProject : Form
 
     private void CreateProject()
     {
+        var useSchematic = RBN_TypeSchematic.Checked;
+        var schematicPath = useSchematic ? TBX_SchematicFilePath.Text.Trim() : null;
+
         Project project = new()
         {
             Id = Guid.NewGuid(),
             Name = TBX_ProjectName.Text.Trim(),
-            SchematicPath = TBX_SchematicFilePath.Text.Trim(),
+            SchematicPath = schematicPath,
             CreatedAtUtc = DateTime.UtcNow,
             LastOpenedAtUtc = DateTime.UtcNow
         };
 
-        Log.Debug("{LogContext} Creating project. ProjectId={ProjectId}, Name={ProjectName}, SchematicPath={SchematicPath}", LogContext, project.Id, project.Name, project.SchematicPath);
+        IReadOnlyCollection<MaterialEntry> materials = [];
 
-        IReadOnlyCollection<MaterialEntry> materials = _materialImportService.ReadMaterialList(project.SchematicPath);
+        if(schematicPath is not null)
+            materials = _materialImportService.ReadMaterialList(schematicPath);
 
         _projectPersistenceService.Create(project, materials);
 
-        Log.Information("{LogContext} Project created. ProjectId={ProjectId}, MaterialCount={MaterialCount}", LogContext, project.Id, materials.Count);
+        Log.Information("{LogContext} Project created. ProjectId={ProjectId}, CreationMode={CreationMode}, MaterialCount={MaterialCount}", LogContext, project.Id, useSchematic ? "Schematic" : "Empty", materials.Count);
     }
 
     private void UpdateProject()
@@ -101,8 +115,9 @@ public partial class FRM_NewProject : Form
         if(_currentProject is null)
             return;
 
+        var useSchematic = RBN_TypeSchematic.Checked;
         var newName = TBX_ProjectName.Text.Trim();
-        var newSchematicPath = TBX_SchematicFilePath.Text.Trim();
+        var newSchematicPath = useSchematic ? TBX_SchematicFilePath.Text.Trim() : null;
         var schematicChanged = !string.Equals(_currentProject.SchematicPath, newSchematicPath, StringComparison.OrdinalIgnoreCase);
 
         Log.Debug("{LogContext} Updating project. ProjectId={ProjectId}, SchematicChanged={SchematicChanged}", LogContext, _currentProject.Id, schematicChanged);
@@ -110,7 +125,11 @@ public partial class FRM_NewProject : Form
         IReadOnlyCollection<MaterialEntry>? materials = null;
 
         if(schematicChanged)
-            materials = _materialImportService.ReadMaterialList(newSchematicPath);
+        {
+            materials = newSchematicPath is null
+                ? []
+                : _materialImportService.ReadMaterialList(newSchematicPath);
+        }
 
         _currentProject.Name = newName;
         _currentProject.SchematicPath = newSchematicPath;
@@ -145,7 +164,7 @@ public partial class FRM_NewProject : Form
         return new OpenFileDialog
         {
             Title = "Select schematic file",
-            Filter = "Litematic files (*.litematic)|*.litematic|Sponge schematic files (*.schem)|*.schem",
+            Filter = "Supported schematic files (*.litematic;*.schem)|*.litematic;*.schem|Litematic files (*.litematic)|*.litematic|Sponge schematic files (*.schem)|*.schem",
             CheckFileExists = true,
             CheckPathExists = true,
             Multiselect = false
@@ -155,26 +174,36 @@ public partial class FRM_NewProject : Form
     private bool ValidateInput()
     {
         var projectName = TBX_ProjectName.Text.Trim();
-        var schematicFilePath = TBX_SchematicFilePath.Text.Trim();
 
         if(string.IsNullOrWhiteSpace(projectName))
         {
             Log.Warning("{LogContext} Project validation failed: project name is empty.", LogContext);
+
             _ = MessageBox.Show("Project name cannot be empty.", WindowName, MessageBoxButtons.OK, MessageBoxIcon.Error);
+
             return false;
         }
+
+        if(RBN_TypeEmpty.Checked)
+            return true;
+
+        var schematicFilePath = TBX_SchematicFilePath.Text.Trim();
 
         if(string.IsNullOrWhiteSpace(schematicFilePath))
         {
             Log.Warning("{LogContext} Project validation failed: schematic file path is empty.", LogContext);
+
             _ = MessageBox.Show("Schematic file path cannot be empty.", WindowName, MessageBoxButtons.OK, MessageBoxIcon.Error);
+
             return false;
         }
 
         if(!File.Exists(schematicFilePath))
         {
             Log.Warning("{LogContext} Project validation failed: schematic file does not exist. Path={Path}", LogContext, schematicFilePath);
+
             _ = MessageBox.Show("Schematic file does not exist.", WindowName, MessageBoxButtons.OK, MessageBoxIcon.Error);
+
             return false;
         }
 
@@ -183,7 +212,9 @@ public partial class FRM_NewProject : Form
         if(!extension.Equals(".litematic", StringComparison.OrdinalIgnoreCase) && !extension.Equals(".schem", StringComparison.OrdinalIgnoreCase))
         {
             Log.Warning("{LogContext} Project validation failed: unsupported schematic format. Extension={Extension}", LogContext, extension);
+
             _ = MessageBox.Show("The selected file format is not supported.", WindowName, MessageBoxButtons.OK, MessageBoxIcon.Error);
+
             return false;
         }
 
@@ -192,9 +223,31 @@ public partial class FRM_NewProject : Form
 
     private void BTN_Cancel_Click(object sender, EventArgs e)
     {
-        Log.Debug("{LogContext} Project dialogue cancelled. EditMode={EditMode}, ProjectId={ProjectId}", LogContext, IsEditMode, _currentProject?.Id);
+        Log.Debug("{LogContext} Project dialog cancelled. EditMode={EditMode}, ProjectId={ProjectId}", LogContext, IsEditMode, _currentProject?.Id);
 
         DialogResult = DialogResult.Cancel;
         Close();
+    }
+
+    private void UpdateControls()
+    {
+        var schematicRequired = RBN_TypeSchematic.Checked;
+
+        TBX_SchematicFilePath.Enabled = schematicRequired;
+        BTN_SelectSchematicFilePath.Enabled = schematicRequired;
+
+        TBX_SchematicFilePath.PlaceholderText = schematicRequired
+            ? "Select a schematic file..."
+            : "No schematic file required";
+    }
+
+    private void RBN_TypeSchematic_CheckedChanged(object sender, EventArgs e)
+    {
+        UpdateControls();
+    }
+
+    private void RBN_TypeEmpty_CheckedChanged(object sender, EventArgs e)
+    {
+        UpdateControls();
     }
 }

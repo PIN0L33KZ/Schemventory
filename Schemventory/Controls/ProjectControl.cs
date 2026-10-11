@@ -1,12 +1,13 @@
-﻿using Serilog;
-using Schemventory.Data;
+﻿using Schemventory.Data;
 using Schemventory.Data.EventArguments;
+using Serilog;
 
 namespace Schemventory;
 
 public partial class ProjectControl : UserControl
 {
     private const string LogContext = "(ProjectControl)";
+
     private readonly Project _project;
     private readonly System.Windows.Forms.Timer _hoverTimer;
     private bool _isHovered;
@@ -79,20 +80,22 @@ public partial class ProjectControl : UserControl
     private void LoadProjectData()
     {
         LBL_ProjectName.Text = _project.Name;
-        LBL_SchematicPath.Text = _project.SchematicPath;
+        LBL_SchematicPath.Text = string.IsNullOrWhiteSpace(_project.SchematicPath) ? "No schematic file" : _project.SchematicPath;
         LBL_CreatedAt.Text = $"Created: {_project.CreatedAtUtc:dd.MM.yyyy HH:mm}";
         LBL_LastOpened.Text = $"Last opened: {_project.LastOpenedAtUtc:dd.MM.yyyy HH:mm}";
 
-        switch(Path.GetExtension(_project.SchematicPath))
+        if(string.IsNullOrWhiteSpace(_project.SchematicPath))
         {
-            case ".litematic":
-                PBX_ProjectIcon.Image = Properties.Resources.ProjectIconL;
-                break;
-
-            case ".schem":
-                PBX_ProjectIcon.Image = Properties.Resources.ProjectIconS;
-                break;
+            PBX_ProjectIcon.Image = Properties.Resources.ProjectIconC;
+            return;
         }
+
+        PBX_ProjectIcon.Image = Path.GetExtension(_project.SchematicPath) switch
+        {
+            ".litematic" => Properties.Resources.ProjectIconL,
+            ".schem" => Properties.Resources.ProjectIconS,
+            _ => null,
+        };
     }
 
     private void RegisterEvents(Control control)
