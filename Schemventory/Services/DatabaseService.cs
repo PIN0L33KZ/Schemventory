@@ -50,6 +50,7 @@ public class DatabaseService
         MigrateProjectsTable(connection);
         CreateProjectMaterialsTable(connection);
         MigrateProjectMaterialsTable(connection);
+        NormalizeProjectIds(connection);
 
         Log.Debug("{LogContext} Database initialisation completed.", LogContext);
     }
@@ -235,6 +236,92 @@ public class DatabaseService
 
             Log.Information("{LogContext} Existing material states migrated.", LogContext);
         }
+    }
+
+    private static void NormalizeProjectIds(SqliteConnection connection)
+    {
+        using(SqliteCommand duplicateProjectCommand = connection.CreateCommand())
+        {
+            duplicateProjectCommand.CommandText = @"
+                SELECT LOWER(Id)
+                FROM Projects
+                GROUP BY LOWER(Id)
+                HAVING COUNT(*) > 1
+                LIMIT 1;";
+
+            if(duplicateProjectCommand.ExecuteScalar() is not null)
+                throw new InvalidOperationException("Project IDs cannot be normalised because duplicate IDs with different casing exist.");
+        }
+
+        using(SqliteCommand duplicateMaterialCommand = connection.CreateCommand())
+        {
+            duplicateMaterialCommand.CommandText = @"
+                SELECT LOWER(ProjectId)
+                FROM ProjectMaterials
+                GROUP BY LOWER(ProjectId), ItemId
+                HAVING COUNT(*) > 1
+                LIMIT 1;";
+
+            if(duplicateMaterialCommand.ExecuteScalar() is not null)
+                throw new InvalidOperationException("Project material IDs cannot be normalised because duplicate material keys with different project ID casing exist.");
+        }
+
+        SetForeignKeysEnabled(connection, false);
+
+        try
+        {
+            using SqliteTransaction transaction = connection.BeginTransaction();
+
+            try
+            {
+                using(SqliteCommand materialCommand = connection.CreateCommand())
+                {
+                    materialCommand.Transaction = transaction;
+                    materialCommand.CommandText = @"
+                        UPDATE ProjectMaterials
+                        SET ProjectId = LOWER(ProjectId)
+                        WHERE ProjectId <> LOWER(ProjectId);";
+
+                    var affectedMaterials = materialCommand.ExecuteNonQuery();
+
+                    if(affectedMaterials > 0)
+                        Log.Information("{LogContext} Normalised project material IDs. Count={Count}", LogContext, affectedMaterials);
+                }
+
+                using(SqliteCommand projectCommand = connection.CreateCommand())
+                {
+                    projectCommand.Transaction = transaction;
+                    projectCommand.CommandText = @"
+                        UPDATE Projects
+                        SET Id = LOWER(Id)
+                        WHERE Id <> LOWER(Id);";
+
+                    var affectedProjects = projectCommand.ExecuteNonQuery();
+
+                    if(affectedProjects > 0)
+                        Log.Information("{LogContext} Normalised project IDs. Count={Count}", LogContext, affectedProjects);
+                }
+
+                transaction.Commit();
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
+        }
+        finally
+        {
+            SetForeignKeysEnabled(connection, true);
+        }
+
+        using SqliteCommand foreignKeyCheckCommand = connection.CreateCommand();
+        foreignKeyCheckCommand.CommandText = "PRAGMA foreign_key_check;";
+
+        using SqliteDataReader reader = foreignKeyCheckCommand.ExecuteReader();
+
+        if(reader.Read())
+            throw new InvalidOperationException("Foreign key validation failed after normalising project IDs.");
     }
 
     private static bool ColumnExists(SqliteConnection connection, string tableName, string columnName)

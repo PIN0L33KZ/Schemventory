@@ -31,7 +31,7 @@ public class ProjectMaterialService
                 State,
                 ReplacementItemId
             FROM ProjectMaterials
-            WHERE ProjectId = $projectId
+            WHERE ProjectId = $projectId COLLATE NOCASE
             ORDER BY RequiredAmount DESC, ItemId;";
 
         SqliteParameter projectIdParameter = command.Parameters.Add("$projectId", SqliteType.Text);
@@ -118,7 +118,7 @@ public class ProjectMaterialService
         using(SqliteCommand deleteCommand = connection.CreateCommand())
         {
             deleteCommand.Transaction = transaction;
-            deleteCommand.CommandText = "DELETE FROM ProjectMaterials WHERE ProjectId = $projectId;";
+            deleteCommand.CommandText = "DELETE FROM ProjectMaterials WHERE ProjectId = $projectId COLLATE NOCASE;";
 
             SqliteParameter deleteProjectIdParameter = deleteCommand.Parameters.Add("$projectId", SqliteType.Text);
             deleteProjectIdParameter.Value = projectId.ToString("D");
@@ -196,7 +196,7 @@ public class ProjectMaterialService
                     WHEN ReplacementItemId IS NOT NULL THEN $replacedState
                     ELSE $missingState
                 END
-            WHERE ProjectId = $projectId
+            WHERE ProjectId = $projectId COLLATE NOCASE
             AND ItemId = $itemId;";
 
         SqliteParameter projectIdParameter = command.Parameters.Add("$projectId", SqliteType.Text);
@@ -257,7 +257,7 @@ public class ProjectMaterialService
                     WHEN $state = $collectedState THEN RequiredAmount
                     ELSE 0
                 END
-            WHERE ProjectId = $projectId
+            WHERE ProjectId = $projectId COLLATE NOCASE
             AND ItemId = $itemId;";
 
         SqliteParameter projectIdParameter = command.Parameters.Add("$projectId", SqliteType.Text);
@@ -283,7 +283,7 @@ public class ProjectMaterialService
         command.CommandText = @"
             SELECT ItemId, CollectedAmount, State, ReplacementItemId
             FROM ProjectMaterials
-            WHERE ProjectId = $projectId;";
+            WHERE ProjectId = $projectId COLLATE NOCASE;";
 
         SqliteParameter projectIdParameter = command.Parameters.Add("$projectId", SqliteType.Text);
         projectIdParameter.Value = projectId.ToString("D");

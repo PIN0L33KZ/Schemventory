@@ -64,7 +64,7 @@ internal class ProjectService
             Name = $name,
             SchematicPath = $schematicPath,
             LastOpenedAtUtc = $lastOpenedAtUtc
-        WHERE Id = $id;";
+        WHERE Id = $id COLLATE NOCASE;";
 
         SqliteParameter idParameter = command.Parameters.Add("$id", SqliteType.Text);
         idParameter.Value = project.Id.ToString("D");
@@ -93,7 +93,7 @@ internal class ProjectService
 
         command.CommandText = @"
             DELETE FROM Projects
-            WHERE Id = $id;";
+            WHERE Id = $id COLLATE NOCASE;";
 
         SqliteParameter idParameter = command.Parameters.Add("$id", SqliteType.Text);
         idParameter.Value = projectId.ToString("D");
