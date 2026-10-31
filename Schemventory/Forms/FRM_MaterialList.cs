@@ -1,4 +1,4 @@
-﻿using Schemventory.App;
+using Schemventory.App;
 using Schemventory.Controls;
 using Schemventory.Data;
 using Schemventory.Services;
@@ -12,11 +12,13 @@ public partial class FRM_MaterialList : Form
 
     private readonly Project _project;
     private readonly ProjectMaterialService _projectMaterialService;
+    private readonly ProjectFilterSettingsService _projectFilterSettingsService;
     private readonly ItemIconService _itemIconService;
     private readonly ItemDataProvider _itemDataProvider;
 
     private IReadOnlyCollection<ProjectMaterial> _materials = [];
     private List<ProjectMaterial> _viewMaterials = [];
+    private bool _loadingFilterSettings;
 
     public FRM_MaterialList(DatabaseService databaseService, Project project, ItemIconService itemIconService, ItemDataProvider itemDataProvider)
     {
@@ -24,6 +26,7 @@ public partial class FRM_MaterialList : Form
 
         _project = project;
         _projectMaterialService = new ProjectMaterialService(databaseService);
+        _projectFilterSettingsService = new ProjectFilterSettingsService(databaseService);
         _itemIconService = itemIconService;
         _itemDataProvider = itemDataProvider;
 
@@ -35,11 +38,6 @@ public partial class FRM_MaterialList : Form
         PNL_MaterialList.ScrollMetricsChanged += PNL_MaterialList_ScrollMetricsChanged;
         PNL_MaterialList.ScrollPositionChanged += PNL_MaterialList_ScrollPositionChanged;
         PNL_MaterialList.MouseWheelScrollRequested += PNL_MaterialList_MouseWheelScrollRequested;
-
-        FPN_Missing.Checked = true;
-        FPN_Replaced.Checked = true;
-        FPN_Collected.Checked = false;
-        FPN_Ignored.Checked = false;
 
         FPN_Missing.CheckedChanged += FilterPanel_CheckedChanged;
         FPN_Replaced.CheckedChanged += FilterPanel_CheckedChanged;
@@ -56,6 +54,7 @@ public partial class FRM_MaterialList : Form
         try
         {
             LoadMaterialList();
+            LoadFilterSettings();
             FillProjectData();
             ApplyMaterialView(resetScrollPosition: true);
 
@@ -141,6 +140,38 @@ public partial class FRM_MaterialList : Form
         _materials = _projectMaterialService.GetByProjectId(_project.Id);
 
         Log.Debug("{LogContext} Project materials loaded. ProjectId={ProjectId}, Count={Count}", LogContext, _project.Id, _materials.Count);
+    }
+
+    private void LoadFilterSettings()
+    {
+        ProjectFilterSettings settings = _projectFilterSettingsService.GetByProjectId(_project.Id);
+
+        _loadingFilterSettings = true;
+
+        try
+        {
+            FPN_Missing.Checked = settings.ShowMissing;
+            FPN_Replaced.Checked = settings.ShowReplaced;
+            FPN_Collected.Checked = settings.ShowCollected;
+            FPN_Ignored.Checked = settings.ShowIgnored;
+        }
+        finally
+        {
+            _loadingFilterSettings = false;
+        }
+    }
+
+    private void SaveFilterSettings()
+    {
+        ProjectFilterSettings settings = new()
+        {
+            ShowMissing = FPN_Missing.Checked,
+            ShowReplaced = FPN_Replaced.Checked,
+            ShowCollected = FPN_Collected.Checked,
+            ShowIgnored = FPN_Ignored.Checked
+        };
+
+        _projectFilterSettingsService.Save(_project.Id, settings);
     }
 
     private void ApplyMaterialView(bool resetScrollPosition)
@@ -235,9 +266,13 @@ public partial class FRM_MaterialList : Form
 
     private void FilterPanel_CheckedChanged(object? sender, EventArgs e)
     {
+        if(_loadingFilterSettings)
+            return;
+
         if(sender is FilterPanel filterPanel)
             Log.Debug("{LogContext} Material filter changed. Filter={Filter}, Checked={Checked}", LogContext, filterPanel.FilterStyle, filterPanel.Checked);
 
+        SaveFilterSettings();
         ApplyMaterialView(resetScrollPosition: true);
     }
 

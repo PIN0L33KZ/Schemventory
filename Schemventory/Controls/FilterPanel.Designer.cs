@@ -28,6 +28,7 @@ partial class FilterPanel
     /// </summary>
     private void InitializeComponent()
     {
+        components = new System.ComponentModel.Container();
         Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges3 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
         Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges4 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
         Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges1 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
@@ -35,6 +36,7 @@ partial class FilterPanel
         PNL_Background = new Guna.UI2.WinForms.Guna2Panel();
         CHP_Amount = new Guna.UI2.WinForms.Guna2Chip();
         CHB_Value = new Guna.UI2.WinForms.Guna2CheckBox();
+        TTP_Main = new ToolTip(components);
         PNL_Background.SuspendLayout();
         SuspendLayout();
         // 
@@ -59,6 +61,7 @@ partial class FilterPanel
         CHP_Amount.Anchor = AnchorStyles.Right;
         CHP_Amount.AutoRoundedCorners = true;
         CHP_Amount.BorderColor = Color.Empty;
+        CHP_Amount.BorderThickness = 2;
         CHP_Amount.CustomizableEdges = customizableEdges1;
         CHP_Amount.FillColor = Color.FromArgb(176, 78, 77);
         CHP_Amount.Font = new Font("Leelawadee UI", 8.25F, FontStyle.Regular, GraphicsUnit.Point, 0);
@@ -71,6 +74,7 @@ partial class FilterPanel
         CHP_Amount.TabIndex = 0;
         CHP_Amount.TabStop = false;
         CHP_Amount.Text = "000";
+        TTP_Main.SetToolTip(CHP_Amount, "Amount of matching materials");
         // 
         // CHB_Value
         // 
@@ -88,11 +92,23 @@ partial class FilterPanel
         CHB_Value.Size = new Size(78, 24);
         CHB_Value.TabIndex = 0;
         CHB_Value.Text = "Missing";
+        TTP_Main.SetToolTip(CHB_Value, "Filter for materials");
         CHB_Value.UncheckedState.BorderColor = Color.FromArgb(103, 99, 99);
         CHB_Value.UncheckedState.BorderRadius = 2;
         CHB_Value.UncheckedState.BorderThickness = 0;
         CHB_Value.UncheckedState.FillColor = Color.FromArgb(103, 99, 99);
         CHB_Value.CheckedChanged += CHB_Value_CheckedChanged;
+        // 
+        // TTP_Main
+        // 
+        TTP_Main.AutomaticDelay = 200;
+        TTP_Main.AutoPopDelay = 99999;
+        TTP_Main.BackColor = Color.FromArgb(38, 34, 34);
+        TTP_Main.ForeColor = Color.FromArgb(235, 234, 234);
+        TTP_Main.InitialDelay = 200;
+        TTP_Main.ReshowDelay = 0;
+        TTP_Main.ToolTipIcon = ToolTipIcon.Info;
+        TTP_Main.ToolTipTitle = "Information";
         // 
         // FilterPanel
         // 
@@ -115,4 +131,5 @@ partial class FilterPanel
     private Guna.UI2.WinForms.Guna2Panel PNL_Background;
     private Guna.UI2.WinForms.Guna2CheckBox CHB_Value;
     private Guna.UI2.WinForms.Guna2Chip CHP_Amount;
+    private ToolTip TTP_Main;
 }

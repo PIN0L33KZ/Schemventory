@@ -13,6 +13,7 @@ public partial class FilterPanel : UserControl
         {
             field = Math.Max(0, value);
             CHP_Amount.Text = field.ToString();
+            TTP_Main.SetToolTip(CHP_Amount, $"{field} {FilterStyle.ToString().ToLower()} materials");
         }
     }
 
@@ -55,17 +56,31 @@ public partial class FilterPanel : UserControl
     {
         FilterStyleDefinition style = GetStyleDefinition(FilterStyle);
 
-        PNL_Background.BorderColor = style.BorderColor;
-        PNL_Background.FillColor = style.BackgroundColor;
-
-        CHB_Value.CheckedState.FillColor = style.CheckboxColor;
+        CHB_Value.CheckedState.FillColor = style.BorderColor;
         CHB_Value.Text = style.Text;
+        TTP_Main.SetToolTip(CHB_Value, $"Filter for {FilterStyle.ToString().ToLower()} materials");
 
-        CHP_Amount.FillColor = style.ChipColor;
+        if(Checked)
+        {
+            PNL_Background.BorderColor = style.BorderColor;
+            PNL_Background.FillColor = style.BackgroundColor;
+
+            CHP_Amount.BorderColor = style.BorderColor;
+            CHP_Amount.FillColor = style.BackgroundColor;
+        }
+        else
+        {
+            PNL_Background.BorderColor = Color.FromArgb(103, 99, 99);
+            PNL_Background.FillColor = Color.FromArgb(58, 55, 55);
+
+            CHP_Amount.BorderColor = Color.FromArgb(103, 99, 99);
+            CHP_Amount.FillColor = Color.FromArgb(80, 76, 76);
+        }
     }
 
     private void CHB_Value_CheckedChanged(object sender, EventArgs e)
     {
+        ApplyStyle();
         CheckedChanged?.Invoke(this, EventArgs.Empty);
     }
 
@@ -76,36 +91,28 @@ public partial class FilterPanel : UserControl
             FilterStyle.Missing => new(
                 "Missing",
                 Color.FromArgb(217, 74, 74),
-                Color.FromArgb(64, 47, 48),
-                Color.FromArgb(176, 78, 77),
-                Color.FromArgb(217, 74, 74)),
+                Color.FromArgb(65, 40, 40)),
 
             FilterStyle.Replaced => new(
                 "Replaced",
                 Color.FromArgb(43, 133, 187),
-                Color.FromArgb(45, 53, 60),
-                Color.FromArgb(35, 107, 150),
-                Color.FromArgb(43, 133, 187)),
+                Color.FromArgb(39, 49, 58)),
 
             FilterStyle.Collected => new(
                 "Collected",
                 Color.FromArgb(71, 213, 166),
-                Color.FromArgb(47, 50, 46),
-                Color.FromArgb(73, 104, 66),
-                Color.FromArgb(71, 213, 166)),
+                Color.FromArgb(43, 61, 54)),
 
             FilterStyle.Ignored => new(
                 "Ignored",
                 Color.FromArgb(215, 172, 97),
-                Color.FromArgb(62, 56, 47),
-                Color.FromArgb(190, 152, 67),
-                Color.FromArgb(215, 172, 97)),
+                Color.FromArgb(65, 56, 43)),
 
             _ => throw new ArgumentOutOfRangeException(nameof(filterStyle), filterStyle, null)
         };
     }
 
-    private sealed record FilterStyleDefinition(string Text, Color BorderColor, Color BackgroundColor, Color ChipColor, Color CheckboxColor);
+    private sealed record FilterStyleDefinition(string Text, Color BorderColor, Color BackgroundColor);
 }
 
 public enum FilterStyle

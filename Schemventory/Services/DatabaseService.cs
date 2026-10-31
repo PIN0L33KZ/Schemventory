@@ -1,4 +1,4 @@
-﻿using Microsoft.Data.Sqlite;
+using Microsoft.Data.Sqlite;
 using Schemventory.App;
 using Serilog;
 
@@ -50,6 +50,7 @@ public class DatabaseService
         MigrateProjectsTable(connection);
         CreateProjectMaterialsTable(connection);
         MigrateProjectMaterialsTable(connection);
+        CreateProjectFilterSettingsTable(connection);
         NormalizeProjectIds(connection);
 
         Log.Debug("{LogContext} Database initialisation completed.", LogContext);
@@ -238,6 +239,27 @@ public class DatabaseService
         }
     }
 
+    private static void CreateProjectFilterSettingsTable(SqliteConnection connection)
+    {
+        using SqliteCommand command = connection.CreateCommand();
+
+        command.CommandText = @"
+            CREATE TABLE IF NOT EXISTS ProjectFilterSettings
+            (
+                ProjectId TEXT NOT NULL PRIMARY KEY,
+                ShowMissing INTEGER NOT NULL DEFAULT 1,
+                ShowReplaced INTEGER NOT NULL DEFAULT 1,
+                ShowCollected INTEGER NOT NULL DEFAULT 0,
+                ShowIgnored INTEGER NOT NULL DEFAULT 0,
+
+                FOREIGN KEY(ProjectId)
+                    REFERENCES Projects(Id)
+                    ON DELETE CASCADE
+            );";
+
+        _ = command.ExecuteNonQuery();
+    }
+
     private static void NormalizeProjectIds(SqliteConnection connection)
     {
         using(SqliteCommand duplicateProjectCommand = connection.CreateCommand())
@@ -266,6 +288,19 @@ public class DatabaseService
                 throw new InvalidOperationException("Project material IDs cannot be normalised because duplicate material keys with different project ID casing exist.");
         }
 
+        using(SqliteCommand duplicateFilterSettingsCommand = connection.CreateCommand())
+        {
+            duplicateFilterSettingsCommand.CommandText = @"
+                SELECT LOWER(ProjectId)
+                FROM ProjectFilterSettings
+                GROUP BY LOWER(ProjectId)
+                HAVING COUNT(*) > 1
+                LIMIT 1;";
+
+            if(duplicateFilterSettingsCommand.ExecuteScalar() is not null)
+                throw new InvalidOperationException("Project filter settings IDs cannot be normalised because duplicate project IDs with different casing exist.");
+        }
+
         SetForeignKeysEnabled(connection, false);
 
         try
@@ -286,6 +321,20 @@ public class DatabaseService
 
                     if(affectedMaterials > 0)
                         Log.Information("{LogContext} Normalised project material IDs. Count={Count}", LogContext, affectedMaterials);
+                }
+
+                using(SqliteCommand filterSettingsCommand = connection.CreateCommand())
+                {
+                    filterSettingsCommand.Transaction = transaction;
+                    filterSettingsCommand.CommandText = @"
+                        UPDATE ProjectFilterSettings
+                        SET ProjectId = LOWER(ProjectId)
+                        WHERE ProjectId <> LOWER(ProjectId);";
+
+                    var affectedFilterSettings = filterSettingsCommand.ExecuteNonQuery();
+
+                    if(affectedFilterSettings > 0)
+                        Log.Information("{LogContext} Normalised project filter settings IDs. Count={Count}", LogContext, affectedFilterSettings);
                 }
 
                 using(SqliteCommand projectCommand = connection.CreateCommand())
