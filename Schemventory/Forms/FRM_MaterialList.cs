@@ -1,4 +1,5 @@
 ﻿using Schemventory.App;
+using Schemventory.Controls;
 using Schemventory.Data;
 using Schemventory.Services;
 using Serilog;
@@ -8,7 +9,6 @@ namespace Schemventory.Forms;
 public partial class FRM_MaterialList : Form
 {
     private const string LogContext = "(FRM_MaterialList)";
-    private const string WindowName = $"Material list - {Constants.AppName}";
 
     private readonly Project _project;
     private readonly ProjectMaterialService _projectMaterialService;
@@ -22,12 +22,12 @@ public partial class FRM_MaterialList : Form
     {
         InitializeComponent();
 
-        Text = WindowName;
-
         _project = project;
         _projectMaterialService = new ProjectMaterialService(databaseService);
         _itemIconService = itemIconService;
         _itemDataProvider = itemDataProvider;
+
+        Text = $"Material list for {_project.Name} - {Constants.AppName}";
 
         PNL_MaterialList.Initialize(_itemIconService, _itemDataProvider, _projectMaterialService);
 
@@ -35,6 +35,16 @@ public partial class FRM_MaterialList : Form
         PNL_MaterialList.ScrollMetricsChanged += PNL_MaterialList_ScrollMetricsChanged;
         PNL_MaterialList.ScrollPositionChanged += PNL_MaterialList_ScrollPositionChanged;
         PNL_MaterialList.MouseWheelScrollRequested += PNL_MaterialList_MouseWheelScrollRequested;
+
+        FPN_Missing.Checked = true;
+        FPN_Replaced.Checked = true;
+        FPN_Collected.Checked = false;
+        FPN_Ignored.Checked = false;
+
+        FPN_Missing.CheckedChanged += FilterPanel_CheckedChanged;
+        FPN_Replaced.CheckedChanged += FilterPanel_CheckedChanged;
+        FPN_Collected.CheckedChanged += FilterPanel_CheckedChanged;
+        FPN_Ignored.CheckedChanged += FilterPanel_CheckedChanged;
     }
 
     private async void FRM_MaterialList_Load(object sender, EventArgs e)
@@ -81,6 +91,11 @@ public partial class FRM_MaterialList : Form
 
     private void UpdateStatistics()
     {
+        FPN_Missing.Count = _materials.Count(x => x.State == ProjectMaterialState.Missing);
+        FPN_Replaced.Count = _materials.Count(x => x.State == ProjectMaterialState.Replaced);
+        FPN_Collected.Count = _materials.Count(x => x.State == ProjectMaterialState.Collected);
+        FPN_Ignored.Count = _materials.Count(x => x.State == ProjectMaterialState.Ignored);
+
         Dictionary<string, (long RequiredAmount, long CollectedAmount)> groupedMaterials = new(StringComparer.Ordinal);
 
         foreach(ProjectMaterial material in _materials)
@@ -124,12 +139,17 @@ public partial class FRM_MaterialList : Form
     private void LoadMaterialList()
     {
         _materials = _projectMaterialService.GetByProjectId(_project.Id);
+
         Log.Debug("{LogContext} Project materials loaded. ProjectId={ProjectId}, Count={Count}", LogContext, _project.Id, _materials.Count);
     }
 
     private void ApplyMaterialView(bool resetScrollPosition)
     {
-        _viewMaterials = _materials.Where(ShouldShowMaterial).OrderBy(x => GetStateSortOrder(x.State)).ThenByDescending(x => x.RequiredAmount).ToList();
+        _viewMaterials = _materials
+            .Where(ShouldShowMaterial)
+            .OrderBy(x => GetStateSortOrder(x.State))
+            .ThenByDescending(x => x.RequiredAmount)
+            .ToList();
 
         var hasVisibleMaterials = _viewMaterials.Count > 0;
 
@@ -146,10 +166,10 @@ public partial class FRM_MaterialList : Form
     {
         return material.State switch
         {
-            ProjectMaterialState.Missing => CHB_ShowMissing.Checked,
-            ProjectMaterialState.Replaced => CBX_ShowReplaced.Checked,
-            ProjectMaterialState.Collected => CBX_ShowCollected.Checked,
-            ProjectMaterialState.Ignored => CBX_ShowIgnored.Checked,
+            ProjectMaterialState.Missing => FPN_Missing.Checked,
+            ProjectMaterialState.Replaced => FPN_Replaced.Checked,
+            ProjectMaterialState.Collected => FPN_Collected.Checked,
+            ProjectMaterialState.Ignored => FPN_Ignored.Checked,
             _ => false
         };
     }
@@ -213,27 +233,11 @@ public partial class FRM_MaterialList : Form
             VSB_Main.Value = scrollValue;
     }
 
-    private void CHB_ShowMissing_CheckedChanged(object sender, EventArgs e)
+    private void FilterPanel_CheckedChanged(object? sender, EventArgs e)
     {
-        Log.Debug("{LogContext} Missing filter changed. Checked={Checked}", LogContext, CHB_ShowMissing.Checked);
-        ApplyMaterialView(resetScrollPosition: true);
-    }
+        if(sender is FilterPanel filterPanel)
+            Log.Debug("{LogContext} Material filter changed. Filter={Filter}, Checked={Checked}", LogContext, filterPanel.FilterStyle, filterPanel.Checked);
 
-    private void CBX_ShowReplaced_CheckedChanged(object sender, EventArgs e)
-    {
-        Log.Debug("{LogContext} Replaced filter changed. Checked={Checked}", LogContext, CBX_ShowReplaced.Checked);
-        ApplyMaterialView(resetScrollPosition: true);
-    }
-
-    private void CBX_ShowCollected_CheckedChanged(object sender, EventArgs e)
-    {
-        Log.Debug("{LogContext} Collected filter changed. Checked={Checked}", LogContext, CBX_ShowCollected.Checked);
-        ApplyMaterialView(resetScrollPosition: true);
-    }
-
-    private void CBX_ShowIgnored_CheckedChanged(object sender, EventArgs e)
-    {
-        Log.Debug("{LogContext} Ignored filter changed. Checked={Checked}", LogContext, CBX_ShowIgnored.Checked);
         ApplyMaterialView(resetScrollPosition: true);
     }
 
@@ -259,56 +263,31 @@ public partial class FRM_MaterialList : Form
 
     private void BTN_AddMaterial_Click(object? sender, EventArgs e)
     {
-        Log.Debug(
-            "{LogContext} Add material dialog requested. ProjectId={ProjectId}",
-            LogContext,
-            _project.Id);
+        Log.Debug("{LogContext} Add material dialog requested. ProjectId={ProjectId}", LogContext, _project.Id);
 
         using FRM_AddMaterial addMaterialForm = new(_itemDataProvider, _itemIconService);
 
-        if(addMaterialForm.ShowDialog(this) != DialogResult.OK ||
-           string.IsNullOrWhiteSpace(addMaterialForm.SelectedItemId))
+        if(addMaterialForm.ShowDialog(this) != DialogResult.OK || string.IsNullOrWhiteSpace(addMaterialForm.SelectedItemId))
         {
-            Log.Debug(
-                "{LogContext} Add material dialog cancelled. ProjectId={ProjectId}",
-                LogContext,
-                _project.Id);
-
+            Log.Debug("{LogContext} Add material dialog cancelled. ProjectId={ProjectId}", LogContext, _project.Id);
             return;
         }
 
         try
         {
-            _projectMaterialService.Add(
-                _project.Id,
-                addMaterialForm.SelectedItemId,
-                addMaterialForm.RequiredAmount);
+            _projectMaterialService.Add(_project.Id, addMaterialForm.SelectedItemId, addMaterialForm.RequiredAmount);
 
             LoadMaterialList();
             ApplyMaterialView(resetScrollPosition: false);
             UpdateStatistics();
 
-            Log.Information(
-                "{LogContext} Material added manually. ProjectId={ProjectId}, ItemId={ItemId}, RequiredAmount={RequiredAmount}",
-                LogContext,
-                _project.Id,
-                addMaterialForm.SelectedItemId,
-                addMaterialForm.RequiredAmount);
+            Log.Information("{LogContext} Material added manually. ProjectId={ProjectId}, ItemId={ItemId}, RequiredAmount={RequiredAmount}", LogContext, _project.Id, addMaterialForm.SelectedItemId, addMaterialForm.RequiredAmount);
         }
         catch(Exception exception)
         {
-            Log.Error(
-                exception,
-                "{LogContext} Failed to add material manually. ProjectId={ProjectId}, ItemId={ItemId}",
-                LogContext,
-                _project.Id,
-                addMaterialForm.SelectedItemId);
+            Log.Error(exception, "{LogContext} Failed to add material manually. ProjectId={ProjectId}, ItemId={ItemId}", LogContext, _project.Id, addMaterialForm.SelectedItemId);
 
-            _ = MessageBox.Show(
-                $"The material could not be added.\n\n{exception.Message}",
-                Constants.AppName,
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Error);
+            _ = MessageBox.Show($"The material could not be added.\n\n{exception.Message}", Constants.AppName, MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 }

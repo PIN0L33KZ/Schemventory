@@ -44,6 +44,8 @@ partial class AppTheme
         Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges13 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
         Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges14 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
         Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges15 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
+        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges16 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
+        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges17 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
         BTN_Primary = new Guna.UI2.WinForms.Guna2Button();
         BTN_Secondary = new Guna.UI2.WinForms.Guna2Button();
         TBX_Input = new Guna.UI2.WinForms.Guna2TextBox();
@@ -62,6 +64,7 @@ partial class AppTheme
         SEP_1 = new Guna.UI2.WinForms.Guna2Separator();
         RBN_Select1 = new Guna.UI2.WinForms.Guna2RadioButton();
         PGI_Loading = new Guna.UI2.WinForms.Guna2WinProgressIndicator();
+        PNL_Background = new Guna.UI2.WinForms.Guna2Panel();
         ((System.ComponentModel.ISupportInitialize)NUD_Number).BeginInit();
         SuspendLayout();
         // 
@@ -400,11 +403,28 @@ partial class AppTheme
         PGI_Loading.UseTransparentBackground = true;
         PGI_Loading.Visible = false;
         // 
+        // PNL_Background
+        // 
+        PNL_Background.Anchor = AnchorStyles.None;
+        PNL_Background.BackColor = Color.Transparent;
+        PNL_Background.BorderColor = Color.FromArgb(103, 99, 99);
+        PNL_Background.BorderRadius = 5;
+        PNL_Background.BorderThickness = 2;
+        PNL_Background.CustomizableEdges = customizableEdges16;
+        PNL_Background.FillColor = Color.FromArgb(58, 55, 55);
+        PNL_Background.Location = new Point(30, 465);
+        PNL_Background.Name = "PNL_Background";
+        PNL_Background.ShadowDecoration.CustomizableEdges = customizableEdges17;
+        PNL_Background.Size = new Size(261, 55);
+        PNL_Background.TabIndex = 0;
+        PNL_Background.UseTransparentBackground = true;
+        // 
         // AppTheme
         // 
         AutoScaleDimensions = new SizeF(7F, 15F);
         AutoScaleMode = AutoScaleMode.Font;
         BackColor = Color.Black;
+        Controls.Add(PNL_Background);
         Controls.Add(PGI_Loading);
         Controls.Add(RBN_Select1);
         Controls.Add(SEP_1);
@@ -456,4 +476,5 @@ partial class AppTheme
     private Guna.UI2.WinForms.Guna2Separator SEP_1;
     private Guna.UI2.WinForms.Guna2RadioButton RBN_Select1;
     private Guna.UI2.WinForms.Guna2WinProgressIndicator PGI_Loading;
+    private Guna.UI2.WinForms.Guna2Panel PNL_Background;
 }

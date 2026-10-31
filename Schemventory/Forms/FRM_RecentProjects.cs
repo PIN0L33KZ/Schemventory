@@ -1,9 +1,9 @@
-﻿using Serilog;
-using Schemventory.App;
+﻿using Schemventory.App;
 using Schemventory.Data;
 using Schemventory.Data.EventArguments;
 using Schemventory.Forms;
 using Schemventory.Services;
+using Serilog;
 
 namespace Schemventory;
 

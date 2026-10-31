@@ -346,6 +346,7 @@ public partial class FRM_AddMaterial : Form
         Log.Debug("{LogContext} Add material dialog cancelled.", LogContext);
 
         DialogResult = DialogResult.Cancel;
+
         Close();
     }
 

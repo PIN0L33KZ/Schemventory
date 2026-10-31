@@ -42,14 +42,14 @@ partial class FRM_MaterialList
         LBL_ProjectName = new Label();
         PNL_MaterialList = new Schemventory.Controls.VirtualMaterialPanel();
         VSB_Main = new Guna.UI2.WinForms.Guna2VScrollBar();
-        CHB_ShowMissing = new Guna.UI2.WinForms.Guna2CheckBox();
-        CBX_ShowReplaced = new Guna.UI2.WinForms.Guna2CheckBox();
-        CBX_ShowCollected = new Guna.UI2.WinForms.Guna2CheckBox();
-        CBX_ShowIgnored = new Guna.UI2.WinForms.Guna2CheckBox();
         IBN_About = new Guna.UI2.WinForms.Guna2ImageButton();
         TTP_Main = new ToolTip(components);
         LBL_FilterWarn = new Label();
         BTN_AddMaterial = new Guna.UI2.WinForms.Guna2Button();
+        FPN_Ignored = new Schemventory.Controls.FilterPanel();
+        FPN_Collected = new Schemventory.Controls.FilterPanel();
+        FPN_Replaced = new Schemventory.Controls.FilterPanel();
+        FPN_Missing = new Schemventory.Controls.FilterPanel();
         PNL_ProjectInfo.SuspendLayout();
         SuspendLayout();
         // 
@@ -115,9 +115,9 @@ partial class FRM_MaterialList
         // 
         PNL_MaterialList.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
         PNL_MaterialList.BackColor = Color.Transparent;
-        PNL_MaterialList.Location = new Point(12, 73);
+        PNL_MaterialList.Location = new Point(12, 128);
         PNL_MaterialList.Name = "PNL_MaterialList";
-        PNL_MaterialList.Size = new Size(967, 416);
+        PNL_MaterialList.Size = new Size(967, 415);
         PNL_MaterialList.TabIndex = 0;
         PNL_MaterialList.TabStop = true;
         // 
@@ -129,10 +129,10 @@ partial class FRM_MaterialList
         VSB_Main.FillColor = Color.FromArgb(80, 76, 76);
         VSB_Main.InUpdate = false;
         VSB_Main.LargeChange = 10;
-        VSB_Main.Location = new Point(981, 73);
+        VSB_Main.Location = new Point(981, 128);
         VSB_Main.Name = "VSB_Main";
         VSB_Main.ScrollbarSize = 18;
-        VSB_Main.Size = new Size(18, 416);
+        VSB_Main.Size = new Size(18, 415);
         VSB_Main.TabIndex = 0;
         VSB_Main.TabStop = false;
         VSB_Main.ThumbColor = Color.FromArgb(103, 99, 99);
@@ -140,114 +140,6 @@ partial class FRM_MaterialList
         VSB_Main.ThumbStyle = Guna.UI2.WinForms.Enums.ThumbStyle.Inset;
         VSB_Main.Visible = false;
         VSB_Main.Scroll += VSB_Main_Scroll;
-        // 
-        // CHB_ShowMissing
-        // 
-        CHB_ShowMissing.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
-        CHB_ShowMissing.Animated = true;
-        CHB_ShowMissing.AutoSize = true;
-        CHB_ShowMissing.BackColor = Color.Transparent;
-        CHB_ShowMissing.Checked = true;
-        CHB_ShowMissing.CheckedState.BorderRadius = 2;
-        CHB_ShowMissing.CheckedState.BorderThickness = 0;
-        CHB_ShowMissing.CheckedState.FillColor = Color.FromArgb(162, 123, 90);
-        CHB_ShowMissing.CheckMarkColor = Color.FromArgb(235, 234, 234);
-        CHB_ShowMissing.CheckState = CheckState.Checked;
-        CHB_ShowMissing.Cursor = Cursors.Hand;
-        CHB_ShowMissing.Font = new Font("Leelawadee UI", 11.25F, FontStyle.Regular, GraphicsUnit.Point, 0);
-        CHB_ShowMissing.ForeColor = Color.FromArgb(235, 234, 234);
-        CHB_ShowMissing.Location = new Point(12, 495);
-        CHB_ShowMissing.Name = "CHB_ShowMissing";
-        CHB_ShowMissing.Size = new Size(143, 24);
-        CHB_ShowMissing.TabIndex = 1;
-        CHB_ShowMissing.Text = "Missing materials";
-        TTP_Main.SetToolTip(CHB_ShowMissing, "Show/Hide missing materials");
-        CHB_ShowMissing.UncheckedState.BorderColor = Color.FromArgb(103, 99, 99);
-        CHB_ShowMissing.UncheckedState.BorderRadius = 2;
-        CHB_ShowMissing.UncheckedState.BorderThickness = 2;
-        CHB_ShowMissing.UncheckedState.FillColor = Color.FromArgb(58, 55, 55);
-        CHB_ShowMissing.UseVisualStyleBackColor = false;
-        CHB_ShowMissing.CheckedChanged += CHB_ShowMissing_CheckedChanged;
-        // 
-        // CBX_ShowReplaced
-        // 
-        CBX_ShowReplaced.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
-        CBX_ShowReplaced.Animated = true;
-        CBX_ShowReplaced.AutoSize = true;
-        CBX_ShowReplaced.BackColor = Color.Transparent;
-        CBX_ShowReplaced.Checked = true;
-        CBX_ShowReplaced.CheckedState.BorderRadius = 2;
-        CBX_ShowReplaced.CheckedState.BorderThickness = 0;
-        CBX_ShowReplaced.CheckedState.FillColor = Color.FromArgb(162, 123, 90);
-        CBX_ShowReplaced.CheckMarkColor = Color.FromArgb(235, 234, 234);
-        CBX_ShowReplaced.CheckState = CheckState.Checked;
-        CBX_ShowReplaced.Cursor = Cursors.Hand;
-        CBX_ShowReplaced.Font = new Font("Leelawadee UI", 11.25F, FontStyle.Regular, GraphicsUnit.Point, 0);
-        CBX_ShowReplaced.ForeColor = Color.FromArgb(235, 234, 234);
-        CBX_ShowReplaced.Location = new Point(161, 495);
-        CBX_ShowReplaced.Name = "CBX_ShowReplaced";
-        CBX_ShowReplaced.Size = new Size(155, 24);
-        CBX_ShowReplaced.TabIndex = 2;
-        CBX_ShowReplaced.Text = "Replaced materials";
-        TTP_Main.SetToolTip(CBX_ShowReplaced, "Show/Hide replaced materials");
-        CBX_ShowReplaced.UncheckedState.BorderColor = Color.FromArgb(103, 99, 99);
-        CBX_ShowReplaced.UncheckedState.BorderRadius = 2;
-        CBX_ShowReplaced.UncheckedState.BorderThickness = 2;
-        CBX_ShowReplaced.UncheckedState.FillColor = Color.FromArgb(58, 55, 55);
-        CBX_ShowReplaced.UseVisualStyleBackColor = false;
-        CBX_ShowReplaced.CheckedChanged += CBX_ShowReplaced_CheckedChanged;
-        // 
-        // CBX_ShowCollected
-        // 
-        CBX_ShowCollected.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
-        CBX_ShowCollected.Animated = true;
-        CBX_ShowCollected.AutoSize = true;
-        CBX_ShowCollected.BackColor = Color.Transparent;
-        CBX_ShowCollected.CheckedState.BorderRadius = 2;
-        CBX_ShowCollected.CheckedState.BorderThickness = 0;
-        CBX_ShowCollected.CheckedState.FillColor = Color.FromArgb(162, 123, 90);
-        CBX_ShowCollected.CheckMarkColor = Color.FromArgb(235, 234, 234);
-        CBX_ShowCollected.Cursor = Cursors.Hand;
-        CBX_ShowCollected.Font = new Font("Leelawadee UI", 11.25F, FontStyle.Regular, GraphicsUnit.Point, 0);
-        CBX_ShowCollected.ForeColor = Color.FromArgb(235, 234, 234);
-        CBX_ShowCollected.Location = new Point(322, 495);
-        CBX_ShowCollected.Name = "CBX_ShowCollected";
-        CBX_ShowCollected.Size = new Size(156, 24);
-        CBX_ShowCollected.TabIndex = 3;
-        CBX_ShowCollected.Text = "Collected materials";
-        TTP_Main.SetToolTip(CBX_ShowCollected, "Show/Hide collected materials");
-        CBX_ShowCollected.UncheckedState.BorderColor = Color.FromArgb(103, 99, 99);
-        CBX_ShowCollected.UncheckedState.BorderRadius = 2;
-        CBX_ShowCollected.UncheckedState.BorderThickness = 2;
-        CBX_ShowCollected.UncheckedState.FillColor = Color.FromArgb(58, 55, 55);
-        CBX_ShowCollected.UseVisualStyleBackColor = false;
-        CBX_ShowCollected.CheckedChanged += CBX_ShowCollected_CheckedChanged;
-        // 
-        // CBX_ShowIgnored
-        // 
-        CBX_ShowIgnored.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
-        CBX_ShowIgnored.Animated = true;
-        CBX_ShowIgnored.AutoSize = true;
-        CBX_ShowIgnored.BackColor = Color.Transparent;
-        CBX_ShowIgnored.CheckedState.BorderRadius = 2;
-        CBX_ShowIgnored.CheckedState.BorderThickness = 0;
-        CBX_ShowIgnored.CheckedState.FillColor = Color.FromArgb(162, 123, 90);
-        CBX_ShowIgnored.CheckMarkColor = Color.FromArgb(235, 234, 234);
-        CBX_ShowIgnored.Cursor = Cursors.Hand;
-        CBX_ShowIgnored.Font = new Font("Leelawadee UI", 11.25F, FontStyle.Regular, GraphicsUnit.Point, 0);
-        CBX_ShowIgnored.ForeColor = Color.FromArgb(235, 234, 234);
-        CBX_ShowIgnored.Location = new Point(484, 495);
-        CBX_ShowIgnored.Name = "CBX_ShowIgnored";
-        CBX_ShowIgnored.Size = new Size(145, 24);
-        CBX_ShowIgnored.TabIndex = 4;
-        CBX_ShowIgnored.Text = "Ignored materials";
-        TTP_Main.SetToolTip(CBX_ShowIgnored, "Show/Hide ignored materials");
-        CBX_ShowIgnored.UncheckedState.BorderColor = Color.FromArgb(103, 99, 99);
-        CBX_ShowIgnored.UncheckedState.BorderRadius = 2;
-        CBX_ShowIgnored.UncheckedState.BorderThickness = 2;
-        CBX_ShowIgnored.UncheckedState.FillColor = Color.FromArgb(58, 55, 55);
-        CBX_ShowIgnored.UseVisualStyleBackColor = false;
-        CBX_ShowIgnored.CheckedChanged += CBX_ShowIgnored_CheckedChanged;
         // 
         // IBN_About
         // 
@@ -259,7 +151,7 @@ partial class FRM_MaterialList
         IBN_About.ImageOffset = new Point(0, 0);
         IBN_About.ImageRotate = 0F;
         IBN_About.ImageSize = new Size(25, 25);
-        IBN_About.Location = new Point(969, 495);
+        IBN_About.Location = new Point(969, 549);
         IBN_About.Name = "IBN_About";
         IBN_About.PressedState.ImageSize = new Size(25, 25);
         IBN_About.ShadowDecoration.CustomizableEdges = customizableEdges3;
@@ -285,9 +177,9 @@ partial class FRM_MaterialList
         LBL_FilterWarn.AutoEllipsis = true;
         LBL_FilterWarn.Font = new Font("Leelawadee UI", 11.25F, FontStyle.Regular, GraphicsUnit.Point, 0);
         LBL_FilterWarn.ForeColor = Color.FromArgb(235, 234, 234);
-        LBL_FilterWarn.Location = new Point(12, 73);
+        LBL_FilterWarn.Location = new Point(12, 125);
         LBL_FilterWarn.Name = "LBL_FilterWarn";
-        LBL_FilterWarn.Size = new Size(975, 419);
+        LBL_FilterWarn.Size = new Size(975, 421);
         LBL_FilterWarn.TabIndex = 6;
         LBL_FilterWarn.Text = "No materials to display based on the current filters.\r\nTry a different filter!";
         LBL_FilterWarn.TextAlign = ContentAlignment.MiddleCenter;
@@ -295,42 +187,88 @@ partial class FRM_MaterialList
         // 
         // BTN_AddMaterial
         // 
-        BTN_AddMaterial.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+        BTN_AddMaterial.Anchor = AnchorStyles.Top | AnchorStyles.Right;
         BTN_AddMaterial.Animated = true;
         BTN_AddMaterial.BackColor = Color.Transparent;
         BTN_AddMaterial.BorderRadius = 5;
         BTN_AddMaterial.Cursor = Cursors.Hand;
         BTN_AddMaterial.CustomizableEdges = customizableEdges4;
-        BTN_AddMaterial.DialogResult = DialogResult.OK;
         BTN_AddMaterial.DisabledState.BorderColor = Color.FromArgb(80, 76, 76);
         BTN_AddMaterial.DisabledState.CustomBorderColor = Color.FromArgb(80, 76, 76);
         BTN_AddMaterial.DisabledState.FillColor = Color.FromArgb(80, 76, 76);
         BTN_AddMaterial.DisabledState.ForeColor = Color.FromArgb(151, 148, 148);
         BTN_AddMaterial.FillColor = Color.FromArgb(162, 123, 90);
-        BTN_AddMaterial.Font = new Font("Leelawadee UI", 9.75F, FontStyle.Regular, GraphicsUnit.Point, 0);
+        BTN_AddMaterial.Font = new Font("Leelawadee UI", 11.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
         BTN_AddMaterial.ForeColor = Color.White;
-        BTN_AddMaterial.Location = new Point(860, 499);
+        BTN_AddMaterial.Location = new Point(861, 74);
         BTN_AddMaterial.Name = "BTN_AddMaterial";
         BTN_AddMaterial.ShadowDecoration.CustomizableEdges = customizableEdges5;
-        BTN_AddMaterial.Size = new Size(103, 22);
+        BTN_AddMaterial.Size = new Size(126, 47);
         BTN_AddMaterial.TabIndex = 7;
         BTN_AddMaterial.Text = "Add material";
         BTN_AddMaterial.UseTransparentBackground = true;
         BTN_AddMaterial.Click += BTN_AddMaterial_Click;
+        // 
+        // FPN_Ignored
+        // 
+        FPN_Ignored.BackColor = Color.Transparent;
+        FPN_Ignored.FilterStyle = Schemventory.Controls.FilterStyle.Ignored;
+        FPN_Ignored.Font = new Font("Leelawadee UI", 11.25F, FontStyle.Regular, GraphicsUnit.Point, 0);
+        FPN_Ignored.ForeColor = Color.FromArgb(235, 234, 234);
+        FPN_Ignored.Location = new Point(483, 74);
+        FPN_Ignored.Margin = new Padding(3, 4, 3, 4);
+        FPN_Ignored.Name = "FPN_Ignored";
+        FPN_Ignored.Size = new Size(146, 47);
+        FPN_Ignored.TabIndex = 0;
+        // 
+        // FPN_Collected
+        // 
+        FPN_Collected.BackColor = Color.Transparent;
+        FPN_Collected.FilterStyle = Schemventory.Controls.FilterStyle.Collected;
+        FPN_Collected.Font = new Font("Leelawadee UI", 11.25F, FontStyle.Regular, GraphicsUnit.Point, 0);
+        FPN_Collected.ForeColor = Color.FromArgb(235, 234, 234);
+        FPN_Collected.Location = new Point(322, 74);
+        FPN_Collected.Margin = new Padding(3, 4, 3, 4);
+        FPN_Collected.Name = "FPN_Collected";
+        FPN_Collected.Size = new Size(155, 47);
+        FPN_Collected.TabIndex = 0;
+        // 
+        // FPN_Replaced
+        // 
+        FPN_Replaced.BackColor = Color.Transparent;
+        FPN_Replaced.FilterStyle = Schemventory.Controls.FilterStyle.Replaced;
+        FPN_Replaced.Font = new Font("Leelawadee UI", 11.25F, FontStyle.Regular, GraphicsUnit.Point, 0);
+        FPN_Replaced.ForeColor = Color.FromArgb(235, 234, 234);
+        FPN_Replaced.Location = new Point(163, 74);
+        FPN_Replaced.Margin = new Padding(3, 4, 3, 4);
+        FPN_Replaced.Name = "FPN_Replaced";
+        FPN_Replaced.Size = new Size(153, 47);
+        FPN_Replaced.TabIndex = 0;
+        // 
+        // FPN_Missing
+        // 
+        FPN_Missing.BackColor = Color.Transparent;
+        FPN_Missing.Font = new Font("Leelawadee UI", 11.25F, FontStyle.Regular, GraphicsUnit.Point, 0);
+        FPN_Missing.ForeColor = Color.FromArgb(235, 234, 234);
+        FPN_Missing.Location = new Point(12, 74);
+        FPN_Missing.Margin = new Padding(3, 4, 3, 4);
+        FPN_Missing.Name = "FPN_Missing";
+        FPN_Missing.Size = new Size(145, 47);
+        FPN_Missing.TabIndex = 0;
         // 
         // FRM_MaterialList
         // 
         AutoScaleDimensions = new SizeF(7F, 17F);
         AutoScaleMode = AutoScaleMode.Font;
         BackColor = Color.FromArgb(38, 34, 34);
-        ClientSize = new Size(999, 527);
+        ClientSize = new Size(999, 581);
         Controls.Add(BTN_AddMaterial);
+        Controls.Add(FPN_Ignored);
         Controls.Add(VSB_Main);
+        Controls.Add(FPN_Collected);
         Controls.Add(IBN_About);
-        Controls.Add(CBX_ShowIgnored);
-        Controls.Add(CBX_ShowCollected);
-        Controls.Add(CBX_ShowReplaced);
-        Controls.Add(CHB_ShowMissing);
+        Controls.Add(FPN_Replaced);
+        Controls.Add(FPN_Missing);
         Controls.Add(PNL_ProjectInfo);
         Controls.Add(PNL_MaterialList);
         Controls.Add(LBL_FilterWarn);
@@ -339,7 +277,7 @@ partial class FRM_MaterialList
         ForeColor = Color.FromArgb(235, 234, 234);
         Icon = (Icon)resources.GetObject("$this.Icon");
         Margin = new Padding(4);
-        MinimumSize = new Size(1015, 566);
+        MinimumSize = new Size(1015, 615);
         Name = "FRM_MaterialList";
         Opacity = 0D;
         StartPosition = FormStartPosition.CenterScreen;
@@ -350,7 +288,6 @@ partial class FRM_MaterialList
         PNL_ProjectInfo.ResumeLayout(false);
         PNL_ProjectInfo.PerformLayout();
         ResumeLayout(false);
-        PerformLayout();
     }
 
     #endregion
@@ -361,12 +298,12 @@ partial class FRM_MaterialList
     private Label LBL_DifferentMaterialsCount;
     private Schemventory.Controls.VirtualMaterialPanel PNL_MaterialList;
     private Guna.UI2.WinForms.Guna2VScrollBar VSB_Main;
-    private Guna.UI2.WinForms.Guna2CheckBox CHB_ShowMissing;
-    private Guna.UI2.WinForms.Guna2CheckBox CBX_ShowReplaced;
-    private Guna.UI2.WinForms.Guna2CheckBox CBX_ShowCollected;
-    private Guna.UI2.WinForms.Guna2CheckBox CBX_ShowIgnored;
     private Guna.UI2.WinForms.Guna2ImageButton IBN_About;
     private ToolTip TTP_Main;
     private Label LBL_FilterWarn;
     private Guna.UI2.WinForms.Guna2Button BTN_AddMaterial;
+    private Controls.FilterPanel FPN_Missing;
+    private Controls.FilterPanel FPN_Replaced;
+    private Controls.FilterPanel FPN_Ignored;
+    private Controls.FilterPanel FPN_Collected;
 }
