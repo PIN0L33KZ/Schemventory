@@ -1,5 +1,5 @@
-﻿using Serilog;
-using Schemventory.Services;
+﻿using Schemventory.Services;
+using Serilog;
 
 namespace Schemventory.App;
 

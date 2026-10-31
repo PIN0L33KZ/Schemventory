@@ -1,5 +1,5 @@
-﻿using Serilog;
-using Schemventory.App;
+﻿using Schemventory.App;
+using Serilog;
 
 namespace Schemventory.Forms;
 

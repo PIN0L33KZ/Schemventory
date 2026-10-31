@@ -1,6 +1,6 @@
 ﻿using Microsoft.Data.Sqlite;
-using Serilog;
 using Schemventory.Data;
+using Serilog;
 
 namespace Schemventory.Services;
 

@@ -1,6 +1,6 @@
-﻿using Serilog;
-using Schemventory.Data;
+﻿using Schemventory.Data;
 using Schemventory.Interfaces;
+using Serilog;
 
 namespace Schemventory.Services;
 

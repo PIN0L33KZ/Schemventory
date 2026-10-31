@@ -1,7 +1,7 @@
-﻿using Serilog;
-using Schemventory.App;
+﻿using Schemventory.App;
 using Schemventory.Forms;
 using Schemventory.Services;
+using Serilog;
 
 namespace Schemventory.Controls;
 

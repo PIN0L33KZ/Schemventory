@@ -19,6 +19,7 @@ public sealed class VirtualMaterialPanel : Panel
     private ProjectMaterialService? _projectMaterialService;
 
     private int _columnCount = 1;
+    private int _renderRowCount = 1;
     private int _refreshVersion;
     private bool _resizeSuspended;
 
@@ -120,13 +121,26 @@ public sealed class VirtualMaterialPanel : Panel
 
         var availableWidth = Math.Max(MaterialControlWidth, ClientSize.Width);
 
-        _columnCount = Math.Max(1, (availableWidth - (ContentPadding * 2) + HorizontalGap) / (MaterialControlWidth + HorizontalGap));
+        _columnCount = Math.Max(
+            1,
+            (availableWidth - (ContentPadding * 2) + HorizontalGap) /
+            (MaterialControlWidth + HorizontalGap));
 
-        var availableHeight = Math.Max(MaterialControlHeight, ClientSize.Height - (ContentPadding * 2));
+        var availableHeight = Math.Max(
+            MaterialControlHeight,
+            ClientSize.Height - (ContentPadding * 2));
 
-        ViewportRows = Math.Max(1, (availableHeight + VerticalGap) / (MaterialControlHeight + VerticalGap));
+        var rowHeight = MaterialControlHeight + VerticalGap;
 
-        EnsureControlPoolSize(_columnCount * ViewportRows);
+        ViewportRows = Math.Max(
+            1,
+            (availableHeight + VerticalGap) / rowHeight);
+
+        _renderRowCount = Math.Max(
+            ViewportRows,
+            (int)Math.Ceiling((double)availableHeight / rowHeight));
+
+        EnsureControlPoolSize(_columnCount * _renderRowCount);
         PositionControlPool();
     }
 
