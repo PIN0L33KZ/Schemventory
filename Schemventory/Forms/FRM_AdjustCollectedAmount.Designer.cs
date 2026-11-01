@@ -206,11 +206,13 @@ partial class FRM_AdjustCollectedAmount
         ForeColor = Color.FromArgb(235, 234, 234);
         FormBorderStyle = FormBorderStyle.FixedSingle;
         Icon = (Icon)resources.GetObject("$this.Icon");
+        KeyPreview = true;
         Margin = new Padding(3, 4, 3, 4);
         MaximizeBox = false;
         Name = "FRM_AdjustCollectedAmount";
         StartPosition = FormStartPosition.CenterScreen;
         Text = "FRM_SetCollectedAmount";
+        KeyDown += FRM_AdjustCollectedAmount_KeyDown;
         ((System.ComponentModel.ISupportInitialize)NUD_Stacks).EndInit();
         ((System.ComponentModel.ISupportInitialize)NUD_Blocks).EndInit();
         ResumeLayout(false);

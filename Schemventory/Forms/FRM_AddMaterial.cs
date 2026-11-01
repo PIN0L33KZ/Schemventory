@@ -408,5 +408,14 @@ public partial class FRM_AddMaterial : Form
         PBX_Icon.Image = null;
     }
 
+    private void FRM_AddMaterial_KeyDown(object sender, KeyEventArgs e)
+    {
+        if(e.KeyCode == Keys.Escape)
+        {
+            DialogResult = DialogResult.Cancel;
+            Close();
+        }
+    }
+
     private sealed record ItemSearchEntry(ItemData Item, string DisplayName, string FullItemId);
 }

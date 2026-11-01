@@ -300,4 +300,13 @@ public partial class FRM_AdjustCollectedAmount : Form
         DialogResult = DialogResult.Cancel;
         Close();
     }
+
+    private void FRM_AdjustCollectedAmount_KeyDown(object sender, KeyEventArgs e)
+    {
+        if(e.KeyCode == Keys.Escape)
+        {
+            DialogResult = DialogResult.Cancel;
+            Close();
+        }
+    }
 }

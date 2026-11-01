@@ -364,6 +364,7 @@ partial class FRM_AddMaterial
         ForeColor = Color.FromArgb(235, 234, 234);
         FormBorderStyle = FormBorderStyle.FixedSingle;
         Icon = (Icon)resources.GetObject("$this.Icon");
+        KeyPreview = true;
         Margin = new Padding(3, 4, 3, 4);
         MaximizeBox = false;
         MinimizeBox = false;
@@ -371,6 +372,7 @@ partial class FRM_AddMaterial
         StartPosition = FormStartPosition.CenterScreen;
         Text = "FRM_AddMaterial";
         Load += FRM_AddMaterial_Load;
+        KeyDown += FRM_AddMaterial_KeyDown;
         PNL_ItemsBackground.ResumeLayout(false);
         PNL_Preview.ResumeLayout(false);
         PNL_Preview.PerformLayout();
