@@ -181,7 +181,7 @@ partial class FRM_MaterialList
         BTN_AddMaterial.ImageOffset = new Point(0, 0);
         BTN_AddMaterial.ImageRotate = 0F;
         BTN_AddMaterial.ImageSize = new Size(30, 30);
-        BTN_AddMaterial.Location = new Point(12, 549);
+        BTN_AddMaterial.Location = new Point(5, 547);
         BTN_AddMaterial.Name = "BTN_AddMaterial";
         BTN_AddMaterial.PressedState.ImageSize = new Size(30, 30);
         BTN_AddMaterial.ShadowDecoration.CustomizableEdges = customizableEdges4;
