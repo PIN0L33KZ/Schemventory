@@ -80,7 +80,10 @@ public partial class ProjectControl : UserControl
     private void LoadProjectData()
     {
         LBL_ProjectName.Text = _project.Name;
-        LBL_SchematicPath.Text = string.IsNullOrWhiteSpace(_project.SchematicPath) ? "No schematic file" : _project.SchematicPath;
+        LBL_SchematicPath.Text = string.IsNullOrWhiteSpace(_project.SchematicPath)
+            ? "No schematic file"
+            : _project.SchematicPath;
+
         LBL_CreatedAt.Text = $"Created: {_project.CreatedAtUtc:dd.MM.yyyy HH:mm}";
         LBL_LastOpened.Text = $"Last opened: {_project.LastOpenedAtUtc:dd.MM.yyyy HH:mm}";
 
@@ -90,11 +93,13 @@ public partial class ProjectControl : UserControl
             return;
         }
 
-        PBX_ProjectIcon.Image = Path.GetExtension(_project.SchematicPath) switch
+        var extension = Path.GetExtension(_project.SchematicPath);
+
+        PBX_ProjectIcon.Image = extension.ToLowerInvariant() switch
         {
             ".litematic" => Properties.Resources.ProjectIconL,
             ".schem" => Properties.Resources.ProjectIconS,
-            _ => null,
+            _ => null
         };
     }
 
