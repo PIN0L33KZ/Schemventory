@@ -187,7 +187,7 @@ partial class FRM_MaterialList
         BTN_AddMaterial.ShadowDecoration.CustomizableEdges = customizableEdges4;
         BTN_AddMaterial.Size = new Size(30, 30);
         BTN_AddMaterial.TabIndex = 4;
-        TTP_Main.SetToolTip(BTN_AddMaterial, "Add a custom material");
+        TTP_Main.SetToolTip(BTN_AddMaterial, "Add custom materials");
         BTN_AddMaterial.UseTransparentBackground = true;
         BTN_AddMaterial.Click += BTN_AddMaterial_Click;
         // 
