@@ -1,9 +1,11 @@
-﻿using Schemventory.Services;
+﻿﻿using Schemventory.Services;
+using Serilog;
 
 namespace Schemventory.Controls;
 
 public sealed class VirtualMaterialPanel : Panel
 {
+    private const string LogContext = "(VirtualMaterialPanel)";
     private const int MaterialControlWidth = 312;
     private const int MaterialControlHeight = 97;
     private const int HorizontalGap = 6;
@@ -312,6 +314,26 @@ public sealed class VirtualMaterialPanel : Panel
         }
         catch(OperationCanceledException)
         {
+        }
+        catch(Exception exception)
+        {
+            if(IsDisposed || refreshVersion != _refreshVersion)
+            {
+                Log.Debug(
+                    exception,
+                    "{LogContext} Ignoring failed material refresh because it is no longer current. RefreshVersion={RefreshVersion}, CurrentRefreshVersion={CurrentRefreshVersion}",
+                    LogContext,
+                    refreshVersion,
+                    _refreshVersion);
+
+                return;
+            }
+
+            Log.Warning(
+                exception,
+                "{LogContext} Failed to refresh visible material controls. RefreshVersion={RefreshVersion}",
+                LogContext,
+                refreshVersion);
         }
     }
 
