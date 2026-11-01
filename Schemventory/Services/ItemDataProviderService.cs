@@ -13,6 +13,7 @@ public sealed class ItemDataProvider
     private const string DataUrl = @"https://raw.githubusercontent.com/misode/mcmeta/summary/item_components/data.json";
 
     private static readonly TimeSpan CacheLifetime = TimeSpan.FromDays(7);
+    private static readonly TimeSpan FailedLoadRetryDelay = TimeSpan.FromSeconds(30);
 
     private static readonly HttpClient HttpClient = new()
     {
@@ -27,6 +28,7 @@ public sealed class ItemDataProvider
     private IReadOnlyCollection<ItemData>? _items;
     private Dictionary<string, ItemData>? _itemsById;
     private bool _loadedSuccessfully;
+    private DateTime _retryAfterUtc = DateTime.MinValue;
 
     public ItemDataProvider()
     {
@@ -67,11 +69,23 @@ public sealed class ItemDataProvider
             if(_loadedSuccessfully && _items is not null && _itemsById is not null)
                 return;
 
+            if(_items is not null &&
+               _itemsById is not null &&
+               DateTime.UtcNow < _retryAfterUtc)
+            {
+                Log.Debug(
+                    "{LogContext} Skipping item data reload during retry cooldown. RetryAfterUtc={RetryAfterUtc}",
+                    LogContext,
+                    _retryAfterUtc);
+
+                return;
+            }
+
             var cacheLoaded = await TryLoadCompactCacheAsync(cancellationToken);
 
             if(cacheLoaded && await IsCacheFreshAsync(cancellationToken))
             {
-                _loadedSuccessfully = true;
+                MarkLoadedSuccessfully();
 
                 Log.Debug("{LogContext} Using fresh item data cache. ItemCount={ItemCount}", LogContext, _items?.Count ?? 0);
                 return;
@@ -96,7 +110,7 @@ public sealed class ItemDataProvider
                             LastModified = refreshResult.LastModified ?? metadata?.LastModified
                         }, cancellationToken);
 
-                        _loadedSuccessfully = true;
+                        MarkLoadedSuccessfully();
 
                         Log.Debug("{LogContext} Item data cache revalidated without changes.", LogContext);
                         return;
@@ -118,7 +132,7 @@ public sealed class ItemDataProvider
                     }, cancellationToken);
 
                     TryDeleteLegacyCache();
-                    _loadedSuccessfully = true;
+                    MarkLoadedSuccessfully();
 
                     Log.Information("{LogContext} Item data cache updated from remote source. ItemCount={ItemCount}", LogContext, _items?.Count ?? 0);
                     return;
@@ -128,7 +142,7 @@ public sealed class ItemDataProvider
             {
                 if(cacheLoaded)
                 {
-                    _loadedSuccessfully = true;
+                    MarkLoadedSuccessfully();
 
                     Log.Warning(exception, "{LogContext} Item data refresh failed. Existing cache will be used.", LogContext);
                     return;
@@ -140,7 +154,7 @@ public sealed class ItemDataProvider
             {
                 if(cacheLoaded)
                 {
-                    _loadedSuccessfully = true;
+                    MarkLoadedSuccessfully();
 
                     Log.Warning(exception, "{LogContext} Item data refresh timed out. Existing cache will be used.", LogContext);
                     return;
@@ -152,13 +166,23 @@ public sealed class ItemDataProvider
             _items = [];
             _itemsById = new Dictionary<string, ItemData>(StringComparer.Ordinal);
             _loadedSuccessfully = false;
+            _retryAfterUtc = DateTime.UtcNow.Add(FailedLoadRetryDelay);
 
-            Log.Warning("{LogContext} Item data provider initialised with an empty data set.", LogContext);
+            Log.Warning(
+                "{LogContext} Item data provider initialised with an empty data set. NextRetryUtc={NextRetryUtc}",
+                LogContext,
+                _retryAfterUtc);
         }
         finally
         {
             _ = _loadSemaphore.Release();
         }
+    }
+
+    private void MarkLoadedSuccessfully()
+    {
+        _loadedSuccessfully = true;
+        _retryAfterUtc = DateTime.MinValue;
     }
 
     private async Task<bool> TryLoadCompactCacheAsync(CancellationToken cancellationToken)
