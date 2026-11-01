@@ -127,24 +127,8 @@ public partial class FRM_NewProject : Form
 
         Log.Debug("{LogContext} Updating project. ProjectId={ProjectId}, SchematicChanged={SchematicChanged}", LogContext, _currentProject.Id, schematicChanged);
 
-        if(schematicChanged &&
-           !string.IsNullOrWhiteSpace(_currentProject.SchematicPath) &&
-           !string.IsNullOrWhiteSpace(newSchematicPath))
-        {
-            DialogResult result = MessageBox.Show(
-                "The schematic file has changed.\n\n" +
-                "Changing the schematic will replace the current material list, including manually added materials.\n\n" +
-                "Do you want to continue?",
-                $"Change schematic - {Constants.AppName}",
-                MessageBoxButtons.YesNo,
-                MessageBoxIcon.Warning);
-
-            if(result != DialogResult.Yes)
-            {
-                Log.Debug("{LogContext} Project update cancelled because schematic change was not confirmed. ProjectId={ProjectId}", LogContext, _currentProject.Id);
-                return false;
-            }
-        }
+        if(schematicChanged && !ConfirmSchematicChange(newSchematicPath))
+            return false;
 
         IReadOnlyCollection<MaterialEntry>? materials = null;
 
@@ -163,6 +147,51 @@ public partial class FRM_NewProject : Form
         Log.Information("{LogContext} Project updated. ProjectId={ProjectId}", LogContext, _currentProject.Id);
 
         return true;
+    }
+
+    private bool ConfirmSchematicChange(string? newSchematicPath)
+    {
+        if(_currentProject is null)
+            return false;
+
+        var hadSchematic = !string.IsNullOrWhiteSpace(_currentProject.SchematicPath);
+        var willHaveSchematic = !string.IsNullOrWhiteSpace(newSchematicPath);
+
+        string message;
+
+        if(hadSchematic && willHaveSchematic)
+        {
+            message =
+                "The schematic file has changed.\n\n" +
+                "Changing the schematic will replace the current material list, including manually added materials.\n\n" +
+                "Do you want to continue?";
+        }
+        else
+        {
+            message = hadSchematic
+                ? "The schematic file will be removed.\n\n" +
+                "Removing the schematic will clear the current material list, including manually added materials.\n\n" +
+                "Do you want to continue?"
+                : "A schematic file will be added to this project.\n\n" +
+                "Adding a schematic will replace the current material list, including manually added materials.\n\n" +
+                "Do you want to continue?";
+        }
+
+        DialogResult result = MessageBox.Show(
+            message,
+            $"Change schematic - {Constants.AppName}",
+            MessageBoxButtons.YesNo,
+            MessageBoxIcon.Warning);
+
+        if(result == DialogResult.Yes)
+            return true;
+
+        Log.Debug(
+            "{LogContext} Project update cancelled because schematic change was not confirmed. ProjectId={ProjectId}",
+            LogContext,
+            _currentProject.Id);
+
+        return false;
     }
 
     private void BTN_SelectSchematicFilePath_Click(object sender, EventArgs e)
