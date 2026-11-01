@@ -86,8 +86,18 @@ public partial class FRM_NewProject : Form
         }
         catch(Exception exception)
         {
-            Log.Error(exception, "{LogContext} Failed to save project. EditMode={EditMode}, ProjectId={ProjectId}", LogContext, IsEditMode, _currentProject?.Id);
-            throw;
+            Log.Error(
+                exception,
+                "{LogContext} Failed to save project. EditMode={EditMode}, ProjectId={ProjectId}",
+                LogContext,
+                IsEditMode,
+                _currentProject?.Id);
+
+            _ = MessageBox.Show(
+                $"The project could not be saved.\n\n{exception.Message}",
+                WindowName,
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
         }
     }
 
@@ -112,7 +122,12 @@ public partial class FRM_NewProject : Form
 
         _projectPersistenceService.Create(project, materials);
 
-        Log.Information("{LogContext} Project created. ProjectId={ProjectId}, CreationMode={CreationMode}, MaterialCount={MaterialCount}", LogContext, project.Id, useSchematic ? "Schematic" : "Empty", materials.Count);
+        Log.Information(
+            "{LogContext} Project created. ProjectId={ProjectId}, CreationMode={CreationMode}, MaterialCount={MaterialCount}",
+            LogContext,
+            project.Id,
+            useSchematic ? "Schematic" : "Empty",
+            materials.Count);
     }
 
     private bool UpdateProject()
@@ -125,7 +140,11 @@ public partial class FRM_NewProject : Form
         var newSchematicPath = useSchematic ? TBX_SchematicFilePath.Text.Trim() : null;
         var schematicChanged = !string.Equals(_currentProject.SchematicPath, newSchematicPath, StringComparison.OrdinalIgnoreCase);
 
-        Log.Debug("{LogContext} Updating project. ProjectId={ProjectId}, SchematicChanged={SchematicChanged}", LogContext, _currentProject.Id, schematicChanged);
+        Log.Debug(
+            "{LogContext} Updating project. ProjectId={ProjectId}, SchematicChanged={SchematicChanged}",
+            LogContext,
+            _currentProject.Id,
+            schematicChanged);
 
         if(schematicChanged && !ConfirmSchematicChange(newSchematicPath))
             return false;
@@ -139,10 +158,22 @@ public partial class FRM_NewProject : Form
                 : _materialImportService.ReadMaterialList(newSchematicPath);
         }
 
+        var previousName = _currentProject.Name;
+        var previousSchematicPath = _currentProject.SchematicPath;
+
         _currentProject.Name = newName;
         _currentProject.SchematicPath = newSchematicPath;
 
-        _projectPersistenceService.Update(_currentProject, materials);
+        try
+        {
+            _projectPersistenceService.Update(_currentProject, materials);
+        }
+        catch
+        {
+            _currentProject.Name = previousName;
+            _currentProject.SchematicPath = previousSchematicPath;
+            throw;
+        }
 
         Log.Information("{LogContext} Project updated. ProjectId={ProjectId}", LogContext, _currentProject.Id);
 
@@ -157,26 +188,17 @@ public partial class FRM_NewProject : Form
         var hadSchematic = !string.IsNullOrWhiteSpace(_currentProject.SchematicPath);
         var willHaveSchematic = !string.IsNullOrWhiteSpace(newSchematicPath);
 
-        string message;
-
-        if(hadSchematic && willHaveSchematic)
-        {
-            message =
-                "The schematic file has changed.\n\n" +
+        var message = hadSchematic && willHaveSchematic
+            ? "The schematic file has changed.\n\n" +
                 "Changing the schematic will replace the current material list, including manually added materials.\n\n" +
-                "Do you want to continue?";
-        }
-        else
-        {
-            message = hadSchematic
-                ? "The schematic file will be removed.\n\n" +
-                "Removing the schematic will clear the current material list, including manually added materials.\n\n" +
                 "Do you want to continue?"
+            : hadSchematic
+                ? "The schematic file will be removed.\n\n" +
+                  "Removing the schematic will clear the current material list, including manually added materials.\n\n" +
+                  "Do you want to continue?"
                 : "A schematic file will be added to this project.\n\n" +
-                "Adding a schematic will replace the current material list, including manually added materials.\n\n" +
-                "Do you want to continue?";
-        }
-
+                  "Adding a schematic will replace the current material list, including manually added materials.\n\n" +
+                  "Do you want to continue?";
         DialogResult result = MessageBox.Show(
             message,
             $"Change schematic - {Constants.AppName}",
@@ -264,7 +286,8 @@ public partial class FRM_NewProject : Form
 
         var extension = Path.GetExtension(schematicFilePath);
 
-        if(!extension.Equals(".litematic", StringComparison.OrdinalIgnoreCase) && !extension.Equals(".schem", StringComparison.OrdinalIgnoreCase))
+        if(!extension.Equals(".litematic", StringComparison.OrdinalIgnoreCase) &&
+           !extension.Equals(".schem", StringComparison.OrdinalIgnoreCase))
         {
             Log.Warning("{LogContext} Project validation failed: unsupported schematic format. Extension={Extension}", LogContext, extension);
 
