@@ -22,7 +22,7 @@ public partial class FRM_AddMaterial : Form
 
     public ItemData? SelectedItem { get; private set; }
 
-    public string? SelectedItemId => SelectedItem is null ? null : GetFullItemId(SelectedItem.Id);
+    public string? SelectedItemId => SelectedItem is null ? null : ItemIdService.GetFullId(SelectedItem.Id);
 
     public long RequiredAmount => (long)NUD_RequiredAmount.Value;
 
@@ -92,7 +92,10 @@ public partial class FRM_AddMaterial : Form
                 return;
 
             _items = items
-                .Select(x => new ItemSearchEntry(x, GetDisplayName(x.Id), GetFullItemId(x.Id)))
+                .Select(x => new ItemSearchEntry(
+                    x,
+                    ItemIdService.GetDisplayName(x.Id),
+                    ItemIdService.GetFullId(x.Id)))
                 .OrderBy(x => x.DisplayName, StringComparer.CurrentCultureIgnoreCase)
                 .ToList();
 
@@ -403,27 +406,6 @@ public partial class FRM_AddMaterial : Form
 
         PBX_Icon.Image?.Dispose();
         PBX_Icon.Image = null;
-    }
-
-    private static string NormalizeItemId(string itemId)
-    {
-        const string prefix = "minecraft:";
-
-        return itemId.StartsWith(prefix, StringComparison.Ordinal) ? itemId[prefix.Length..] : itemId;
-    }
-
-    private static string GetFullItemId(string itemId)
-    {
-        return itemId.StartsWith("minecraft:", StringComparison.Ordinal) ? itemId : $"minecraft:{itemId}";
-    }
-
-    private static string GetDisplayName(string itemId)
-    {
-        var name = NormalizeItemId(itemId);
-
-        name = name.Replace('_', ' ');
-
-        return System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(name);
     }
 
     private sealed record ItemSearchEntry(ItemData Item, string DisplayName, string FullItemId);

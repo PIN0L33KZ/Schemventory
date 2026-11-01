@@ -22,7 +22,7 @@ public partial class FRM_ReplaceMaterial : Form
     private CancellationTokenSource? _previewCancellationTokenSource;
 
     public ItemData? SelectedItem { get; private set; }
-    public string? ReplacementItemId => SelectedItem?.Id;
+    public string? ReplacementItemId => SelectedItem is null ? null : ItemIdService.GetFullId(SelectedItem.Id);
     public bool ResetRequested { get; private set; }
 
     public FRM_ReplaceMaterial(ProjectMaterial material, ItemDataProvider itemDataProvider, ItemIconService itemIconService)
@@ -85,10 +85,13 @@ public partial class FRM_ReplaceMaterial : Form
             if(_formCancellationTokenSource.IsCancellationRequested || IsDisposed)
                 return;
 
-            var originalItemId = NormalizeItemId(_material.ItemId);
+            var originalItemId = ItemIdService.Normalize(_material.ItemId);
 
             _items = items.Where(x => !string.Equals(x.Id, originalItemId, StringComparison.Ordinal))
-                .Select(x => new ItemSearchEntry(x, ItemIdService.GetDisplayName(x.Id), GetFullItemId(x.Id)))
+                .Select(x => new ItemSearchEntry(
+                    x,
+                    ItemIdService.GetDisplayName(x.Id),
+                    ItemIdService.GetFullId(x.Id)))
                 .OrderBy(x => x.DisplayName, StringComparer.CurrentCultureIgnoreCase)
                 .ToList();
 
@@ -304,7 +307,12 @@ public partial class FRM_ReplaceMaterial : Form
         if(SelectedItem is null)
             return;
 
-        Log.Debug("{LogContext} Replacement confirmed. ProjectId={ProjectId}, OriginalItemId={OriginalItemId}, ReplacementItemId={ReplacementItemId}", LogContext, _material.ProjectId, _material.ItemId, SelectedItem.Id);
+        Log.Debug(
+            "{LogContext} Replacement confirmed. ProjectId={ProjectId}, OriginalItemId={OriginalItemId}, ReplacementItemId={ReplacementItemId}",
+            LogContext,
+            _material.ProjectId,
+            _material.ItemId,
+            ReplacementItemId);
 
         DialogResult = DialogResult.OK;
         Close();
@@ -373,18 +381,6 @@ public partial class FRM_ReplaceMaterial : Form
 
         PBX_Icon.Image?.Dispose();
         PBX_Icon.Image = null;
-    }
-
-    private static string NormalizeItemId(string itemId)
-    {
-        const string prefix = "minecraft:";
-
-        return itemId.StartsWith(prefix, StringComparison.Ordinal) ? itemId[prefix.Length..] : itemId;
-    }
-
-    private static string GetFullItemId(string itemId)
-    {
-        return itemId.StartsWith("minecraft:", StringComparison.Ordinal) ? itemId : $"minecraft:{itemId}";
     }
 
     private sealed record ItemSearchEntry(ItemData Item, string DisplayName, string FullItemId);

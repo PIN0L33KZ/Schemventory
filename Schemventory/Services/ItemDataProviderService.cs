@@ -45,7 +45,7 @@ public sealed class ItemDataProvider
     {
         await EnsureLoadedAsync(cancellationToken);
 
-        var normalizedId = NormalizeItemId(itemId);
+        var normalizedId = ItemIdService.Normalize(itemId);
 
         return _itemsById!.TryGetValue(normalizedId, out ItemData? item) ? item.MaxStackSize : 64;
     }
@@ -308,7 +308,7 @@ public sealed class ItemDataProvider
             if(item.Value.TryGetProperty("minecraft:max_stack_size", out JsonElement stackSizeElement) && stackSizeElement.TryGetInt32(out var parsedMaxStackSize))
                 maxStackSize = parsedMaxStackSize;
 
-            stackSizes[NormalizeItemId(item.Name)] = maxStackSize;
+            stackSizes[ItemIdService.Normalize(item.Name)] = maxStackSize;
         }
 
         LoadCompactData(stackSizes);
@@ -323,7 +323,7 @@ public sealed class ItemDataProvider
         {
             ItemData itemData = new()
             {
-                Id = NormalizeItemId(entry.Key),
+                Id = ItemIdService.Normalize(entry.Key),
                 MaxStackSize = entry.Value
             };
 
@@ -412,7 +412,7 @@ public sealed class ItemDataProvider
         }
         catch(UnauthorizedAccessException exception)
         {
-            Log.Warning(exception, "{LogContext} Access to the item data cache metadata was denied.", LogContext);
+            Log.Warning(exception, "{LogContext} Access to item data cache metadata was denied.", LogContext);
             return false;
         }
     }
@@ -430,13 +430,6 @@ public sealed class ItemDataProvider
         {
             TryDeleteFile(temporaryFilePath);
         }
-    }
-
-    private static string NormalizeItemId(string itemId)
-    {
-        const string prefix = "minecraft:";
-
-        return itemId.StartsWith(prefix, StringComparison.Ordinal) ? itemId[prefix.Length..] : itemId;
     }
 
     private static async Task<DownloadResult> DownloadDataAsync(CacheMetadata? metadata, CancellationToken cancellationToken)

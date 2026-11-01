@@ -35,7 +35,7 @@ public sealed class ItemIconService
 
     public async Task<Image> GetItemIconAsync(string itemId, int size = 64, CancellationToken cancellationToken = default)
     {
-        var normalizedItemId = NormalizeItemId(itemId);
+        var normalizedItemId = ItemIdService.Normalize(itemId);
         var cacheKey = $"{normalizedItemId}:{size}";
         var cacheFilePath = GetCacheFilePath(normalizedItemId, size);
         var missingCacheFilePath = GetMissingCacheFilePath(normalizedItemId, size);
@@ -265,13 +265,6 @@ public sealed class ItemIconService
     private static string GetSafeCacheFileName(string itemId)
     {
         return Uri.EscapeDataString(itemId);
-    }
-
-    private static string NormalizeItemId(string itemId)
-    {
-        const string prefix = "minecraft:";
-
-        return itemId.StartsWith(prefix, StringComparison.Ordinal) ? itemId[prefix.Length..] : itemId;
     }
 
     private static Bitmap LoadImage(byte[] data)

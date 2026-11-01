@@ -1,4 +1,4 @@
-using Schemventory.App;
+﻿using Schemventory.App;
 using Schemventory.Controls;
 using Schemventory.Data;
 using Schemventory.Services;
@@ -86,11 +86,11 @@ public partial class FRM_MaterialList : Form
     private void MaterialControl_RemoveRequested(ProjectMaterial material)
     {
         DialogResult result = MessageBox.Show(
-    $"Do you really want to remove '{ItemIdService.GetDisplayName(material.ItemId)}' from this project?\n\n" +
-    "This action cannot be undone.",
-    $"Remove material - {Constants.AppName}",
-    MessageBoxButtons.YesNo,
-    MessageBoxIcon.Warning);
+            $"Do you really want to remove '{ItemIdService.GetDisplayName(material.ItemId)}' from this project?\n\n" +
+            "This action cannot be undone.",
+            $"Remove material - {Constants.AppName}",
+            MessageBoxButtons.YesNo,
+            MessageBoxIcon.Warning);
 
         if(result != DialogResult.Yes)
         {
@@ -105,9 +105,7 @@ public partial class FRM_MaterialList : Form
 
         try
         {
-            _projectMaterialService.Remove(
-                material.ProjectId,
-                material.ItemId);
+            _projectMaterialService.Remove(material.ProjectId, material.ItemId);
 
             LoadMaterialList();
             ApplyMaterialView(resetScrollPosition: false);
@@ -156,7 +154,7 @@ public partial class FRM_MaterialList : Form
             if(material.State == ProjectMaterialState.Ignored)
                 continue;
 
-            var itemId = NormalizeItemId(material.DisplayItemId);
+            var itemId = ItemIdService.Normalize(material.DisplayItemId);
             var collectedAmount = Math.Min(material.CollectedAmount, material.RequiredAmount);
 
             if(groupedMaterials.TryGetValue(itemId, out (long RequiredAmount, long CollectedAmount) current))
@@ -180,13 +178,6 @@ public partial class FRM_MaterialList : Form
 
         LBL_TotalBlocks.Text = $"{collectedBlocks}/{totalBlocks} Blocks collected";
         LBL_DifferentMaterialsCount.Text = $"{collectedMaterials}/{groupedMaterials.Count} Materials collected";
-    }
-
-    private static string NormalizeItemId(string itemId)
-    {
-        const string prefix = "minecraft:";
-
-        return itemId.StartsWith(prefix, StringComparison.Ordinal) ? itemId[prefix.Length..] : itemId;
     }
 
     private void LoadMaterialList()
