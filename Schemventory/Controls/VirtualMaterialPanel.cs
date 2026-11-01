@@ -38,7 +38,11 @@ public sealed class VirtualMaterialPanel : Panel
 
     public VirtualMaterialPanel()
     {
-        SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw | ControlStyles.UserPaint, true);
+        SetStyle(
+            ControlStyles.AllPaintingInWmPaint |
+            ControlStyles.OptimizedDoubleBuffer |
+            ControlStyles.UserPaint,
+            true);
 
         UpdateStyles();
         TabStop = true;
@@ -59,6 +63,14 @@ public sealed class VirtualMaterialPanel : Panel
 
         _materials = materials;
 
+        if(_resizeSuspended)
+        {
+            if(resetScrollPosition)
+                ScrollRow = 0;
+
+            return;
+        }
+
         RecalculateLayout();
 
         ScrollRow = resetScrollPosition ? 0 : Math.Min(ScrollRow, MaximumScrollRow);
@@ -71,6 +83,9 @@ public sealed class VirtualMaterialPanel : Panel
 
     public void SetScrollRow(int scrollRow)
     {
+        if(_resizeSuspended)
+            return;
+
         var newScrollRow = Math.Clamp(scrollRow, 0, MaximumScrollRow);
 
         if(newScrollRow == ScrollRow)
@@ -117,6 +132,10 @@ public sealed class VirtualMaterialPanel : Panel
     protected override void OnMouseWheel(MouseEventArgs eventArgs)
     {
         base.OnMouseWheel(eventArgs);
+
+        if(_resizeSuspended)
+            return;
+
         ScrollByMouseWheel(eventArgs.Delta);
     }
 
@@ -203,8 +222,13 @@ public sealed class VirtualMaterialPanel : Panel
                 var row = index / _columnCount;
                 var column = index % _columnCount;
 
-                _controlPool[index].Location = new Point(startX + (column * (MaterialControlWidth + HorizontalGap)), ContentPadding + (row * (MaterialControlHeight + VerticalGap)));
-                _controlPool[index].Size = new Size(MaterialControlWidth, MaterialControlHeight);
+                _controlPool[index].Location = new Point(
+                    startX + (column * (MaterialControlWidth + HorizontalGap)),
+                    ContentPadding + (row * (MaterialControlHeight + VerticalGap)));
+
+                _controlPool[index].Size = new Size(
+                    MaterialControlWidth,
+                    MaterialControlHeight);
             }
         }
         finally
@@ -215,6 +239,9 @@ public sealed class VirtualMaterialPanel : Panel
 
     private bool TryRecycleRows(int oldScrollRow, int newScrollRow)
     {
+        if(_resizeSuspended)
+            return false;
+
         var rowDelta = newScrollRow - oldScrollRow;
         var rowsToRecycle = Math.Abs(rowDelta);
 
@@ -260,9 +287,9 @@ public sealed class VirtualMaterialPanel : Panel
         return true;
     }
 
-    private void RefreshVisibleControls()
+    private void RefreshVisibleControls(bool forceRebind = false)
     {
-        if(_itemIconService is null)
+        if(_itemIconService is null || _resizeSuspended)
             return;
 
         var refreshVersion = ++_refreshVersion;
@@ -275,7 +302,13 @@ public sealed class VirtualMaterialPanel : Panel
         try
         {
             for(var slotIndex = 0; slotIndex < _controlPool.Count; slotIndex++)
-                BindControl(_controlPool[slotIndex], firstMaterialIndex + slotIndex, bindingTasks);
+            {
+                BindControl(
+                    _controlPool[slotIndex],
+                    firstMaterialIndex + slotIndex,
+                    bindingTasks,
+                    forceRebind);
+            }
         }
         finally
         {
@@ -286,8 +319,15 @@ public sealed class VirtualMaterialPanel : Panel
             _ = CompleteRefreshAsync(bindingTasks, refreshVersion);
     }
 
-    private void BindControl(MaterialControl materialControl, int materialIndex, List<Task> bindingTasks)
+    private void BindControl(
+        MaterialControl materialControl,
+        int materialIndex,
+        List<Task> bindingTasks,
+        bool forceRebind = false)
     {
+        if(_resizeSuspended)
+            return;
+
         if(materialIndex >= _materials.Count)
         {
             materialControl.ClearMaterial();
@@ -299,8 +339,11 @@ public sealed class VirtualMaterialPanel : Panel
 
         materialControl.Visible = true;
 
-        if(ReferenceEquals(materialControl.BoundMaterial, material))
+        if(!forceRebind &&
+           ReferenceEquals(materialControl.BoundMaterial, material))
+        {
             return;
+        }
 
         bindingTasks.Add(materialControl.SetMaterialAsync(material));
     }
@@ -311,8 +354,12 @@ public sealed class VirtualMaterialPanel : Panel
         {
             await Task.WhenAll(bindingTasks);
 
-            if(IsDisposed || refreshVersion != _refreshVersion)
+            if(IsDisposed ||
+               _resizeSuspended ||
+               refreshVersion != _refreshVersion)
+            {
                 return;
+            }
 
             Invalidate();
         }
@@ -321,14 +368,17 @@ public sealed class VirtualMaterialPanel : Panel
         }
         catch(Exception exception)
         {
-            if(IsDisposed || refreshVersion != _refreshVersion)
+            if(IsDisposed ||
+               _resizeSuspended ||
+               refreshVersion != _refreshVersion)
             {
                 Log.Debug(
                     exception,
-                    "{LogContext} Ignoring failed material refresh because it is no longer current. RefreshVersion={RefreshVersion}, CurrentRefreshVersion={CurrentRefreshVersion}",
+                    "{LogContext} Ignoring failed material refresh because it is no longer current. RefreshVersion={RefreshVersion}, CurrentRefreshVersion={CurrentRefreshVersion}, ResizeSuspended={ResizeSuspended}",
                     LogContext,
                     refreshVersion,
-                    _refreshVersion);
+                    _refreshVersion,
+                    _resizeSuspended);
 
                 return;
             }
@@ -361,12 +411,15 @@ public sealed class VirtualMaterialPanel : Panel
 
     private void ChildControl_MouseWheel(object? sender, MouseEventArgs e)
     {
+        if(_resizeSuspended)
+            return;
+
         ScrollByMouseWheel(e.Delta);
     }
 
     private void ScrollByMouseWheel(int delta)
     {
-        if(delta == 0 || MaximumScrollRow == 0)
+        if(_resizeSuspended || delta == 0 || MaximumScrollRow == 0)
             return;
 
         var wheelSteps = Math.Max(1, Math.Abs(delta) / SystemInformation.MouseWheelScrollDelta);
@@ -377,20 +430,52 @@ public sealed class VirtualMaterialPanel : Panel
 
     public void SuspendVirtualLayout()
     {
+        if(_resizeSuspended)
+            return;
+
         _resizeSuspended = true;
+
+        // Invalidate every refresh that started before the resize.
+        _refreshVersion++;
+
+        // Stop pending item/icon loads while preserving the currently rendered
+        // material data so the controls remain visually frozen during resize.
+        foreach(MaterialControl materialControl in _controlPool)
+            materialControl.SuspendBinding();
+
+        Log.Debug(
+            "{LogContext} Virtual layout suspended for resize. ControlCount={ControlCount}, RefreshVersion={RefreshVersion}",
+            LogContext,
+            _controlPool.Count,
+            _refreshVersion);
     }
 
     public void ResumeVirtualLayout()
     {
+        if(!_resizeSuspended)
+            return;
+
         _resizeSuspended = false;
 
         RecalculateLayout();
 
         ScrollRow = Math.Min(ScrollRow, MaximumScrollRow);
 
-        RefreshVisibleControls();
+        // Bind all visible controls again because their previous asynchronous
+        // bindings were intentionally cancelled when the resize started.
+        RefreshVisibleControls(forceRebind: true);
 
         ScrollMetricsChanged?.Invoke(this, EventArgs.Empty);
         ScrollPositionChanged?.Invoke(this, EventArgs.Empty);
+
+        Invalidate();
+
+        Log.Debug(
+            "{LogContext} Virtual layout resumed after resize. ColumnCount={ColumnCount}, ViewportRows={ViewportRows}, RenderRowCount={RenderRowCount}, ScrollRow={ScrollRow}",
+            LogContext,
+            _columnCount,
+            ViewportRows,
+            _renderRowCount,
+            ScrollRow);
     }
 }

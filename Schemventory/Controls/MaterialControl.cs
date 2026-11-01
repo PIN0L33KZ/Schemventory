@@ -108,6 +108,12 @@ public partial class MaterialControl : UserControl
         PBX_MaterialIcon.Image = null;
     }
 
+    public void SuspendBinding()
+    {
+        CancelCurrentBinding();
+        _bindingVersion++;
+    }
+
     private void HoverTimer_Tick(object? sender, EventArgs e)
     {
         if(RectangleToScreen(ClientRectangle).Contains(Cursor.Position))
