@@ -32,22 +32,33 @@ public partial class FRM_AdjustCollectedAmount : Form
 
         InitializeValues();
 
-        Log.Debug("{LogContext} Adjust collected amount dialog opened. ProjectId={ProjectId}, ItemId={ItemId}, CollectedAmount={CollectedAmount}, RequiredAmount={RequiredAmount}", LogContext, _material.ProjectId, _material.ItemId, _material.CollectedAmount, _material.RequiredAmount);
+        Log.Debug(
+            "{LogContext} Adjust collected amount dialog opened. ProjectId={ProjectId}, ItemId={ItemId}, CollectedAmount={CollectedAmount}, RequiredAmount={RequiredAmount}",
+            LogContext,
+            _material.ProjectId,
+            _material.ItemId,
+            _material.CollectedAmount,
+            _material.RequiredAmount);
     }
 
     private void InitializeValues()
     {
         _updatingValues = true;
 
-        NUD_Stacks.Value = 0;
-        NUD_Blocks.Value = 0;
+        try
+        {
+            NUD_Stacks.Value = 0;
+            NUD_Blocks.Value = 0;
+            _direction = AmountDirection.None;
 
-        _updatingValues = false;
-        _direction = AmountDirection.None;
-
-        UpdateLimits();
-        UpdateHeading();
-        UpdateCollectedStats();
+            UpdateLimits();
+            UpdateHeading();
+            UpdateCollectedStats();
+        }
+        finally
+        {
+            _updatingValues = false;
+        }
     }
 
     private void NUD_Stacks_ValueChanged(object sender, EventArgs e)
@@ -65,18 +76,21 @@ public partial class FRM_AdjustCollectedAmount : Form
         if(_updatingValues)
             return;
 
-        if(changedControl.Value > 0)
-            _direction = AmountDirection.Add;
-        else if(changedControl.Value < 0)
-            _direction = AmountDirection.Remove;
-        else if(NUD_Stacks.Value == 0 && NUD_Blocks.Value == 0)
-            _direction = AmountDirection.None;
-
         _updatingValues = true;
 
         try
         {
-            NormalizeDirection();
+            if(_direction == AmountDirection.None)
+            {
+                if(changedControl.Value > 0)
+                    _direction = AmountDirection.Add;
+                else if(changedControl.Value < 0)
+                    _direction = AmountDirection.Remove;
+            }
+
+            if(NUD_Stacks.Value == 0 && NUD_Blocks.Value == 0)
+                _direction = AmountDirection.None;
+
             UpdateLimits();
             UpdateHeading();
         }
@@ -86,64 +100,36 @@ public partial class FRM_AdjustCollectedAmount : Form
         }
     }
 
-    private void NormalizeDirection()
-    {
-        switch(_direction)
-        {
-            case AmountDirection.Add:
-                if(NUD_Stacks.Value < 0)
-                    NUD_Stacks.Value = 0;
-
-                if(NUD_Blocks.Value < 0)
-                    NUD_Blocks.Value = 0;
-                break;
-
-            case AmountDirection.Remove:
-                if(NUD_Stacks.Value > 0)
-                    NUD_Stacks.Value = 0;
-
-                if(NUD_Blocks.Value > 0)
-                    NUD_Blocks.Value = 0;
-                break;
-        }
-    }
-
     private void UpdateLimits()
     {
-        long stackSize = _material.MaxStackSize;
-        var maxAddAmount = _material.RemainingAmount;
-        var maxRemoveAmount = _material.CollectedAmount;
-
-        var maxAddStacks = maxAddAmount / stackSize;
-        var maxRemoveStacks = maxRemoveAmount / stackSize;
+        var stackSize = GetStackSize();
+        var maxAddAmount = Math.Max(0, _material.RequiredAmount - _material.CollectedAmount);
+        var maxRemoveAmount = Math.Max(0, _material.CollectedAmount);
 
         switch(_direction)
         {
             case AmountDirection.Add:
-                SetRange(NUD_Stacks, 0, maxAddStacks);
-                UpdateAddBlockLimits(stackSize, maxAddAmount);
+                UpdateAddLimits(stackSize, maxAddAmount);
                 break;
 
             case AmountDirection.Remove:
-                SetRange(NUD_Stacks, -maxRemoveStacks, 0);
-                UpdateRemoveBlockLimits(stackSize, maxRemoveAmount);
+                UpdateRemoveLimits(stackSize, maxRemoveAmount);
                 break;
 
             default:
-                SetRange(NUD_Stacks, -maxRemoveStacks, maxAddStacks);
-
-                var maxAddBlocks = Math.Min(stackSize - 1, maxAddAmount);
-                var maxRemoveBlocks = Math.Min(stackSize - 1, maxRemoveAmount);
-
-                SetRange(NUD_Blocks, -maxRemoveBlocks, maxAddBlocks);
+                UpdateNeutralLimits(stackSize, maxAddAmount, maxRemoveAmount);
                 break;
         }
 
-        BTN_Save.Enabled = NUD_Stacks.Value != 0 || NUD_Blocks.Value != 0;
+        BTN_Save.Enabled = GetAmountChange() != 0;
     }
 
-    private void UpdateAddBlockLimits(long stackSize, long maxAddAmount)
+    private void UpdateAddLimits(long stackSize, long maxAddAmount)
     {
+        var maxStacks = maxAddAmount / stackSize;
+
+        SetRange(NUD_Stacks, 0, maxStacks);
+
         var stackAmount = (long)NUD_Stacks.Value * stackSize;
         var remainingAmount = Math.Max(0, maxAddAmount - stackAmount);
         var maxBlocks = Math.Min(stackSize - 1, remainingAmount);
@@ -151,8 +137,12 @@ public partial class FRM_AdjustCollectedAmount : Form
         SetRange(NUD_Blocks, 0, maxBlocks);
     }
 
-    private void UpdateRemoveBlockLimits(long stackSize, long maxRemoveAmount)
+    private void UpdateRemoveLimits(long stackSize, long maxRemoveAmount)
     {
+        var maxStacks = maxRemoveAmount / stackSize;
+
+        SetRange(NUD_Stacks, -maxStacks, 0);
+
         var stackAmount = Math.Abs((long)NUD_Stacks.Value) * stackSize;
         var remainingAmount = Math.Max(0, maxRemoveAmount - stackAmount);
         var maxBlocks = Math.Min(stackSize - 1, remainingAmount);
@@ -160,9 +150,21 @@ public partial class FRM_AdjustCollectedAmount : Form
         SetRange(NUD_Blocks, -maxBlocks, 0);
     }
 
+    private void UpdateNeutralLimits(long stackSize, long maxAddAmount, long maxRemoveAmount)
+    {
+        var maxAddStacks = maxAddAmount / stackSize;
+        var maxRemoveStacks = maxRemoveAmount / stackSize;
+        var maxAddBlocks = Math.Min(stackSize - 1, maxAddAmount);
+        var maxRemoveBlocks = Math.Min(stackSize - 1, maxRemoveAmount);
+
+        SetRange(NUD_Stacks, -maxRemoveStacks, maxAddStacks);
+        SetRange(NUD_Blocks, -maxRemoveBlocks, maxAddBlocks);
+    }
+
     private static void SetRange(Guna2NumericUpDown numericUpDown, decimal minimum, decimal maximum)
     {
-        var value = Math.Clamp(numericUpDown.Value, minimum, maximum);
+        if(minimum > maximum)
+            throw new ArgumentOutOfRangeException(nameof(minimum));
 
         if(minimum < numericUpDown.Minimum)
             numericUpDown.Minimum = minimum;
@@ -170,9 +172,24 @@ public partial class FRM_AdjustCollectedAmount : Form
         if(maximum > numericUpDown.Maximum)
             numericUpDown.Maximum = maximum;
 
+        var value = Math.Clamp(numericUpDown.Value, minimum, maximum);
+
         numericUpDown.Value = value;
         numericUpDown.Minimum = minimum;
         numericUpDown.Maximum = maximum;
+    }
+
+    private long GetAmountChange()
+    {
+        var stacks = (long)NUD_Stacks.Value;
+        var blocks = (long)NUD_Blocks.Value;
+
+        return checked((stacks * GetStackSize()) + blocks);
+    }
+
+    private long GetStackSize()
+    {
+        return Math.Max(1, _material.MaxStackSize);
     }
 
     private void UpdateHeading()
@@ -187,9 +204,10 @@ public partial class FRM_AdjustCollectedAmount : Form
 
     private void UpdateCollectedStats()
     {
+        var stackSize = GetStackSize();
         var collectedAmount = _material.CollectedAmount;
-        var stacks = collectedAmount / _material.MaxStackSize;
-        var blocks = collectedAmount % _material.MaxStackSize;
+        var stacks = collectedAmount / stackSize;
+        var blocks = collectedAmount % stackSize;
 
         if(stacks == 0 && blocks == 0)
         {
@@ -209,18 +227,67 @@ public partial class FRM_AdjustCollectedAmount : Form
 
     private void BTN_Save_Click(object sender, EventArgs e)
     {
-        var stacks = (long)NUD_Stacks.Value;
-        var blocks = (long)NUD_Blocks.Value;
+        long amountChange;
 
-        AmountChange = (stacks * _material.MaxStackSize) + blocks;
+        try
+        {
+            amountChange = GetAmountChange();
+        }
+        catch(OverflowException exception)
+        {
+            Log.Warning(
+                exception,
+                "{LogContext} Collected amount adjustment overflowed. ProjectId={ProjectId}, ItemId={ItemId}",
+                LogContext,
+                _material.ProjectId,
+                _material.ItemId);
 
-        if(AmountChange == 0)
+            _ = MessageBox.Show(
+                "The selected amount is too large.",
+                WindowName,
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
+
+            return;
+        }
+
+        if(amountChange == 0)
         {
             Log.Debug("{LogContext} Save ignored because amount change is zero. ItemId={ItemId}", LogContext, _material.ItemId);
             return;
         }
 
-        Log.Debug("{LogContext} Collected amount adjustment confirmed. ProjectId={ProjectId}, ItemId={ItemId}, AmountChange={AmountChange}", LogContext, _material.ProjectId, _material.ItemId, AmountChange);
+        var maxAddAmount = Math.Max(0, _material.RequiredAmount - _material.CollectedAmount);
+        var maxRemoveAmount = Math.Max(0, _material.CollectedAmount);
+
+        if(amountChange > maxAddAmount || amountChange < -maxRemoveAmount)
+        {
+            Log.Warning(
+                "{LogContext} Collected amount adjustment is outside the valid range. ProjectId={ProjectId}, ItemId={ItemId}, AmountChange={AmountChange}, MaxAddAmount={MaxAddAmount}, MaxRemoveAmount={MaxRemoveAmount}",
+                LogContext,
+                _material.ProjectId,
+                _material.ItemId,
+                amountChange,
+                maxAddAmount,
+                maxRemoveAmount);
+
+            _ = MessageBox.Show(
+                "The selected amount is outside the valid range.",
+                WindowName,
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
+
+            return;
+        }
+
+        AmountChange = amountChange;
+
+        Log.Debug(
+            "{LogContext} Collected amount adjustment confirmed. ProjectId={ProjectId}, ItemId={ItemId}, AmountChange={AmountChange}",
+            LogContext,
+            _material.ProjectId,
+            _material.ItemId,
+            AmountChange);
 
         DialogResult = DialogResult.OK;
         Close();
