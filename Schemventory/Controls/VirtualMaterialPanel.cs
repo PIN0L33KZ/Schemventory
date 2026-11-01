@@ -209,7 +209,7 @@ public sealed class VirtualMaterialPanel : Panel
         var rowDelta = newScrollRow - oldScrollRow;
         var rowsToRecycle = Math.Abs(rowDelta);
 
-        if(rowDelta == 0 || rowsToRecycle >= ViewportRows || _controlPool.Count == 0)
+        if(rowDelta == 0 || rowsToRecycle >= _renderRowCount || _controlPool.Count == 0)
             return false;
 
         var controlsToRecycle = rowsToRecycle * _columnCount;

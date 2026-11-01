@@ -272,7 +272,21 @@ public partial class FRM_MaterialList : Form
         if(sender is FilterPanel filterPanel)
             Log.Debug("{LogContext} Material filter changed. Filter={Filter}, Checked={Checked}", LogContext, filterPanel.FilterStyle, filterPanel.Checked);
 
-        SaveFilterSettings();
+        try
+        {
+            SaveFilterSettings();
+        }
+        catch(Exception exception)
+        {
+            Log.Error(exception, "{LogContext} Failed to save project filter settings. ProjectId={ProjectId}", LogContext, _project.Id);
+
+            _ = MessageBox.Show(
+                $"The filter settings could not be saved.\n\n{exception.Message}",
+                Constants.AppName,
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
+        }
+
         ApplyMaterialView(resetScrollPosition: true);
     }
 
