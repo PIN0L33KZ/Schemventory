@@ -84,8 +84,11 @@ public partial class ProjectControl : UserControl
             ? "No schematic file"
             : _project.SchematicPath;
 
-        LBL_CreatedAt.Text = $"Created: {_project.CreatedAtUtc:dd.MM.yyyy HH:mm}";
-        LBL_LastOpened.Text = $"Last opened: {_project.LastOpenedAtUtc:dd.MM.yyyy HH:mm}";
+        DateTime createdAtLocal = ToLocalTime(_project.CreatedAtUtc);
+        DateTime lastOpenedAtLocal = ToLocalTime(_project.LastOpenedAtUtc);
+
+        LBL_CreatedAt.Text = $"Created: {createdAtLocal:dd.MM.yyyy HH:mm}";
+        LBL_LastOpened.Text = $"Last opened: {lastOpenedAtLocal:dd.MM.yyyy HH:mm}";
 
         if(string.IsNullOrWhiteSpace(_project.SchematicPath))
         {
@@ -101,6 +104,15 @@ public partial class ProjectControl : UserControl
             ".schem" => Properties.Resources.ProjectIconS,
             _ => null
         };
+    }
+
+    private static DateTime ToLocalTime(DateTime utcDateTime)
+    {
+        DateTime normalizedUtc = utcDateTime.Kind == DateTimeKind.Utc
+            ? utcDateTime
+            : DateTime.SpecifyKind(utcDateTime, DateTimeKind.Utc);
+
+        return normalizedUtc.ToLocalTime();
     }
 
     private void RegisterEvents(Control control)
