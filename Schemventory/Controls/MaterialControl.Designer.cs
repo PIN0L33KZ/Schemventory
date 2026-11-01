@@ -29,9 +29,9 @@ partial class MaterialControl
     private void InitializeComponent()
     {
         components = new System.ComponentModel.Container();
-        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges2 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
-        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges3 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
-        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges1 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
+        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges5 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
+        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges6 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
+        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges4 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
         PNL_Background = new Guna.UI2.WinForms.Guna2CustomGradientPanel();
         IBN_MoreOptions = new Guna.UI2.WinForms.Guna2ImageButton();
         PBX_StateIcon = new PictureBox();
@@ -46,9 +46,10 @@ partial class MaterialControl
         TMI_SetStateMissing = new ToolStripMenuItem();
         TMI_SetStateIgnore = new ToolStripMenuItem();
         TSS_Sep1 = new ToolStripSeparator();
-        TMI_SetCollectedAmount = new ToolStripMenuItem();
         TMI_ReplaceMaterial = new ToolStripMenuItem();
         TSS_Sep2 = new ToolStripSeparator();
+        TMI_SetCollectedAmount = new ToolStripMenuItem();
+        TMI_RemoveMaterial = new ToolStripMenuItem();
         PNL_Background.SuspendLayout();
         ((System.ComponentModel.ISupportInitialize)PBX_StateIcon).BeginInit();
         ((System.ComponentModel.ISupportInitialize)PBX_MaterialIcon).BeginInit();
@@ -70,7 +71,7 @@ partial class MaterialControl
         PNL_Background.Controls.Add(LBL_MaterialName);
         PNL_Background.Controls.Add(PBX_MaterialIcon);
         PNL_Background.CustomBorderColor = Color.FromArgb(103, 99, 99);
-        PNL_Background.CustomizableEdges = customizableEdges2;
+        PNL_Background.CustomizableEdges = customizableEdges5;
         PNL_Background.FillColor = Color.FromArgb(58, 55, 55);
         PNL_Background.FillColor2 = Color.FromArgb(58, 55, 55);
         PNL_Background.FillColor3 = Color.FromArgb(58, 55, 55);
@@ -79,7 +80,7 @@ partial class MaterialControl
         PNL_Background.ForeColor = Color.FromArgb(235, 234, 234);
         PNL_Background.Location = new Point(3, 3);
         PNL_Background.Name = "PNL_Background";
-        PNL_Background.ShadowDecoration.CustomizableEdges = customizableEdges3;
+        PNL_Background.ShadowDecoration.CustomizableEdges = customizableEdges6;
         PNL_Background.Size = new Size(306, 91);
         PNL_Background.TabIndex = 0;
         // 
@@ -95,7 +96,7 @@ partial class MaterialControl
         IBN_MoreOptions.Location = new Point(277, 5);
         IBN_MoreOptions.Name = "IBN_MoreOptions";
         IBN_MoreOptions.PressedState.ImageSize = new Size(25, 25);
-        IBN_MoreOptions.ShadowDecoration.CustomizableEdges = customizableEdges1;
+        IBN_MoreOptions.ShadowDecoration.CustomizableEdges = customizableEdges4;
         IBN_MoreOptions.Size = new Size(25, 25);
         IBN_MoreOptions.TabIndex = 2;
         TTP_Main.SetToolTip(IBN_MoreOptions, "Material options");
@@ -183,7 +184,7 @@ partial class MaterialControl
         // 
         CMS_MaterialOptions.BackColor = Color.FromArgb(58, 55, 55);
         CMS_MaterialOptions.Font = new Font("Leelawadee UI", 9.75F, FontStyle.Regular, GraphicsUnit.Point, 0);
-        CMS_MaterialOptions.Items.AddRange(new ToolStripItem[] { TMI_SetStateCollected, TMI_SetStateMissing, TMI_SetStateIgnore, TSS_Sep1, TMI_ReplaceMaterial, TSS_Sep2, TMI_SetCollectedAmount });
+        CMS_MaterialOptions.Items.AddRange(new ToolStripItem[] { TMI_SetStateCollected, TMI_SetStateMissing, TMI_SetStateIgnore, TSS_Sep1, TMI_ReplaceMaterial, TMI_RemoveMaterial, TSS_Sep2, TMI_SetCollectedAmount });
         CMS_MaterialOptions.Name = "CMS_MaterialOptions";
         CMS_MaterialOptions.RenderStyle.ArrowColor = Color.FromArgb(194, 165, 142);
         CMS_MaterialOptions.RenderStyle.BorderColor = Color.FromArgb(103, 99, 99);
@@ -195,7 +196,7 @@ partial class MaterialControl
         CMS_MaterialOptions.RenderStyle.SeparatorColor = Color.FromArgb(151, 148, 148);
         CMS_MaterialOptions.RenderStyle.TextRenderingHint = System.Drawing.Text.TextRenderingHint.SystemDefault;
         CMS_MaterialOptions.ShowImageMargin = false;
-        CMS_MaterialOptions.Size = new Size(192, 148);
+        CMS_MaterialOptions.Size = new Size(192, 170);
         // 
         // TMI_SetStateCollected
         // 
@@ -227,14 +228,6 @@ partial class MaterialControl
         TSS_Sep1.Name = "TSS_Sep1";
         TSS_Sep1.Size = new Size(188, 6);
         // 
-        // TMI_SetCollectedAmount
-        // 
-        TMI_SetCollectedAmount.ForeColor = Color.FromArgb(235, 234, 234);
-        TMI_SetCollectedAmount.Name = "TMI_SetCollectedAmount";
-        TMI_SetCollectedAmount.Size = new Size(191, 22);
-        TMI_SetCollectedAmount.Text = "Adjust collected amount";
-        TMI_SetCollectedAmount.Click += TMI_SetCollectedAmount_Click;
-        // 
         // TMI_ReplaceMaterial
         // 
         TMI_ReplaceMaterial.ForeColor = Color.FromArgb(235, 234, 234);
@@ -247,6 +240,22 @@ partial class MaterialControl
         // 
         TSS_Sep2.Name = "TSS_Sep2";
         TSS_Sep2.Size = new Size(188, 6);
+        // 
+        // TMI_SetCollectedAmount
+        // 
+        TMI_SetCollectedAmount.ForeColor = Color.FromArgb(235, 234, 234);
+        TMI_SetCollectedAmount.Name = "TMI_SetCollectedAmount";
+        TMI_SetCollectedAmount.Size = new Size(191, 22);
+        TMI_SetCollectedAmount.Text = "Adjust collected amount";
+        TMI_SetCollectedAmount.Click += TMI_SetCollectedAmount_Click;
+        // 
+        // TMI_RemoveMaterial
+        // 
+        TMI_RemoveMaterial.ForeColor = Color.FromArgb(235, 234, 234);
+        TMI_RemoveMaterial.Name = "TMI_RemoveMaterial";
+        TMI_RemoveMaterial.Size = new Size(191, 22);
+        TMI_RemoveMaterial.Text = "Remove";
+        TMI_RemoveMaterial.Click += TMI_RemoveMaterial_Click;
         // 
         // MaterialControl
         // 
@@ -285,4 +294,5 @@ partial class MaterialControl
     private ToolStripMenuItem TMI_SetStateIgnore;
     private ToolStripSeparator TSS_Sep1;
     private ToolStripSeparator TSS_Sep2;
+    private ToolStripMenuItem TMI_RemoveMaterial;
 }

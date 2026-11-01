@@ -52,7 +52,7 @@ public partial class FRM_ReplaceMaterial : Form
 
     private void InitializeForm()
     {
-        LBL_Description.Text = $"Choose a material to replace {GetDisplayName(_material.ItemId)} with.";
+        LBL_Description.Text = $"Choose a material to replace {ItemIdService.GetDisplayName(_material.ItemId)} with.";
         LBL_ItemName.Text = "No material selected";
         LBL_ItemId.Text = string.Empty;
         LBL_StackSize.Text = string.Empty;
@@ -88,7 +88,7 @@ public partial class FRM_ReplaceMaterial : Form
             var originalItemId = NormalizeItemId(_material.ItemId);
 
             _items = items.Where(x => !string.Equals(x.Id, originalItemId, StringComparison.Ordinal))
-                .Select(x => new ItemSearchEntry(x, GetDisplayName(x.Id), GetFullItemId(x.Id)))
+                .Select(x => new ItemSearchEntry(x, ItemIdService.GetDisplayName(x.Id), GetFullItemId(x.Id)))
                 .OrderBy(x => x.DisplayName, StringComparer.CurrentCultureIgnoreCase)
                 .ToList();
 
@@ -385,15 +385,6 @@ public partial class FRM_ReplaceMaterial : Form
     private static string GetFullItemId(string itemId)
     {
         return itemId.StartsWith("minecraft:", StringComparison.Ordinal) ? itemId : $"minecraft:{itemId}";
-    }
-
-    private static string GetDisplayName(string itemId)
-    {
-        var name = NormalizeItemId(itemId);
-
-        name = name.Replace('_', ' ');
-
-        return System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(name);
     }
 
     private sealed record ItemSearchEntry(ItemData Item, string DisplayName, string FullItemId);

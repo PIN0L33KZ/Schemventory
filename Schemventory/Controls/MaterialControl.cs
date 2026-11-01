@@ -20,6 +20,7 @@ public partial class MaterialControl : UserControl
     private CancellationTokenSource? _bindingCancellationTokenSource;
 
     public event EventHandler? StateChanged;
+    public event Action<ProjectMaterial>? RemoveRequested;
 
     public ProjectMaterial Material => BoundMaterial ?? throw new InvalidOperationException("No material is currently bound to this control.");
 
@@ -343,7 +344,7 @@ public partial class MaterialControl : UserControl
 
     private static string GetMaterialDisplayName(ProjectMaterial material)
     {
-        var displayName = GetDisplayName(material.DisplayItemId);
+        var displayName = ItemIdService.GetDisplayName(material.DisplayItemId);
 
         return !string.IsNullOrWhiteSpace(material.ReplacementItemId)
             ? $"{displayName} (replaced)"
@@ -401,15 +402,6 @@ public partial class MaterialControl : UserControl
             PBX_MaterialIcon.Image?.Dispose();
             PBX_MaterialIcon.Image = null;
         }
-    }
-
-    private static string GetDisplayName(string itemId)
-    {
-        var name = itemId.Replace("minecraft:", "", StringComparison.Ordinal);
-
-        name = name.Replace('_', ' ');
-
-        return System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(name);
     }
 
     private void RegisterEvents(Control control)
@@ -737,5 +729,15 @@ public partial class MaterialControl : UserControl
 
         PBX_MaterialIcon.Image?.Dispose();
         PBX_MaterialIcon.Image = null;
+    }
+
+    private void TMI_RemoveMaterial_Click(object sender, EventArgs e)
+    {
+        ProjectMaterial? material = BoundMaterial;
+
+        if(material is null)
+            return;
+
+        RemoveRequested?.Invoke(material);
     }
 }

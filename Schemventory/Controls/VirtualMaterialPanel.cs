@@ -29,6 +29,7 @@ public sealed class VirtualMaterialPanel : Panel
     public event EventHandler? ScrollMetricsChanged;
     public event EventHandler? ScrollPositionChanged;
     public event Action<int>? MouseWheelScrollRequested;
+    public event Action<ProjectMaterial>? MaterialRemoveRequested;
 
     public int TotalRows => _materials.Count == 0 ? 0 : (int)Math.Ceiling((double)_materials.Count / _columnCount);
     public int ViewportRows { get; private set; } = 1;
@@ -162,6 +163,8 @@ public sealed class VirtualMaterialPanel : Panel
             };
 
             materialControl.StateChanged += MaterialControl_StateChanged;
+            materialControl.RemoveRequested += MaterialControl_RemoveRequested;
+
             RegisterMouseWheel(materialControl);
 
             _controlPool.Add(materialControl);
@@ -174,6 +177,7 @@ public sealed class VirtualMaterialPanel : Panel
             MaterialControl materialControl = _controlPool[lastIndex];
 
             materialControl.StateChanged -= MaterialControl_StateChanged;
+            materialControl.RemoveRequested -= MaterialControl_RemoveRequested;
 
             Controls.Remove(materialControl);
             _controlPool.RemoveAt(lastIndex);
@@ -340,6 +344,11 @@ public sealed class VirtualMaterialPanel : Panel
     private void MaterialControl_StateChanged(object? sender, EventArgs e)
     {
         MaterialStateChanged?.Invoke(sender, e);
+    }
+
+    private void MaterialControl_RemoveRequested(ProjectMaterial material)
+    {
+        MaterialRemoveRequested?.Invoke(material);
     }
 
     private void RegisterMouseWheel(Control control)

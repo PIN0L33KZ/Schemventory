@@ -34,10 +34,11 @@ public partial class FRM_MaterialList : Form
 
         PNL_MaterialList.Initialize(_itemIconService, _itemDataProvider, _projectMaterialService);
 
-        PNL_MaterialList.MaterialStateChanged += MaterialControl_StateChanged;
         PNL_MaterialList.ScrollMetricsChanged += PNL_MaterialList_ScrollMetricsChanged;
         PNL_MaterialList.ScrollPositionChanged += PNL_MaterialList_ScrollPositionChanged;
         PNL_MaterialList.MouseWheelScrollRequested += PNL_MaterialList_MouseWheelScrollRequested;
+        PNL_MaterialList.MaterialStateChanged += MaterialControl_StateChanged;
+        PNL_MaterialList.MaterialRemoveRequested += MaterialControl_RemoveRequested;
 
         FPN_Missing.CheckedChanged += FilterPanel_CheckedChanged;
         FPN_Replaced.CheckedChanged += FilterPanel_CheckedChanged;
@@ -80,6 +81,59 @@ public partial class FRM_MaterialList : Form
 
         ApplyMaterialView(resetScrollPosition: false);
         UpdateStatistics();
+    }
+
+    private void MaterialControl_RemoveRequested(ProjectMaterial material)
+    {
+        DialogResult result = MessageBox.Show(
+    $"Do you really want to remove '{ItemIdService.GetDisplayName(material.ItemId)}' from this project?\n\n" +
+    "This action cannot be undone.",
+    $"Remove material - {Constants.AppName}",
+    MessageBoxButtons.YesNo,
+    MessageBoxIcon.Warning);
+
+        if(result != DialogResult.Yes)
+        {
+            Log.Debug(
+                "{LogContext} Material removal cancelled. ProjectId={ProjectId}, ItemId={ItemId}",
+                LogContext,
+                material.ProjectId,
+                material.ItemId);
+
+            return;
+        }
+
+        try
+        {
+            _projectMaterialService.Remove(
+                material.ProjectId,
+                material.ItemId);
+
+            LoadMaterialList();
+            ApplyMaterialView(resetScrollPosition: false);
+            UpdateStatistics();
+
+            Log.Information(
+                "{LogContext} Material removed. ProjectId={ProjectId}, ItemId={ItemId}",
+                LogContext,
+                material.ProjectId,
+                material.ItemId);
+        }
+        catch(Exception exception)
+        {
+            Log.Error(
+                exception,
+                "{LogContext} Failed to remove material. ProjectId={ProjectId}, ItemId={ItemId}",
+                LogContext,
+                material.ProjectId,
+                material.ItemId);
+
+            _ = MessageBox.Show(
+                $"The material could not be removed.\n\n{exception.Message}",
+                Constants.AppName,
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
+        }
     }
 
     private void FillProjectData()

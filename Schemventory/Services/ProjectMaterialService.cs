@@ -180,6 +180,35 @@ public class ProjectMaterialService
         Log.Debug("{LogContext} Project material set replaced. ProjectId={ProjectId}, MaterialCount={MaterialCount}", LogContext, projectId, materials.Count);
     }
 
+    public void Remove(Guid projectId, string itemId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(itemId);
+
+        using SqliteConnection connection = _databaseService.CreateConnection();
+        using SqliteCommand command = connection.CreateCommand();
+
+        command.CommandText = @"
+        DELETE FROM ProjectMaterials
+        WHERE ProjectId = $projectId COLLATE NOCASE
+        AND ItemId = $itemId;";
+
+        SqliteParameter projectIdParameter = command.Parameters.Add("$projectId", SqliteType.Text);
+        projectIdParameter.Value = projectId.ToString("D");
+
+        _ = command.Parameters.AddWithValue("$itemId", itemId);
+
+        EnsureMaterialUpdated(
+            command.ExecuteNonQuery(),
+            projectId,
+            itemId);
+
+        Log.Debug(
+            "{LogContext} Material removed. ProjectId={ProjectId}, ItemId={ItemId}",
+            LogContext,
+            projectId,
+            itemId);
+    }
+
     public void UpdateCollectedAmount(Guid projectId, string itemId, long collectedAmount)
     {
         if(collectedAmount < 0)
