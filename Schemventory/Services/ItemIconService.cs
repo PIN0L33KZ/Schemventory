@@ -250,16 +250,21 @@ public sealed class ItemIconService
 
     private string GetCacheFilePath(string itemId, int size)
     {
-        var fileName = $"{itemId}_{size}.png";
+        var fileName = $"{GetSafeCacheFileName(itemId)}_{size}.png";
 
         return Path.Combine(_cacheDirectory, fileName);
     }
 
     private string GetMissingCacheFilePath(string itemId, int size)
     {
-        var fileName = $"{itemId}_{size}.missing";
+        var fileName = $"{GetSafeCacheFileName(itemId)}_{size}.missing";
 
         return Path.Combine(_cacheDirectory, fileName);
+    }
+
+    private static string GetSafeCacheFileName(string itemId)
+    {
+        return Uri.EscapeDataString(itemId);
     }
 
     private static string NormalizeItemId(string itemId)
