@@ -14,7 +14,7 @@ public partial class FRM_AddMaterial : Form
     private readonly ItemDataProvider _itemDataProvider;
     private readonly ItemIconService _itemIconService;
     private readonly System.Windows.Forms.Timer _searchTimer;
-
+    private readonly CancellationTokenSource _formCancellationTokenSource = new();
 
     private List<ItemSearchEntry> _items = [];
     private List<ItemSearchEntry> _filteredItems = [];
@@ -39,7 +39,6 @@ public partial class FRM_AddMaterial : Form
         };
 
         _searchTimer.Tick += SearchTimer_Tick;
-
 
         Text = WindowName;
         Icon = System.Drawing.Icon.ExtractAssociatedIcon(Application.ExecutablePath);
@@ -87,7 +86,10 @@ public partial class FRM_AddMaterial : Form
             TBX_Search.Enabled = false;
             LST_Items.Enabled = false;
 
-            IReadOnlyCollection<ItemData> items = await _itemDataProvider.GetItemsAsync();
+            IReadOnlyCollection<ItemData> items = await _itemDataProvider.GetItemsAsync(_formCancellationTokenSource.Token);
+
+            if(_formCancellationTokenSource.IsCancellationRequested || IsDisposed)
+                return;
 
             _items = items
                 .Select(x => new ItemSearchEntry(x, GetDisplayName(x.Id), GetFullItemId(x.Id)))
@@ -104,11 +106,16 @@ public partial class FRM_AddMaterial : Form
 
             Log.Debug("{LogContext} Materials loaded. Count={Count}", LogContext, _items.Count);
         }
+        catch(OperationCanceledException) when(_formCancellationTokenSource.IsCancellationRequested)
+        {
+            Log.Debug("{LogContext} Material loading cancelled.", LogContext);
+        }
         catch(Exception exception)
         {
             Log.Error(exception, "{LogContext} Failed to load material list.", LogContext);
 
-            _ = MessageBox.Show($"The material list could not be loaded.\n\n{exception.Message}", Constants.AppName, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            if(!IsDisposed)
+                _ = MessageBox.Show($"The material list could not be loaded.\n\n{exception.Message}", Constants.AppName, MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
@@ -194,7 +201,6 @@ public partial class FRM_AddMaterial : Form
 
         ItemSearchEntry entry = _filteredItems[selectedIndex];
 
-
         SelectedItem = entry.Item;
 
         NUD_RequiredAmount.Enabled = true;
@@ -243,18 +249,11 @@ public partial class FRM_AddMaterial : Form
         }
         catch(OperationCanceledException)
         {
-            Log.Debug(
-                "{LogContext} Preview icon loading cancelled. ItemId={ItemId}",
-                LogContext,
-                itemId);
+            Log.Debug("{LogContext} Preview icon loading cancelled. ItemId={ItemId}", LogContext, itemId);
         }
         catch(Exception exception)
         {
-            Log.Warning(
-                exception,
-                "{LogContext} Failed to load preview icon. ItemId={ItemId}",
-                LogContext,
-                itemId);
+            Log.Warning(exception, "{LogContext} Failed to load preview icon. ItemId={ItemId}", LogContext, itemId);
 
             if(IsDisposed)
                 return;
@@ -265,7 +264,7 @@ public partial class FRM_AddMaterial : Form
         }
         finally
         {
-            if(ReferenceEquals(_previewCancellationTokenSource, cancellationTokenSource))
+            if(ReferenceEquals(_previewCancellationTokenSource, cancellationTokenSource) && !IsDisposed)
             {
                 PGI_Loading.Stop();
                 PGI_Loading.Visible = false;
@@ -346,7 +345,6 @@ public partial class FRM_AddMaterial : Form
         Log.Debug("{LogContext} Add material dialog cancelled.", LogContext);
 
         DialogResult = DialogResult.Cancel;
-
         Close();
     }
 
@@ -384,7 +382,6 @@ public partial class FRM_AddMaterial : Form
             }
             catch(InvalidOperationException)
             {
-                // The ListView handle may not be ready yet.
             }
         }
 
@@ -395,6 +392,8 @@ public partial class FRM_AddMaterial : Form
     {
         LST_Items.SizeChanged -= LST_Items_SizeChanged;
 
+        _formCancellationTokenSource.Cancel();
+        _formCancellationTokenSource.Dispose();
 
         _searchTimer.Stop();
         _searchTimer.Dispose();
