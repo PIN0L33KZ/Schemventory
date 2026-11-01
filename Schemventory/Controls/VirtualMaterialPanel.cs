@@ -91,12 +91,15 @@ public sealed class VirtualMaterialPanel : Panel
 
         var oldColumnCount = _columnCount;
         var oldViewportRowCount = ViewportRows;
+        var oldRenderRowCount = _renderRowCount;
 
         RecalculateLayout();
 
         ScrollRow = Math.Min(ScrollRow, MaximumScrollRow);
 
-        if(oldColumnCount != _columnCount || oldViewportRowCount != ViewportRows)
+        if(oldColumnCount != _columnCount ||
+           oldViewportRowCount != ViewportRows ||
+           oldRenderRowCount != _renderRowCount)
         {
             RefreshVisibleControls();
             ScrollMetricsChanged?.Invoke(this, EventArgs.Empty);
