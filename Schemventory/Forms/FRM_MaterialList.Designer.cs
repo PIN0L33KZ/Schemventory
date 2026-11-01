@@ -34,7 +34,6 @@ partial class FRM_MaterialList
         Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges2 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
         Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges3 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
         Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges4 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
-        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges5 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
         System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FRM_MaterialList));
         PNL_ProjectInfo = new Guna.UI2.WinForms.Guna2Panel();
         LBL_DifferentMaterialsCount = new Label();
@@ -44,8 +43,8 @@ partial class FRM_MaterialList
         VSB_Main = new Guna.UI2.WinForms.Guna2VScrollBar();
         IBN_About = new Guna.UI2.WinForms.Guna2ImageButton();
         TTP_Main = new ToolTip(components);
+        BTN_AddMaterial = new Guna.UI2.WinForms.Guna2ImageButton();
         LBL_FilterWarn = new Label();
-        BTN_AddMaterial = new Guna.UI2.WinForms.Guna2Button();
         FPN_Ignored = new Schemventory.Controls.FilterPanel();
         FPN_Collected = new Schemventory.Controls.FilterPanel();
         FPN_Replaced = new Schemventory.Controls.FilterPanel();
@@ -171,6 +170,27 @@ partial class FRM_MaterialList
         TTP_Main.ToolTipIcon = ToolTipIcon.Info;
         TTP_Main.ToolTipTitle = "Information";
         // 
+        // BTN_AddMaterial
+        // 
+        BTN_AddMaterial.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+        BTN_AddMaterial.BackColor = Color.Transparent;
+        BTN_AddMaterial.CheckedState.ImageSize = new Size(64, 64);
+        BTN_AddMaterial.Cursor = Cursors.Hand;
+        BTN_AddMaterial.HoverState.ImageSize = new Size(30, 30);
+        BTN_AddMaterial.Image = Properties.Resources.AddMaterial;
+        BTN_AddMaterial.ImageOffset = new Point(0, 0);
+        BTN_AddMaterial.ImageRotate = 0F;
+        BTN_AddMaterial.ImageSize = new Size(30, 30);
+        BTN_AddMaterial.Location = new Point(12, 549);
+        BTN_AddMaterial.Name = "BTN_AddMaterial";
+        BTN_AddMaterial.PressedState.ImageSize = new Size(30, 30);
+        BTN_AddMaterial.ShadowDecoration.CustomizableEdges = customizableEdges4;
+        BTN_AddMaterial.Size = new Size(30, 30);
+        BTN_AddMaterial.TabIndex = 4;
+        TTP_Main.SetToolTip(BTN_AddMaterial, "Add a custom material");
+        BTN_AddMaterial.UseTransparentBackground = true;
+        BTN_AddMaterial.Click += BTN_AddMaterial_Click;
+        // 
         // LBL_FilterWarn
         // 
         LBL_FilterWarn.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
@@ -185,30 +205,6 @@ partial class FRM_MaterialList
         LBL_FilterWarn.TextAlign = ContentAlignment.MiddleCenter;
         LBL_FilterWarn.Visible = false;
         // 
-        // BTN_AddMaterial
-        // 
-        BTN_AddMaterial.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-        BTN_AddMaterial.Animated = true;
-        BTN_AddMaterial.BackColor = Color.Transparent;
-        BTN_AddMaterial.BorderRadius = 5;
-        BTN_AddMaterial.Cursor = Cursors.Hand;
-        BTN_AddMaterial.CustomizableEdges = customizableEdges4;
-        BTN_AddMaterial.DisabledState.BorderColor = Color.FromArgb(80, 76, 76);
-        BTN_AddMaterial.DisabledState.CustomBorderColor = Color.FromArgb(80, 76, 76);
-        BTN_AddMaterial.DisabledState.FillColor = Color.FromArgb(80, 76, 76);
-        BTN_AddMaterial.DisabledState.ForeColor = Color.FromArgb(151, 148, 148);
-        BTN_AddMaterial.FillColor = Color.FromArgb(162, 123, 90);
-        BTN_AddMaterial.Font = new Font("Leelawadee UI", 11.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
-        BTN_AddMaterial.ForeColor = Color.White;
-        BTN_AddMaterial.Location = new Point(861, 74);
-        BTN_AddMaterial.Name = "BTN_AddMaterial";
-        BTN_AddMaterial.ShadowDecoration.CustomizableEdges = customizableEdges5;
-        BTN_AddMaterial.Size = new Size(126, 47);
-        BTN_AddMaterial.TabIndex = 7;
-        BTN_AddMaterial.Text = "Add material";
-        BTN_AddMaterial.UseTransparentBackground = true;
-        BTN_AddMaterial.Click += BTN_AddMaterial_Click;
-        // 
         // FPN_Ignored
         // 
         FPN_Ignored.BackColor = Color.Transparent;
@@ -219,7 +215,7 @@ partial class FRM_MaterialList
         FPN_Ignored.Margin = new Padding(3, 4, 3, 4);
         FPN_Ignored.Name = "FPN_Ignored";
         FPN_Ignored.Size = new Size(146, 47);
-        FPN_Ignored.TabIndex = 0;
+        FPN_Ignored.TabIndex = 3;
         // 
         // FPN_Collected
         // 
@@ -231,7 +227,7 @@ partial class FRM_MaterialList
         FPN_Collected.Margin = new Padding(3, 4, 3, 4);
         FPN_Collected.Name = "FPN_Collected";
         FPN_Collected.Size = new Size(155, 47);
-        FPN_Collected.TabIndex = 0;
+        FPN_Collected.TabIndex = 2;
         // 
         // FPN_Replaced
         // 
@@ -243,7 +239,7 @@ partial class FRM_MaterialList
         FPN_Replaced.Margin = new Padding(3, 4, 3, 4);
         FPN_Replaced.Name = "FPN_Replaced";
         FPN_Replaced.Size = new Size(153, 47);
-        FPN_Replaced.TabIndex = 0;
+        FPN_Replaced.TabIndex = 1;
         // 
         // FPN_Missing
         // 
@@ -301,9 +297,9 @@ partial class FRM_MaterialList
     private Guna.UI2.WinForms.Guna2ImageButton IBN_About;
     private ToolTip TTP_Main;
     private Label LBL_FilterWarn;
-    private Guna.UI2.WinForms.Guna2Button BTN_AddMaterial;
     private Controls.FilterPanel FPN_Missing;
     private Controls.FilterPanel FPN_Replaced;
     private Controls.FilterPanel FPN_Ignored;
     private Controls.FilterPanel FPN_Collected;
+    private Guna.UI2.WinForms.Guna2ImageButton BTN_AddMaterial;
 }
