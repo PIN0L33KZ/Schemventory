@@ -20,6 +20,7 @@ public sealed class VirtualMaterialPanel : Panel
     private ItemDataProvider? _itemDataProvider;
     private ProjectMaterialService? _projectMaterialService;
 
+    private Bitmap? _resizeSnapshot;
     private int _columnCount = 1;
     private int _renderRowCount = 1;
     private int _refreshVersion;
@@ -104,8 +105,14 @@ public sealed class VirtualMaterialPanel : Panel
     {
         base.OnResize(eventArgs);
 
-        if(_itemIconService is null || _resizeSuspended)
+        if(_itemIconService is null)
             return;
+
+        if(_resizeSuspended)
+        {
+            Invalidate();
+            return;
+        }
 
         var oldColumnCount = _columnCount;
         var oldViewportRowCount = ViewportRows;
@@ -129,6 +136,16 @@ public sealed class VirtualMaterialPanel : Panel
         }
     }
 
+    protected override void OnPaint(PaintEventArgs eventArgs)
+    {
+        base.OnPaint(eventArgs);
+
+        if(!_resizeSuspended || _resizeSnapshot is null)
+            return;
+
+        eventArgs.Graphics.DrawImageUnscaled(_resizeSnapshot, Point.Empty);
+    }
+
     protected override void OnMouseWheel(MouseEventArgs eventArgs)
     {
         base.OnMouseWheel(eventArgs);
@@ -137,6 +154,17 @@ public sealed class VirtualMaterialPanel : Panel
             return;
 
         ScrollByMouseWheel(eventArgs.Delta);
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if(disposing)
+        {
+            _resizeSnapshot?.Dispose();
+            _resizeSnapshot = null;
+        }
+
+        base.Dispose(disposing);
     }
 
     private void RecalculateLayout()
@@ -428,26 +456,64 @@ public sealed class VirtualMaterialPanel : Panel
         MouseWheelScrollRequested?.Invoke(direction * wheelSteps);
     }
 
+    private void CreateResizeSnapshot()
+    {
+        _resizeSnapshot?.Dispose();
+        _resizeSnapshot = null;
+
+        if(ClientSize.Width <= 0 || ClientSize.Height <= 0)
+            return;
+
+        Bitmap snapshot = new(ClientSize.Width, ClientSize.Height);
+
+        try
+        {
+            DrawToBitmap(snapshot, new Rectangle(Point.Empty, ClientSize));
+            _resizeSnapshot = snapshot;
+        }
+        catch
+        {
+            snapshot.Dispose();
+            throw;
+        }
+    }
+
     public void SuspendVirtualLayout()
     {
         if(_resizeSuspended)
             return;
+
+        // Capture the fully rendered panel before child controls are hidden.
+        CreateResizeSnapshot();
 
         _resizeSuspended = true;
 
         // Invalidate every refresh that started before the resize.
         _refreshVersion++;
 
-        // Stop pending item/icon loads while preserving the currently rendered
-        // material data so the controls remain visually frozen during resize.
-        foreach(MaterialControl materialControl in _controlPool)
-            materialControl.SuspendBinding();
+        SuspendLayout();
+
+        try
+        {
+            foreach(MaterialControl materialControl in _controlPool)
+            {
+                materialControl.SuspendBinding();
+                materialControl.Visible = false;
+            }
+        }
+        finally
+        {
+            ResumeLayout(false);
+        }
+
+        Invalidate();
 
         Log.Debug(
-            "{LogContext} Virtual layout suspended for resize. ControlCount={ControlCount}, RefreshVersion={RefreshVersion}",
+            "{LogContext} Virtual layout suspended with resize snapshot. ControlCount={ControlCount}, RefreshVersion={RefreshVersion}, SnapshotAvailable={SnapshotAvailable}",
             LogContext,
             _controlPool.Count,
-            _refreshVersion);
+            _refreshVersion,
+            _resizeSnapshot is not null);
     }
 
     public void ResumeVirtualLayout()
@@ -465,13 +531,16 @@ public sealed class VirtualMaterialPanel : Panel
         // bindings were intentionally cancelled when the resize started.
         RefreshVisibleControls(forceRebind: true);
 
+        _resizeSnapshot?.Dispose();
+        _resizeSnapshot = null;
+
         ScrollMetricsChanged?.Invoke(this, EventArgs.Empty);
         ScrollPositionChanged?.Invoke(this, EventArgs.Empty);
 
         Invalidate();
 
         Log.Debug(
-            "{LogContext} Virtual layout resumed after resize. ColumnCount={ColumnCount}, ViewportRows={ViewportRows}, RenderRowCount={RenderRowCount}, ScrollRow={ScrollRow}",
+            "{LogContext} Virtual layout resumed after snapshot resize. ColumnCount={ColumnCount}, ViewportRows={ViewportRows}, RenderRowCount={RenderRowCount}, ScrollRow={ScrollRow}",
             LogContext,
             _columnCount,
             ViewportRows,
