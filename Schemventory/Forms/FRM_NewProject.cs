@@ -72,9 +72,14 @@ public partial class FRM_NewProject : Form
         try
         {
             if(IsEditMode)
-                UpdateProject();
+            {
+                if(!UpdateProject())
+                    return;
+            }
             else
+            {
                 CreateProject();
+            }
 
             DialogResult = DialogResult.OK;
             Close();
@@ -110,10 +115,10 @@ public partial class FRM_NewProject : Form
         Log.Information("{LogContext} Project created. ProjectId={ProjectId}, CreationMode={CreationMode}, MaterialCount={MaterialCount}", LogContext, project.Id, useSchematic ? "Schematic" : "Empty", materials.Count);
     }
 
-    private void UpdateProject()
+    private bool UpdateProject()
     {
         if(_currentProject is null)
-            return;
+            return false;
 
         var useSchematic = RBN_TypeSchematic.Checked;
         var newName = TBX_ProjectName.Text.Trim();
@@ -121,6 +126,25 @@ public partial class FRM_NewProject : Form
         var schematicChanged = !string.Equals(_currentProject.SchematicPath, newSchematicPath, StringComparison.OrdinalIgnoreCase);
 
         Log.Debug("{LogContext} Updating project. ProjectId={ProjectId}, SchematicChanged={SchematicChanged}", LogContext, _currentProject.Id, schematicChanged);
+
+        if(schematicChanged &&
+           !string.IsNullOrWhiteSpace(_currentProject.SchematicPath) &&
+           !string.IsNullOrWhiteSpace(newSchematicPath))
+        {
+            DialogResult result = MessageBox.Show(
+                "The schematic file has changed.\n\n" +
+                "Changing the schematic will replace the current material list, including manually added materials.\n\n" +
+                "Do you want to continue?",
+                $"Change schematic - {Constants.AppName}",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning);
+
+            if(result != DialogResult.Yes)
+            {
+                Log.Debug("{LogContext} Project update cancelled because schematic change was not confirmed. ProjectId={ProjectId}", LogContext, _currentProject.Id);
+                return false;
+            }
+        }
 
         IReadOnlyCollection<MaterialEntry>? materials = null;
 
@@ -137,6 +161,8 @@ public partial class FRM_NewProject : Form
         _projectPersistenceService.Update(_currentProject, materials);
 
         Log.Information("{LogContext} Project updated. ProjectId={ProjectId}", LogContext, _currentProject.Id);
+
+        return true;
     }
 
     private void BTN_SelectSchematicFilePath_Click(object sender, EventArgs e)
