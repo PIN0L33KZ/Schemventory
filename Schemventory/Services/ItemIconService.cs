@@ -8,6 +8,7 @@ namespace Schemventory.Services;
 public sealed class ItemIconService
 {
     private const string LogContext = "(ItemIconService)";
+    private const int MaxMemoryCacheEntries = 256;
 
     private static readonly TimeSpan MissingCacheLifetime = TimeSpan.FromDays(7);
 
@@ -19,7 +20,9 @@ public sealed class ItemIconService
     private readonly string _cacheDirectory;
     private readonly SemaphoreSlim _downloadSemaphore = new(6);
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _itemLocks = new(StringComparer.Ordinal);
-    private readonly ConcurrentDictionary<string, Bitmap> _memoryCache = new(StringComparer.Ordinal);
+    private readonly object _memoryCacheLock = new();
+    private readonly Dictionary<string, MemoryCacheEntry> _memoryCache = new(StringComparer.Ordinal);
+    private readonly LinkedList<string> _memoryCacheUsage = [];
 
     public ItemIconService()
     {
@@ -142,11 +145,16 @@ public sealed class ItemIconService
 
     private Image? TryGetMemoryCachedImage(string cacheKey)
     {
-        if(!_memoryCache.TryGetValue(cacheKey, out Bitmap? cachedBitmap))
-            return null;
+        lock(_memoryCacheLock)
+        {
+            if(!_memoryCache.TryGetValue(cacheKey, out MemoryCacheEntry? entry))
+                return null;
 
-        lock(cachedBitmap)
-            return new Bitmap(cachedBitmap);
+            _memoryCacheUsage.Remove(entry.UsageNode);
+            _memoryCacheUsage.AddLast(entry.UsageNode);
+
+            return new Bitmap(entry.Bitmap);
+        }
     }
 
     private async Task<Image?> TryLoadCachedImageAsync(string cacheKey, string filePath, CancellationToken cancellationToken)
@@ -175,13 +183,49 @@ public sealed class ItemIconService
     private Image CacheAndCloneImage(string cacheKey, byte[] data)
     {
         Bitmap createdBitmap = LoadImage(data);
-        Bitmap cachedBitmap = _memoryCache.GetOrAdd(cacheKey, createdBitmap);
 
-        if(!ReferenceEquals(createdBitmap, cachedBitmap))
-            createdBitmap.Dispose();
+        lock(_memoryCacheLock)
+        {
+            if(_memoryCache.TryGetValue(cacheKey, out MemoryCacheEntry? existingEntry))
+            {
+                createdBitmap.Dispose();
 
-        lock(cachedBitmap)
-            return new Bitmap(cachedBitmap);
+                _memoryCacheUsage.Remove(existingEntry.UsageNode);
+                _memoryCacheUsage.AddLast(existingEntry.UsageNode);
+
+                return new Bitmap(existingEntry.Bitmap);
+            }
+
+            LinkedListNode<string> usageNode = _memoryCacheUsage.AddLast(cacheKey);
+
+            _memoryCache[cacheKey] = new MemoryCacheEntry
+            {
+                Bitmap = createdBitmap,
+                UsageNode = usageNode
+            };
+
+            TrimMemoryCache();
+
+            return new Bitmap(createdBitmap);
+        }
+    }
+
+    private void TrimMemoryCache()
+    {
+        while(_memoryCache.Count > MaxMemoryCacheEntries)
+        {
+            LinkedListNode<string>? oldestNode = _memoryCacheUsage.First;
+
+            if(oldestNode is null)
+                return;
+
+            _memoryCacheUsage.RemoveFirst();
+
+            if(!_memoryCache.Remove(oldestNode.Value, out MemoryCacheEntry? entry))
+                continue;
+
+            entry.Bitmap.Dispose();
+        }
     }
 
     private static bool IsMissingCacheValid(string filePath)
@@ -244,5 +288,12 @@ public sealed class ItemIconService
         {
             Log.Debug(exception, "{LogContext} Cache cleanup failed. Path={Path}", LogContext, filePath);
         }
+    }
+
+    private sealed class MemoryCacheEntry
+    {
+        public required Bitmap Bitmap { get; init; }
+
+        public required LinkedListNode<string> UsageNode { get; init; }
     }
 }
