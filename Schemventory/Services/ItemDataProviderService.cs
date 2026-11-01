@@ -26,6 +26,7 @@ public sealed class ItemDataProvider
 
     private IReadOnlyCollection<ItemData>? _items;
     private Dictionary<string, ItemData>? _itemsById;
+    private bool _loadedSuccessfully;
 
     public ItemDataProvider()
     {
@@ -56,20 +57,22 @@ public sealed class ItemDataProvider
 
     private async Task EnsureLoadedAsync(CancellationToken cancellationToken)
     {
-        if(_items is not null && _itemsById is not null)
+        if(_loadedSuccessfully && _items is not null && _itemsById is not null)
             return;
 
         await _loadSemaphore.WaitAsync(cancellationToken);
 
         try
         {
-            if(_items is not null && _itemsById is not null)
+            if(_loadedSuccessfully && _items is not null && _itemsById is not null)
                 return;
 
             var cacheLoaded = await TryLoadCompactCacheAsync(cancellationToken);
 
             if(cacheLoaded && await IsCacheFreshAsync(cancellationToken))
             {
+                _loadedSuccessfully = true;
+
                 Log.Debug("{LogContext} Using fresh item data cache. ItemCount={ItemCount}", LogContext, _items?.Count ?? 0);
                 return;
             }
@@ -93,6 +96,8 @@ public sealed class ItemDataProvider
                             LastModified = refreshResult.LastModified ?? metadata?.LastModified
                         }, cancellationToken);
 
+                        _loadedSuccessfully = true;
+
                         Log.Debug("{LogContext} Item data cache revalidated without changes.", LogContext);
                         return;
                     }
@@ -113,6 +118,7 @@ public sealed class ItemDataProvider
                     }, cancellationToken);
 
                     TryDeleteLegacyCache();
+                    _loadedSuccessfully = true;
 
                     Log.Information("{LogContext} Item data cache updated from remote source. ItemCount={ItemCount}", LogContext, _items?.Count ?? 0);
                     return;
@@ -122,6 +128,8 @@ public sealed class ItemDataProvider
             {
                 if(cacheLoaded)
                 {
+                    _loadedSuccessfully = true;
+
                     Log.Warning(exception, "{LogContext} Item data refresh failed. Existing cache will be used.", LogContext);
                     return;
                 }
@@ -132,6 +140,8 @@ public sealed class ItemDataProvider
             {
                 if(cacheLoaded)
                 {
+                    _loadedSuccessfully = true;
+
                     Log.Warning(exception, "{LogContext} Item data refresh timed out. Existing cache will be used.", LogContext);
                     return;
                 }
@@ -141,6 +151,7 @@ public sealed class ItemDataProvider
 
             _items = [];
             _itemsById = new Dictionary<string, ItemData>(StringComparer.Ordinal);
+            _loadedSuccessfully = false;
 
             Log.Warning("{LogContext} Item data provider initialised with an empty data set.", LogContext);
         }
