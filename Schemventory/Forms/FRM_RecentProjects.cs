@@ -121,15 +121,28 @@ public partial class FRM_RecentProjects : Form
     {
         Log.Debug("{LogContext} Project opened. ProjectId={ProjectId}, Name={ProjectName}", LogContext, e.Project.Id, e.Project.Name);
 
-        Hide();
+        try
+        {
+            e.Project.LastOpenedAtUtc = DateTime.UtcNow;
+            _projectService.UpdateLastOpened(e.Project.Id);
 
-        using FRM_MaterialList materialListForm = new(_databaseService, e.Project, _itemIconService, _itemDataProvider);
+            Hide();
 
-        _ = materialListForm.ShowDialog();
+            using FRM_MaterialList materialListForm = new(_databaseService, e.Project, _itemIconService, _itemDataProvider);
 
-        Show();
+            _ = materialListForm.ShowDialog();
 
-        Log.Debug("{LogContext} Returned from material list. ProjectId={ProjectId}", LogContext, e.Project.Id);
+            Show();
+
+            Log.Debug("{LogContext} Returned from material list. ProjectId={ProjectId}", LogContext, e.Project.Id);
+
+            LoadProjects();
+        }
+        catch(Exception exception)
+        {
+            Log.Error(exception, "{LogContext} Failed to open project. ProjectId={ProjectId}", LogContext, e.Project.Id);
+            throw;
+        }
     }
 
     private void ProjectControl_EditRequested(object? sender, ProjectControlEventArgs e)
