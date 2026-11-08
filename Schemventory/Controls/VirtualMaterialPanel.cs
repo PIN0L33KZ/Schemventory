@@ -26,6 +26,7 @@ public sealed class VirtualMaterialPanel : Panel
     private int _renderRowCount = 1;
     private int _refreshVersion;
     private bool _resizeSuspended;
+    private bool _toolTipsEnabled = true;
 
     public event EventHandler? MaterialStateChanged;
     public event EventHandler? ScrollMetricsChanged;
@@ -102,6 +103,17 @@ public sealed class VirtualMaterialPanel : Panel
         }
 
         ScrollPositionChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    public void SetToolTipsEnabled(bool enabled)
+    {
+        if(_toolTipsEnabled == enabled)
+            return;
+
+        _toolTipsEnabled = enabled;
+
+        foreach(MaterialControl materialControl in _controlPool)
+            materialControl.SetToolTipsEnabled(enabled);
     }
 
     protected override void OnResize(EventArgs eventArgs)
@@ -209,6 +221,8 @@ public sealed class VirtualMaterialPanel : Panel
             {
                 Visible = false
             };
+
+            materialControl.SetToolTipsEnabled(_toolTipsEnabled);
 
             materialControl.StateChanged += MaterialControl_StateChanged;
             materialControl.RemoveRequested += MaterialControl_RemoveRequested;

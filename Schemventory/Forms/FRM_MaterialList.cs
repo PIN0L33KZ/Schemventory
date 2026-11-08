@@ -21,6 +21,7 @@ public partial class FRM_MaterialList : Form
     private List<ProjectMaterial> _viewMaterials = [];
     private bool _loadingFilterSettings;
     private int? _pendingScrollOffset;
+    private long _lastScrollInputTick;
 
     public FRM_MaterialList(DatabaseService databaseService, Project project, ItemIconService itemIconService, ItemDataProvider itemDataProvider)
     {
@@ -266,6 +267,12 @@ public partial class FRM_MaterialList : Form
     {
         var targetOffset = Math.Clamp(scrollOffset, VSB_Main.Minimum, PNL_MaterialList.MaximumScrollOffset);
 
+        _lastScrollInputTick = Environment.TickCount64;
+        PNL_MaterialList.SetToolTipsEnabled(false);
+
+        if(!TMR_ScrollUpdate.Enabled)
+            TMR_ScrollUpdate.Start();
+
         if(_pendingScrollOffset == targetOffset)
             return;
 
@@ -276,26 +283,28 @@ public partial class FRM_MaterialList : Form
 
         if(VSB_Main.Value != targetOffset)
             VSB_Main.Value = targetOffset;
-
-        if(!TMR_ScrollUpdate.Enabled)
-            TMR_ScrollUpdate.Start();
     }
 
     private void CancelPendingScrollUpdate()
     {
         TMR_ScrollUpdate.Stop();
         _pendingScrollOffset = null;
+        PNL_MaterialList.SetToolTipsEnabled(true);
     }
 
     private void TMR_ScrollUpdate_Tick(object? sender, EventArgs e)
     {
-        TMR_ScrollUpdate.Stop();
+        if(_pendingScrollOffset is int scrollOffset)
+        {
+            _pendingScrollOffset = null;
+            PNL_MaterialList.SetScrollOffset(scrollOffset);
+        }
 
-        if(_pendingScrollOffset is not int scrollOffset)
-            return;
-
-        _pendingScrollOffset = null;
-        PNL_MaterialList.SetScrollOffset(scrollOffset);
+        if(Environment.TickCount64 - _lastScrollInputTick >= 250)
+        {
+            TMR_ScrollUpdate.Stop();
+            PNL_MaterialList.SetToolTipsEnabled(true);
+        }
     }
 
     private void VSB_Main_Scroll(object? sender, ScrollEventArgs e)

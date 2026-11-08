@@ -1,4 +1,5 @@
-﻿using Schemventory.App;
+﻿
+using Schemventory.App;
 using Schemventory.Forms;
 using Schemventory.Services;
 using Serilog;
@@ -77,9 +78,7 @@ public partial class MaterialControl : UserControl
 
         try
         {
-            await Task.WhenAll(
-                LoadItemDataAsync(material, bindingVersion, cancellationToken),
-                LoadMaterialIconAsync(material, bindingVersion, cancellationToken));
+            await Task.WhenAll(LoadItemDataAsync(material, bindingVersion, cancellationToken), LoadMaterialIconAsync(material, bindingVersion, cancellationToken));
         }
         catch(OperationCanceledException) when(cancellationToken.IsCancellationRequested)
         {
@@ -114,6 +113,17 @@ public partial class MaterialControl : UserControl
         _bindingVersion++;
     }
 
+    public void SetToolTipsEnabled(bool enabled)
+    {
+        if(TTP_Main.Active == enabled)
+            return;
+
+        if(!enabled)
+            HideToolTips(this);
+
+        TTP_Main.Active = enabled;
+    }
+
     private void HoverTimer_Tick(object? sender, EventArgs e)
     {
         if(RectangleToScreen(ClientRectangle).Contains(Cursor.Position))
@@ -132,7 +142,7 @@ public partial class MaterialControl : UserControl
         await SetMaterialAsync(material);
     }
 
-    private void MaterialControl_DoubleClick(object? sender, EventArgs e)
+    private void MaterialControl_DoubleClick(object sender, EventArgs e)
     {
         ProjectMaterial? material = BoundMaterial;
 
@@ -164,28 +174,13 @@ public partial class MaterialControl : UserControl
 
             StateChanged?.Invoke(this, EventArgs.Empty);
 
-            Log.Information(
-                "{LogContext} Material state changed by double click. ProjectId={ProjectId}, ItemId={ItemId}, PreviousState={PreviousState}, NewState={NewState}",
-                LogContext,
-                material.ProjectId,
-                material.ItemId,
-                previousState,
-                material.State);
+            Log.Information("{LogContext} Material state changed by double click. ProjectId={ProjectId}, ItemId={ItemId}, PreviousState={PreviousState}, NewState={NewState}", LogContext, material.ProjectId, material.ItemId, previousState, material.State);
         }
         catch(Exception exception)
         {
-            Log.Error(
-                exception,
-                "{LogContext} Failed to change material state by double click. ProjectId={ProjectId}, ItemId={ItemId}",
-                LogContext,
-                material.ProjectId,
-                material.ItemId);
+            Log.Error(exception, "{LogContext} Failed to change material state. ProjectId={ProjectId}, ItemId={ItemId}", LogContext, material.ProjectId, material.ItemId);
 
-            _ = MessageBox.Show(
-                $"The material state could not be changed.\n\n{exception.Message}",
-                Constants.AppName,
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Error);
+            _ = MessageBox.Show($"The material state could not be changed.\n\n{exception.Message}", Constants.AppName, MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
@@ -395,12 +390,7 @@ public partial class MaterialControl : UserControl
         }
         catch(Exception exception)
         {
-            Log.Debug(
-                exception,
-                "{LogContext} Failed to load material icon. ProjectId={ProjectId}, ItemId={ItemId}",
-                LogContext,
-                material.ProjectId,
-                material.DisplayItemId);
+            Log.Debug(exception, "{LogContext} Failed to load material icon. ProjectId={ProjectId}, ItemId={ItemId}", LogContext, material.ProjectId, material.DisplayItemId);
 
             if(IsDisposed || cancellationToken.IsCancellationRequested || bindingVersion != _bindingVersion || !ReferenceEquals(BoundMaterial, material))
                 return;
@@ -429,6 +419,14 @@ public partial class MaterialControl : UserControl
 
         foreach(Control child in control.Controls)
             RegisterToolTips(child, toolTip);
+    }
+
+    private void HideToolTips(Control control)
+    {
+        TTP_Main.Hide(control);
+
+        foreach(Control child in control.Controls)
+            HideToolTips(child);
     }
 
     private void IBN_MoreOptions_Click(object sender, EventArgs e)
@@ -513,29 +511,13 @@ public partial class MaterialControl : UserControl
 
             StateChanged?.Invoke(this, EventArgs.Empty);
 
-            Log.Information(
-                "{LogContext} Material state changed. ProjectId={ProjectId}, ItemId={ItemId}, PreviousState={PreviousState}, NewState={NewState}",
-                LogContext,
-                material.ProjectId,
-                material.ItemId,
-                previousState,
-                material.State);
+            Log.Information("{LogContext} Material state changed. ProjectId={ProjectId}, ItemId={ItemId}, PreviousState={PreviousState}, NewState={NewState}", LogContext, material.ProjectId, material.ItemId, previousState, material.State);
         }
         catch(Exception exception)
         {
-            Log.Error(
-                exception,
-                "{LogContext} Failed to change material state. ProjectId={ProjectId}, ItemId={ItemId}, RequestedState={RequestedState}",
-                LogContext,
-                material.ProjectId,
-                material.ItemId,
-                state);
+            Log.Error(exception, "{LogContext} Failed to change material state. ProjectId={ProjectId}, ItemId={ItemId}, RequestedState={RequestedState}", LogContext, material.ProjectId, material.ItemId, state);
 
-            _ = MessageBox.Show(
-                $"The material state could not be changed.\n\n{exception.Message}",
-                Constants.AppName,
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Error);
+            _ = MessageBox.Show($"The material state could not be changed.\n\n{exception.Message}", Constants.AppName, MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
@@ -550,11 +532,7 @@ public partial class MaterialControl : UserControl
 
         if(form.ShowDialog(this) != DialogResult.OK)
         {
-            Log.Debug(
-                "{LogContext} Collected amount adjustment cancelled. ProjectId={ProjectId}, ItemId={ItemId}",
-                LogContext,
-                material.ProjectId,
-                material.ItemId);
+            Log.Debug("{LogContext} Collected amount adjustment cancelled. ProjectId={ProjectId}, ItemId={ItemId}", LogContext, material.ProjectId, material.ItemId);
 
             return;
         }
@@ -562,10 +540,7 @@ public partial class MaterialControl : UserControl
         if(form.AmountChange == 0)
             return;
 
-        var newCollectedAmount = Math.Clamp(
-            material.CollectedAmount + form.AmountChange,
-            0,
-            material.RequiredAmount);
+        var newCollectedAmount = Math.Clamp(material.CollectedAmount + form.AmountChange, 0, material.RequiredAmount);
 
         SetCollectedAmount(material, newCollectedAmount);
     }
@@ -576,10 +551,7 @@ public partial class MaterialControl : UserControl
         {
             var previousAmount = material.CollectedAmount;
 
-            _projectMaterialService.UpdateCollectedAmount(
-                material.ProjectId,
-                material.ItemId,
-                collectedAmount);
+            _projectMaterialService.UpdateCollectedAmount(material.ProjectId, material.ItemId, collectedAmount);
 
             material.CollectedAmount = collectedAmount;
             material.State = material.CollectedAmount >= material.RequiredAmount
@@ -593,29 +565,13 @@ public partial class MaterialControl : UserControl
 
             StateChanged?.Invoke(this, EventArgs.Empty);
 
-            Log.Information(
-                "{LogContext} Collected amount changed. ProjectId={ProjectId}, ItemId={ItemId}, PreviousAmount={PreviousAmount}, NewAmount={NewAmount}",
-                LogContext,
-                material.ProjectId,
-                material.ItemId,
-                previousAmount,
-                collectedAmount);
+            Log.Information("{LogContext} Collected amount changed. ProjectId={ProjectId}, ItemId={ItemId}, PreviousAmount={PreviousAmount}, NewAmount={NewAmount}", LogContext, material.ProjectId, material.ItemId, previousAmount, collectedAmount);
         }
         catch(Exception exception)
         {
-            Log.Error(
-                exception,
-                "{LogContext} Failed to change collected amount. ProjectId={ProjectId}, ItemId={ItemId}, RequestedAmount={RequestedAmount}",
-                LogContext,
-                material.ProjectId,
-                material.ItemId,
-                collectedAmount);
+            Log.Error(exception, "{LogContext} Failed to change collected amount. ProjectId={ProjectId}, ItemId={ItemId}, RequestedAmount={RequestedAmount}", LogContext, material.ProjectId, material.ItemId, collectedAmount);
 
-            _ = MessageBox.Show(
-                $"The collected amount could not be changed.\n\n{exception.Message}",
-                Constants.AppName,
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Error);
+            _ = MessageBox.Show($"The collected amount could not be changed.\n\n{exception.Message}", Constants.AppName, MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
@@ -632,11 +588,7 @@ public partial class MaterialControl : UserControl
 
             if(form.ShowDialog(this) != DialogResult.OK)
             {
-                Log.Debug(
-                    "{LogContext} Material replacement cancelled. ProjectId={ProjectId}, ItemId={ItemId}",
-                    LogContext,
-                    material.ProjectId,
-                    material.ItemId);
+                Log.Debug("{LogContext} Material replacement cancelled. ProjectId={ProjectId}, ItemId={ItemId}", LogContext, material.ProjectId, material.ItemId);
 
                 return;
             }
@@ -652,12 +604,7 @@ public partial class MaterialControl : UserControl
 
                 StateChanged?.Invoke(this, EventArgs.Empty);
 
-                Log.Information(
-                    "{LogContext} Material replacement reset. ProjectId={ProjectId}, ItemId={ItemId}, PreviousReplacementItemId={PreviousReplacementItemId}",
-                    LogContext,
-                    material.ProjectId,
-                    material.ItemId,
-                    previousReplacementItemId);
+                Log.Information("{LogContext} Material replacement reset. ProjectId={ProjectId}, ItemId={ItemId}, PreviousReplacementItemId={PreviousReplacementItemId}", LogContext, material.ProjectId, material.ItemId, previousReplacementItemId);
 
                 return;
             }
@@ -667,10 +614,7 @@ public partial class MaterialControl : UserControl
 
             var replacementItemId = form.ReplacementItemId;
 
-            _projectMaterialService.MarkReplaced(
-                material.ProjectId,
-                material.ItemId,
-                replacementItemId);
+            _projectMaterialService.MarkReplaced(material.ProjectId, material.ItemId, replacementItemId);
 
             material.State = ProjectMaterialState.Replaced;
             material.ReplacementItemId = replacementItemId;
@@ -681,27 +625,13 @@ public partial class MaterialControl : UserControl
 
             StateChanged?.Invoke(this, EventArgs.Empty);
 
-            Log.Information(
-                "{LogContext} Material replaced. ProjectId={ProjectId}, ItemId={ItemId}, ReplacementItemId={ReplacementItemId}",
-                LogContext,
-                material.ProjectId,
-                material.ItemId,
-                replacementItemId);
+            Log.Information("{LogContext} Material replaced. ProjectId={ProjectId}, ItemId={ItemId}, ReplacementItemId={ReplacementItemId}", LogContext, material.ProjectId, material.ItemId, replacementItemId);
         }
         catch(Exception exception)
         {
-            Log.Error(
-                exception,
-                "{LogContext} Failed to replace material. ProjectId={ProjectId}, ItemId={ItemId}",
-                LogContext,
-                material.ProjectId,
-                material.ItemId);
+            Log.Error(exception, "{LogContext} Failed to replace material. ProjectId={ProjectId}, ItemId={ItemId}", LogContext, material.ProjectId, material.ItemId);
 
-            _ = MessageBox.Show(
-                $"The material could not be replaced.\n\n{exception.Message}",
-                Constants.AppName,
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Error);
+            _ = MessageBox.Show($"The material could not be replaced.\n\n{exception.Message}", Constants.AppName, MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
