@@ -355,12 +355,14 @@ partial class FRM_ReplaceMaterial
         ForeColor = Color.FromArgb(235, 234, 234);
         FormBorderStyle = FormBorderStyle.FixedSingle;
         Icon = (Icon)resources.GetObject("$this.Icon");
+        KeyPreview = true;
         Margin = new Padding(3, 4, 3, 4);
         MaximizeBox = false;
         Name = "FRM_ReplaceMaterial";
         StartPosition = FormStartPosition.CenterScreen;
         Text = "FRM_ReplaceMaterial";
         Load += FRM_ReplaceMaterial_Load;
+        KeyDown += FRM_ReplaceMaterial_KeyDown;
         PNL_Preview.ResumeLayout(false);
         ((System.ComponentModel.ISupportInitialize)PBX_Icon).EndInit();
         PNL_ItemsBackground.ResumeLayout(false);

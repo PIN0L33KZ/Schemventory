@@ -72,17 +72,32 @@ public partial class FRM_NewProject : Form
         try
         {
             if(IsEditMode)
-                UpdateProject();
+            {
+                if(!UpdateProject())
+                    return;
+            }
             else
+            {
                 CreateProject();
+            }
 
             DialogResult = DialogResult.OK;
             Close();
         }
         catch(Exception exception)
         {
-            Log.Error(exception, "{LogContext} Failed to save project. EditMode={EditMode}, ProjectId={ProjectId}", LogContext, IsEditMode, _currentProject?.Id);
-            throw;
+            Log.Error(
+                exception,
+                "{LogContext} Failed to save project. EditMode={EditMode}, ProjectId={ProjectId}",
+                LogContext,
+                IsEditMode,
+                _currentProject?.Id);
+
+            _ = MessageBox.Show(
+                $"The project could not be saved.\n\n{exception.Message}",
+                WindowName,
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
         }
     }
 
@@ -107,20 +122,32 @@ public partial class FRM_NewProject : Form
 
         _projectPersistenceService.Create(project, materials);
 
-        Log.Information("{LogContext} Project created. ProjectId={ProjectId}, CreationMode={CreationMode}, MaterialCount={MaterialCount}", LogContext, project.Id, useSchematic ? "Schematic" : "Empty", materials.Count);
+        Log.Information(
+            "{LogContext} Project created. ProjectId={ProjectId}, CreationMode={CreationMode}, MaterialCount={MaterialCount}",
+            LogContext,
+            project.Id,
+            useSchematic ? "Schematic" : "Empty",
+            materials.Count);
     }
 
-    private void UpdateProject()
+    private bool UpdateProject()
     {
         if(_currentProject is null)
-            return;
+            return false;
 
         var useSchematic = RBN_TypeSchematic.Checked;
         var newName = TBX_ProjectName.Text.Trim();
         var newSchematicPath = useSchematic ? TBX_SchematicFilePath.Text.Trim() : null;
         var schematicChanged = !string.Equals(_currentProject.SchematicPath, newSchematicPath, StringComparison.OrdinalIgnoreCase);
 
-        Log.Debug("{LogContext} Updating project. ProjectId={ProjectId}, SchematicChanged={SchematicChanged}", LogContext, _currentProject.Id, schematicChanged);
+        Log.Debug(
+            "{LogContext} Updating project. ProjectId={ProjectId}, SchematicChanged={SchematicChanged}",
+            LogContext,
+            _currentProject.Id,
+            schematicChanged);
+
+        if(schematicChanged && !ConfirmSchematicChange(newSchematicPath))
+            return false;
 
         IReadOnlyCollection<MaterialEntry>? materials = null;
 
@@ -131,12 +158,63 @@ public partial class FRM_NewProject : Form
                 : _materialImportService.ReadMaterialList(newSchematicPath);
         }
 
+        var previousName = _currentProject.Name;
+        var previousSchematicPath = _currentProject.SchematicPath;
+
         _currentProject.Name = newName;
         _currentProject.SchematicPath = newSchematicPath;
 
-        _projectPersistenceService.Update(_currentProject, materials);
+        try
+        {
+            _projectPersistenceService.Update(_currentProject, materials);
+        }
+        catch
+        {
+            _currentProject.Name = previousName;
+            _currentProject.SchematicPath = previousSchematicPath;
+            throw;
+        }
 
         Log.Information("{LogContext} Project updated. ProjectId={ProjectId}", LogContext, _currentProject.Id);
+
+        return true;
+    }
+
+    private bool ConfirmSchematicChange(string? newSchematicPath)
+    {
+        if(_currentProject is null)
+            return false;
+
+        var hadSchematic = !string.IsNullOrWhiteSpace(_currentProject.SchematicPath);
+        var willHaveSchematic = !string.IsNullOrWhiteSpace(newSchematicPath);
+
+        var message = hadSchematic && willHaveSchematic
+            ? "The schematic file has changed.\n\n" +
+                "Changing the schematic will replace the current material list, including manually added materials.\n\n" +
+                "Do you want to continue?"
+            : hadSchematic
+                ? "The schematic file will be removed.\n\n" +
+                  "Removing the schematic will clear the current material list, including manually added materials.\n\n" +
+                  "Do you want to continue?"
+                : "A schematic file will be added to this project.\n\n" +
+                  "Adding a schematic will replace the current material list, including manually added materials.\n\n" +
+                  "Do you want to continue?";
+
+        DialogResult result = MessageBox.Show(
+            message,
+            $"Change schematic - {Constants.AppName}",
+            MessageBoxButtons.YesNo,
+            MessageBoxIcon.Warning);
+
+        if(result == DialogResult.Yes)
+            return true;
+
+        Log.Debug(
+            "{LogContext} Project update cancelled because schematic change was not confirmed. ProjectId={ProjectId}",
+            LogContext,
+            _currentProject.Id);
+
+        return false;
     }
 
     private void BTN_SelectSchematicFilePath_Click(object sender, EventArgs e)
@@ -198,6 +276,16 @@ public partial class FRM_NewProject : Form
             return false;
         }
 
+        var schematicChanged = !IsEditMode ||
+                               _currentProject is null ||
+                               !string.Equals(
+                                   _currentProject.SchematicPath,
+                                   schematicFilePath,
+                                   StringComparison.OrdinalIgnoreCase);
+
+        if(!schematicChanged)
+            return true;
+
         if(!File.Exists(schematicFilePath))
         {
             Log.Warning("{LogContext} Project validation failed: schematic file does not exist. Path={Path}", LogContext, schematicFilePath);
@@ -209,7 +297,8 @@ public partial class FRM_NewProject : Form
 
         var extension = Path.GetExtension(schematicFilePath);
 
-        if(!extension.Equals(".litematic", StringComparison.OrdinalIgnoreCase) && !extension.Equals(".schem", StringComparison.OrdinalIgnoreCase))
+        if(!extension.Equals(".litematic", StringComparison.OrdinalIgnoreCase) &&
+           !extension.Equals(".schem", StringComparison.OrdinalIgnoreCase))
         {
             Log.Warning("{LogContext} Project validation failed: unsupported schematic format. Extension={Extension}", LogContext, extension);
 
@@ -249,5 +338,14 @@ public partial class FRM_NewProject : Form
     private void RBN_TypeEmpty_CheckedChanged(object sender, EventArgs e)
     {
         UpdateControls();
+    }
+
+    private void FRM_NewProject_KeyDown(object sender, KeyEventArgs e)
+    {
+        if(e.KeyCode == Keys.Escape)
+        {
+            DialogResult = DialogResult.Cancel;
+            Close();
+        }
     }
 }

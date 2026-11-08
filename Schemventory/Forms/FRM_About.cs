@@ -34,4 +34,13 @@ Minecraft is a trademark of Mojang AB.";
 
         Log.Debug("{LogContext} About dialog opened. Version={Version}", LogContext, Application.ProductVersion);
     }
+
+    private void FRM_About_KeyDown(object sender, KeyEventArgs e)
+    {
+        if(e.KeyCode == Keys.Escape)
+        {
+            DialogResult = DialogResult.Cancel;
+            Close();
+        }
+    }
 }

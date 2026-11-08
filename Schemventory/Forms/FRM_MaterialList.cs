@@ -1,3 +1,4 @@
+﻿
 using Schemventory.App;
 using Schemventory.Controls;
 using Schemventory.Data;
@@ -19,6 +20,8 @@ public partial class FRM_MaterialList : Form
     private IReadOnlyCollection<ProjectMaterial> _materials = [];
     private List<ProjectMaterial> _viewMaterials = [];
     private bool _loadingFilterSettings;
+    private int? _pendingScrollOffset;
+    private long _lastScrollInputTick;
 
     public FRM_MaterialList(DatabaseService databaseService, Project project, ItemIconService itemIconService, ItemDataProvider itemDataProvider)
     {
@@ -34,10 +37,11 @@ public partial class FRM_MaterialList : Form
 
         PNL_MaterialList.Initialize(_itemIconService, _itemDataProvider, _projectMaterialService);
 
-        PNL_MaterialList.MaterialStateChanged += MaterialControl_StateChanged;
         PNL_MaterialList.ScrollMetricsChanged += PNL_MaterialList_ScrollMetricsChanged;
         PNL_MaterialList.ScrollPositionChanged += PNL_MaterialList_ScrollPositionChanged;
         PNL_MaterialList.MouseWheelScrollRequested += PNL_MaterialList_MouseWheelScrollRequested;
+        PNL_MaterialList.MaterialStateChanged += MaterialControl_StateChanged;
+        PNL_MaterialList.MaterialRemoveRequested += MaterialControl_RemoveRequested;
 
         FPN_Missing.CheckedChanged += FilterPanel_CheckedChanged;
         FPN_Replaced.CheckedChanged += FilterPanel_CheckedChanged;
@@ -82,6 +86,35 @@ public partial class FRM_MaterialList : Form
         UpdateStatistics();
     }
 
+    private void MaterialControl_RemoveRequested(ProjectMaterial material)
+    {
+        DialogResult result = MessageBox.Show($"Do you really want to remove '{ItemIdService.GetDisplayName(material.ItemId)}' from this project?\n\n" + "This action cannot be undone.", $"Remove material - {Constants.AppName}", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+
+        if(result != DialogResult.Yes)
+        {
+            Log.Debug("{LogContext} Material removal cancelled. ProjectId={ProjectId}, ItemId={ItemId}", LogContext, material.ProjectId, material.ItemId);
+
+            return;
+        }
+
+        try
+        {
+            _projectMaterialService.Remove(material.ProjectId, material.ItemId);
+
+            LoadMaterialList();
+            ApplyMaterialView(resetScrollPosition: false);
+            UpdateStatistics();
+
+            Log.Information("{LogContext} Material removed. ProjectId={ProjectId}, ItemId={ItemId}", LogContext, material.ProjectId, material.ItemId);
+        }
+        catch(Exception exception)
+        {
+            Log.Error(exception, "{LogContext} Failed to remove material. ProjectId={ProjectId}, ItemId={ItemId}", LogContext, material.ProjectId, material.ItemId);
+
+            _ = MessageBox.Show($"The material could not be removed.\n\n{exception.Message}", Constants.AppName, MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
     private void FillProjectData()
     {
         LBL_ProjectName.Text = _project.Name;
@@ -102,7 +135,7 @@ public partial class FRM_MaterialList : Form
             if(material.State == ProjectMaterialState.Ignored)
                 continue;
 
-            var itemId = NormalizeItemId(material.DisplayItemId);
+            var itemId = ItemIdService.Normalize(material.DisplayItemId);
             var collectedAmount = Math.Min(material.CollectedAmount, material.RequiredAmount);
 
             if(groupedMaterials.TryGetValue(itemId, out (long RequiredAmount, long CollectedAmount) current))
@@ -126,13 +159,6 @@ public partial class FRM_MaterialList : Form
 
         LBL_TotalBlocks.Text = $"{collectedBlocks}/{totalBlocks} Blocks collected";
         LBL_DifferentMaterialsCount.Text = $"{collectedMaterials}/{groupedMaterials.Count} Materials collected";
-    }
-
-    private static string NormalizeItemId(string itemId)
-    {
-        const string prefix = "minecraft:";
-
-        return itemId.StartsWith(prefix, StringComparison.Ordinal) ? itemId[prefix.Length..] : itemId;
     }
 
     private void LoadMaterialList()
@@ -176,6 +202,8 @@ public partial class FRM_MaterialList : Form
 
     private void ApplyMaterialView(bool resetScrollPosition)
     {
+        CancelPendingScrollUpdate();
+
         _viewMaterials = _materials
             .Where(ShouldShowMaterial)
             .OrderBy(x => GetStateSortOrder(x.State))
@@ -218,16 +246,16 @@ public partial class FRM_MaterialList : Form
 
     private void UpdateScrollBar()
     {
-        var totalRows = PNL_MaterialList.TotalRows;
-        var viewportRows = Math.Max(1, PNL_MaterialList.ViewportRows);
+        var contentHeight = PNL_MaterialList.ContentHeight;
+        var viewportHeight = Math.Max(1, PNL_MaterialList.ViewportHeight);
 
         VSB_Main.Minimum = 0;
-        VSB_Main.Maximum = Math.Max(0, totalRows - 1);
-        VSB_Main.LargeChange = viewportRows;
-        VSB_Main.SmallChange = 1;
+        VSB_Main.Maximum = Math.Max(0, contentHeight - 1);
+        VSB_Main.LargeChange = viewportHeight;
+        VSB_Main.SmallChange = PNL_MaterialList.ScrollStep;
 
-        var maximumValue = PNL_MaterialList.MaximumScrollRow;
-        var scrollValue = Math.Clamp(PNL_MaterialList.ScrollRow, 0, maximumValue);
+        var maximumValue = PNL_MaterialList.MaximumScrollOffset;
+        var scrollValue = Math.Clamp(PNL_MaterialList.ScrollOffset, 0, maximumValue);
 
         if(VSB_Main.Value != scrollValue)
             VSB_Main.Value = scrollValue;
@@ -235,30 +263,72 @@ public partial class FRM_MaterialList : Form
         VSB_Main.Visible = PNL_MaterialList.Visible && maximumValue > 0;
     }
 
-    private void VSB_Main_Scroll(object? sender, ScrollEventArgs e)
+    private void QueueScrollUpdate(int scrollOffset)
     {
-        PNL_MaterialList.SetScrollRow(e.NewValue);
-    }
+        var targetOffset = Math.Clamp(scrollOffset, VSB_Main.Minimum, PNL_MaterialList.MaximumScrollOffset);
 
-    private void PNL_MaterialList_MouseWheelScrollRequested(int rowDelta)
-    {
-        var newValue = Math.Clamp(VSB_Main.Value + rowDelta, VSB_Main.Minimum, PNL_MaterialList.MaximumScrollRow);
+        _lastScrollInputTick = Environment.TickCount64;
+        PNL_MaterialList.SetToolTipsEnabled(false);
 
-        if(newValue == VSB_Main.Value)
+        if(!TMR_ScrollUpdate.Enabled)
+            TMR_ScrollUpdate.Start();
+
+        if(_pendingScrollOffset == targetOffset)
             return;
 
-        VSB_Main.Value = newValue;
-        PNL_MaterialList.SetScrollRow(newValue);
+        if(_pendingScrollOffset is null && targetOffset == PNL_MaterialList.ScrollOffset)
+            return;
+
+        _pendingScrollOffset = targetOffset;
+
+        if(VSB_Main.Value != targetOffset)
+            VSB_Main.Value = targetOffset;
+    }
+
+    private void CancelPendingScrollUpdate()
+    {
+        TMR_ScrollUpdate.Stop();
+        _pendingScrollOffset = null;
+        PNL_MaterialList.SetToolTipsEnabled(true);
+    }
+
+    private void TMR_ScrollUpdate_Tick(object? sender, EventArgs e)
+    {
+        if(_pendingScrollOffset is int scrollOffset)
+        {
+            _pendingScrollOffset = null;
+            PNL_MaterialList.SetScrollOffset(scrollOffset);
+        }
+
+        if(Environment.TickCount64 - _lastScrollInputTick >= 250)
+        {
+            TMR_ScrollUpdate.Stop();
+            PNL_MaterialList.SetToolTipsEnabled(true);
+        }
+    }
+
+    private void VSB_Main_Scroll(object? sender, ScrollEventArgs e)
+    {
+        QueueScrollUpdate(e.NewValue);
+    }
+
+    private void PNL_MaterialList_MouseWheelScrollRequested(int pixelDelta)
+    {
+        var currentOffset = _pendingScrollOffset ?? VSB_Main.Value;
+        var newOffset = Math.Clamp(currentOffset + pixelDelta, VSB_Main.Minimum, PNL_MaterialList.MaximumScrollOffset);
+
+        QueueScrollUpdate(newOffset);
     }
 
     private void PNL_MaterialList_ScrollMetricsChanged(object? sender, EventArgs e)
     {
+        CancelPendingScrollUpdate();
         UpdateScrollBar();
     }
 
     private void PNL_MaterialList_ScrollPositionChanged(object? sender, EventArgs e)
     {
-        var scrollValue = Math.Clamp(PNL_MaterialList.ScrollRow, 0, PNL_MaterialList.MaximumScrollRow);
+        var scrollValue = Math.Clamp(PNL_MaterialList.ScrollOffset, 0, PNL_MaterialList.MaximumScrollOffset);
 
         if(VSB_Main.Value != scrollValue)
             VSB_Main.Value = scrollValue;
@@ -272,7 +342,17 @@ public partial class FRM_MaterialList : Form
         if(sender is FilterPanel filterPanel)
             Log.Debug("{LogContext} Material filter changed. Filter={Filter}, Checked={Checked}", LogContext, filterPanel.FilterStyle, filterPanel.Checked);
 
-        SaveFilterSettings();
+        try
+        {
+            SaveFilterSettings();
+        }
+        catch(Exception exception)
+        {
+            Log.Error(exception, "{LogContext} Failed to save project filter settings. ProjectId={ProjectId}", LogContext, _project.Id);
+
+            _ = MessageBox.Show($"The filter settings could not be saved.\n\n{exception.Message}", Constants.AppName, MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+
         ApplyMaterialView(resetScrollPosition: true);
     }
 
@@ -287,11 +367,13 @@ public partial class FRM_MaterialList : Form
 
     private void FRM_MaterialList_ResizeBegin(object sender, EventArgs e)
     {
+        CancelPendingScrollUpdate();
         PNL_MaterialList.SuspendVirtualLayout();
     }
 
     private void FRM_MaterialList_ResizeEnd(object sender, EventArgs e)
     {
+        CancelPendingScrollUpdate();
         PNL_MaterialList.ResumeVirtualLayout();
         UpdateScrollBar();
     }
@@ -304,7 +386,7 @@ public partial class FRM_MaterialList : Form
 
         if(addMaterialForm.ShowDialog(this) != DialogResult.OK || string.IsNullOrWhiteSpace(addMaterialForm.SelectedItemId))
         {
-            Log.Debug("{LogContext} Add material dialog cancelled. ProjectId={ProjectId}", LogContext, _project.Id);
+            Log.Debug("{LogContext} Add material dialog cancelled. ProjectId={ProjectId}, ItemId={ItemId}", LogContext, _project.Id, addMaterialForm.SelectedItemId);
             return;
         }
 

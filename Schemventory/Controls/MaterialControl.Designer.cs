@@ -29,9 +29,9 @@ partial class MaterialControl
     private void InitializeComponent()
     {
         components = new System.ComponentModel.Container();
-        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges8 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
-        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges9 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
-        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges7 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
+        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges5 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
+        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges6 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
+        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges4 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
         PNL_Background = new Guna.UI2.WinForms.Guna2CustomGradientPanel();
         IBN_MoreOptions = new Guna.UI2.WinForms.Guna2ImageButton();
         PBX_StateIcon = new PictureBox();
@@ -42,18 +42,18 @@ partial class MaterialControl
         PBX_MaterialIcon = new PictureBox();
         TTP_Main = new ToolTip(components);
         CMS_MaterialOptions = new Guna.UI2.WinForms.Guna2ContextMenuStrip();
-        TMI_SetState = new ToolStripMenuItem();
-        CMS_SetState = new Guna.UI2.WinForms.Guna2ContextMenuStrip();
         TMI_SetStateCollected = new ToolStripMenuItem();
         TMI_SetStateMissing = new ToolStripMenuItem();
         TMI_SetStateIgnore = new ToolStripMenuItem();
-        TMI_SetCollectedAmount = new ToolStripMenuItem();
+        TSS_Sep1 = new ToolStripSeparator();
         TMI_ReplaceMaterial = new ToolStripMenuItem();
+        TSS_Sep2 = new ToolStripSeparator();
+        TMI_SetCollectedAmount = new ToolStripMenuItem();
+        TMI_RemoveMaterial = new ToolStripMenuItem();
         PNL_Background.SuspendLayout();
         ((System.ComponentModel.ISupportInitialize)PBX_StateIcon).BeginInit();
         ((System.ComponentModel.ISupportInitialize)PBX_MaterialIcon).BeginInit();
         CMS_MaterialOptions.SuspendLayout();
-        CMS_SetState.SuspendLayout();
         SuspendLayout();
         // 
         // PNL_Background
@@ -71,7 +71,7 @@ partial class MaterialControl
         PNL_Background.Controls.Add(LBL_MaterialName);
         PNL_Background.Controls.Add(PBX_MaterialIcon);
         PNL_Background.CustomBorderColor = Color.FromArgb(103, 99, 99);
-        PNL_Background.CustomizableEdges = customizableEdges8;
+        PNL_Background.CustomizableEdges = customizableEdges5;
         PNL_Background.FillColor = Color.FromArgb(58, 55, 55);
         PNL_Background.FillColor2 = Color.FromArgb(58, 55, 55);
         PNL_Background.FillColor3 = Color.FromArgb(58, 55, 55);
@@ -80,7 +80,7 @@ partial class MaterialControl
         PNL_Background.ForeColor = Color.FromArgb(235, 234, 234);
         PNL_Background.Location = new Point(3, 3);
         PNL_Background.Name = "PNL_Background";
-        PNL_Background.ShadowDecoration.CustomizableEdges = customizableEdges9;
+        PNL_Background.ShadowDecoration.CustomizableEdges = customizableEdges6;
         PNL_Background.Size = new Size(306, 91);
         PNL_Background.TabIndex = 0;
         // 
@@ -96,7 +96,7 @@ partial class MaterialControl
         IBN_MoreOptions.Location = new Point(277, 5);
         IBN_MoreOptions.Name = "IBN_MoreOptions";
         IBN_MoreOptions.PressedState.ImageSize = new Size(25, 25);
-        IBN_MoreOptions.ShadowDecoration.CustomizableEdges = customizableEdges7;
+        IBN_MoreOptions.ShadowDecoration.CustomizableEdges = customizableEdges4;
         IBN_MoreOptions.Size = new Size(25, 25);
         IBN_MoreOptions.TabIndex = 2;
         TTP_Main.SetToolTip(IBN_MoreOptions, "Material options");
@@ -184,7 +184,7 @@ partial class MaterialControl
         // 
         CMS_MaterialOptions.BackColor = Color.FromArgb(58, 55, 55);
         CMS_MaterialOptions.Font = new Font("Leelawadee UI", 9.75F, FontStyle.Regular, GraphicsUnit.Point, 0);
-        CMS_MaterialOptions.Items.AddRange(new ToolStripItem[] { TMI_SetState, TMI_SetCollectedAmount, TMI_ReplaceMaterial });
+        CMS_MaterialOptions.Items.AddRange(new ToolStripItem[] { TMI_SetStateCollected, TMI_SetStateMissing, TMI_SetStateIgnore, TSS_Sep1, TMI_ReplaceMaterial, TMI_RemoveMaterial, TSS_Sep2, TMI_SetCollectedAmount });
         CMS_MaterialOptions.Name = "CMS_MaterialOptions";
         CMS_MaterialOptions.RenderStyle.ArrowColor = Color.FromArgb(194, 165, 142);
         CMS_MaterialOptions.RenderStyle.BorderColor = Color.FromArgb(103, 99, 99);
@@ -195,39 +195,14 @@ partial class MaterialControl
         CMS_MaterialOptions.RenderStyle.SelectionForeColor = Color.White;
         CMS_MaterialOptions.RenderStyle.SeparatorColor = Color.FromArgb(151, 148, 148);
         CMS_MaterialOptions.RenderStyle.TextRenderingHint = System.Drawing.Text.TextRenderingHint.SystemDefault;
-        CMS_MaterialOptions.Size = new Size(217, 92);
-        // 
-        // TMI_SetState
-        // 
-        TMI_SetState.DropDown = CMS_SetState;
-        TMI_SetState.ForeColor = Color.FromArgb(235, 234, 234);
-        TMI_SetState.Name = "TMI_SetState";
-        TMI_SetState.Size = new Size(216, 22);
-        TMI_SetState.Text = "Status";
-        // 
-        // CMS_SetState
-        // 
-        CMS_SetState.BackColor = Color.FromArgb(58, 55, 55);
-        CMS_SetState.Font = new Font("Leelawadee UI", 9.75F, FontStyle.Regular, GraphicsUnit.Point, 0);
-        CMS_SetState.Items.AddRange(new ToolStripItem[] { TMI_SetStateCollected, TMI_SetStateMissing, TMI_SetStateIgnore });
-        CMS_SetState.Name = "CMS_MaterialOptions";
-        CMS_SetState.OwnerItem = TMI_SetState;
-        CMS_SetState.RenderStyle.ArrowColor = Color.FromArgb(194, 165, 142);
-        CMS_SetState.RenderStyle.BorderColor = Color.FromArgb(103, 99, 99);
-        CMS_SetState.RenderStyle.ColorTable = null;
-        CMS_SetState.RenderStyle.RoundedEdges = true;
-        CMS_SetState.RenderStyle.SelectionArrowColor = Color.FromArgb(194, 165, 142);
-        CMS_SetState.RenderStyle.SelectionBackColor = Color.FromArgb(162, 123, 90);
-        CMS_SetState.RenderStyle.SelectionForeColor = Color.White;
-        CMS_SetState.RenderStyle.SeparatorColor = Color.FromArgb(151, 148, 148);
-        CMS_SetState.RenderStyle.TextRenderingHint = System.Drawing.Text.TextRenderingHint.SystemDefault;
-        CMS_SetState.Size = new Size(131, 70);
+        CMS_MaterialOptions.ShowImageMargin = false;
+        CMS_MaterialOptions.Size = new Size(192, 170);
         // 
         // TMI_SetStateCollected
         // 
         TMI_SetStateCollected.ForeColor = Color.FromArgb(235, 234, 234);
         TMI_SetStateCollected.Name = "TMI_SetStateCollected";
-        TMI_SetStateCollected.Size = new Size(130, 22);
+        TMI_SetStateCollected.Size = new Size(191, 22);
         TMI_SetStateCollected.Text = "Collected";
         TMI_SetStateCollected.Click += TMI_SetStateCollected_Click;
         // 
@@ -235,7 +210,7 @@ partial class MaterialControl
         // 
         TMI_SetStateMissing.ForeColor = Color.FromArgb(235, 234, 234);
         TMI_SetStateMissing.Name = "TMI_SetStateMissing";
-        TMI_SetStateMissing.Size = new Size(130, 22);
+        TMI_SetStateMissing.Size = new Size(191, 22);
         TMI_SetStateMissing.Text = "Missing";
         TMI_SetStateMissing.Click += TMI_SetStateMissing_Click;
         // 
@@ -243,25 +218,44 @@ partial class MaterialControl
         // 
         TMI_SetStateIgnore.ForeColor = Color.FromArgb(235, 234, 234);
         TMI_SetStateIgnore.Name = "TMI_SetStateIgnore";
-        TMI_SetStateIgnore.Size = new Size(130, 22);
+        TMI_SetStateIgnore.Size = new Size(191, 22);
         TMI_SetStateIgnore.Text = "Ignore";
         TMI_SetStateIgnore.Click += TMI_SetStateIgnored_Click;
         // 
-        // TMI_SetCollectedAmount
+        // TSS_Sep1
         // 
-        TMI_SetCollectedAmount.ForeColor = Color.FromArgb(235, 234, 234);
-        TMI_SetCollectedAmount.Name = "TMI_SetCollectedAmount";
-        TMI_SetCollectedAmount.Size = new Size(216, 22);
-        TMI_SetCollectedAmount.Text = "Adjust collected amount";
-        TMI_SetCollectedAmount.Click += TMI_SetCollectedAmount_Click;
+        TSS_Sep1.ForeColor = Color.FromArgb(235, 234, 234);
+        TSS_Sep1.Name = "TSS_Sep1";
+        TSS_Sep1.Size = new Size(188, 6);
         // 
         // TMI_ReplaceMaterial
         // 
         TMI_ReplaceMaterial.ForeColor = Color.FromArgb(235, 234, 234);
         TMI_ReplaceMaterial.Name = "TMI_ReplaceMaterial";
-        TMI_ReplaceMaterial.Size = new Size(216, 22);
-        TMI_ReplaceMaterial.Text = "Replace material";
+        TMI_ReplaceMaterial.Size = new Size(191, 22);
+        TMI_ReplaceMaterial.Text = "Replace";
         TMI_ReplaceMaterial.Click += TMI_ReplaceMaterial_Click;
+        // 
+        // TSS_Sep2
+        // 
+        TSS_Sep2.Name = "TSS_Sep2";
+        TSS_Sep2.Size = new Size(188, 6);
+        // 
+        // TMI_SetCollectedAmount
+        // 
+        TMI_SetCollectedAmount.ForeColor = Color.FromArgb(235, 234, 234);
+        TMI_SetCollectedAmount.Name = "TMI_SetCollectedAmount";
+        TMI_SetCollectedAmount.Size = new Size(191, 22);
+        TMI_SetCollectedAmount.Text = "Adjust collected amount";
+        TMI_SetCollectedAmount.Click += TMI_SetCollectedAmount_Click;
+        // 
+        // TMI_RemoveMaterial
+        // 
+        TMI_RemoveMaterial.ForeColor = Color.FromArgb(235, 234, 234);
+        TMI_RemoveMaterial.Name = "TMI_RemoveMaterial";
+        TMI_RemoveMaterial.Size = new Size(191, 22);
+        TMI_RemoveMaterial.Text = "Remove";
+        TMI_RemoveMaterial.Click += TMI_RemoveMaterial_Click;
         // 
         // MaterialControl
         // 
@@ -278,7 +272,6 @@ partial class MaterialControl
         ((System.ComponentModel.ISupportInitialize)PBX_StateIcon).EndInit();
         ((System.ComponentModel.ISupportInitialize)PBX_MaterialIcon).EndInit();
         CMS_MaterialOptions.ResumeLayout(false);
-        CMS_SetState.ResumeLayout(false);
         ResumeLayout(false);
     }
 
@@ -293,12 +286,13 @@ partial class MaterialControl
     private PictureBox PBX_StateIcon;
     private ToolTip TTP_Main;
     private Guna.UI2.WinForms.Guna2ContextMenuStrip CMS_MaterialOptions;
-    private ToolStripMenuItem TMI_SetState;
     private Guna.UI2.WinForms.Guna2ImageButton IBN_MoreOptions;
-    private Guna.UI2.WinForms.Guna2ContextMenuStrip CMS_SetState;
-    private ToolStripMenuItem TMI_SetStateMissing;
-    private ToolStripMenuItem TMI_SetStateCollected;
-    private ToolStripMenuItem TMI_SetStateIgnore;
     private ToolStripMenuItem TMI_SetCollectedAmount;
     private ToolStripMenuItem TMI_ReplaceMaterial;
+    private ToolStripMenuItem TMI_SetStateCollected;
+    private ToolStripMenuItem TMI_SetStateMissing;
+    private ToolStripMenuItem TMI_SetStateIgnore;
+    private ToolStripSeparator TSS_Sep1;
+    private ToolStripSeparator TSS_Sep2;
+    private ToolStripMenuItem TMI_RemoveMaterial;
 }

@@ -2,30 +2,18 @@
 
 partial class FRM_AdjustCollectedAmount
 {
-    /// <summary>
-    /// Required designer variable.
-    /// </summary>
     private System.ComponentModel.IContainer components = null;
 
-    /// <summary>
-    /// Clean up any resources being used.
-    /// </summary>
-    /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
     protected override void Dispose(bool disposing)
     {
         if(disposing && (components != null))
-        {
             components.Dispose();
-        }
+
         base.Dispose(disposing);
     }
 
     #region Windows Form Designer generated code
 
-    /// <summary>
-    /// Required method for Designer support - do not modify
-    /// the contents of this method with the code editor.
-    /// </summary>
     private void InitializeComponent()
     {
         Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges1 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
@@ -131,7 +119,7 @@ partial class FRM_AdjustCollectedAmount
         BTN_Save.BorderRadius = 5;
         BTN_Save.Cursor = Cursors.Hand;
         BTN_Save.CustomizableEdges = customizableEdges5;
-        BTN_Save.DialogResult = DialogResult.OK;
+        BTN_Save.DialogResult = DialogResult.None;
         BTN_Save.DisabledState.BorderColor = Color.FromArgb(80, 76, 76);
         BTN_Save.DisabledState.CustomBorderColor = Color.FromArgb(80, 76, 76);
         BTN_Save.DisabledState.FillColor = Color.FromArgb(80, 76, 76);
@@ -206,11 +194,13 @@ partial class FRM_AdjustCollectedAmount
         ForeColor = Color.FromArgb(235, 234, 234);
         FormBorderStyle = FormBorderStyle.FixedSingle;
         Icon = (Icon)resources.GetObject("$this.Icon");
+        KeyPreview = true;
         Margin = new Padding(3, 4, 3, 4);
         MaximizeBox = false;
         Name = "FRM_AdjustCollectedAmount";
         StartPosition = FormStartPosition.CenterScreen;
         Text = "FRM_SetCollectedAmount";
+        KeyDown += FRM_AdjustCollectedAmount_KeyDown;
         ((System.ComponentModel.ISupportInitialize)NUD_Stacks).EndInit();
         ((System.ComponentModel.ISupportInitialize)NUD_Blocks).EndInit();
         ResumeLayout(false);

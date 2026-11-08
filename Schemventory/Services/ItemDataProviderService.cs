@@ -1,4 +1,5 @@
-﻿using Schemventory.App;
+﻿
+using Schemventory.App;
 using Schemventory.Data;
 using Serilog;
 using System.Net;
@@ -13,6 +14,7 @@ public sealed class ItemDataProvider
     private const string DataUrl = @"https://raw.githubusercontent.com/misode/mcmeta/summary/item_components/data.json";
 
     private static readonly TimeSpan CacheLifetime = TimeSpan.FromDays(7);
+    private static readonly TimeSpan FailedLoadRetryDelay = TimeSpan.FromSeconds(30);
 
     private static readonly HttpClient HttpClient = new()
     {
@@ -26,6 +28,8 @@ public sealed class ItemDataProvider
 
     private IReadOnlyCollection<ItemData>? _items;
     private Dictionary<string, ItemData>? _itemsById;
+    private bool _loadedSuccessfully;
+    private DateTime _retryAfterUtc = DateTime.MinValue;
 
     public ItemDataProvider()
     {
@@ -42,7 +46,7 @@ public sealed class ItemDataProvider
     {
         await EnsureLoadedAsync(cancellationToken);
 
-        var normalizedId = NormalizeItemId(itemId);
+        var normalizedId = ItemIdService.Normalize(itemId);
 
         return _itemsById!.TryGetValue(normalizedId, out ItemData? item) ? item.MaxStackSize : 64;
     }
@@ -56,20 +60,31 @@ public sealed class ItemDataProvider
 
     private async Task EnsureLoadedAsync(CancellationToken cancellationToken)
     {
-        if(_items is not null && _itemsById is not null)
+        if(_loadedSuccessfully && _items is not null && _itemsById is not null)
             return;
 
         await _loadSemaphore.WaitAsync(cancellationToken);
 
         try
         {
-            if(_items is not null && _itemsById is not null)
+            if(_loadedSuccessfully && _items is not null && _itemsById is not null)
                 return;
+
+            if(_items is not null &&
+               _itemsById is not null &&
+               DateTime.UtcNow < _retryAfterUtc)
+            {
+                Log.Debug("{LogContext} Skipping item data reload during retry cooldown. RetryAfterUtc={RetryAfterUtc}", LogContext, _retryAfterUtc);
+
+                return;
+            }
 
             var cacheLoaded = await TryLoadCompactCacheAsync(cancellationToken);
 
             if(cacheLoaded && await IsCacheFreshAsync(cancellationToken))
             {
+                MarkLoadedSuccessfully();
+
                 Log.Debug("{LogContext} Using fresh item data cache. ItemCount={ItemCount}", LogContext, _items?.Count ?? 0);
                 return;
             }
@@ -86,12 +101,14 @@ public sealed class ItemDataProvider
                 {
                     if(cacheLoaded)
                     {
-                        await WriteCacheMetadataAsync(new CacheMetadata
+                        _ = await TryWriteCacheMetadataAsync(new CacheMetadata
                         {
                             LastCheckedUtc = DateTime.UtcNow,
                             ETag = refreshResult.ETag ?? metadata?.ETag,
                             LastModified = refreshResult.LastModified ?? metadata?.LastModified
                         }, cancellationToken);
+
+                        MarkLoadedSuccessfully();
 
                         Log.Debug("{LogContext} Item data cache revalidated without changes.", LogContext);
                         return;
@@ -103,18 +120,25 @@ public sealed class ItemDataProvider
                 if(refreshResult.Json is not null)
                 {
                     LoadSourceData(refreshResult.Json);
-                    await WriteCompactCacheAsync(cancellationToken);
 
-                    await WriteCacheMetadataAsync(new CacheMetadata
+                    var cachePersisted = await TryWriteCompactCacheAsync(cancellationToken);
+
+                    if(cachePersisted)
                     {
-                        LastCheckedUtc = DateTime.UtcNow,
-                        ETag = refreshResult.ETag,
-                        LastModified = refreshResult.LastModified
-                    }, cancellationToken);
+                        _ = await TryWriteCacheMetadataAsync(new CacheMetadata
+                        {
+                            LastCheckedUtc = DateTime.UtcNow,
+                            ETag = refreshResult.ETag,
+                            LastModified = refreshResult.LastModified
+                        }, cancellationToken);
 
-                    TryDeleteLegacyCache();
+                        TryDeleteLegacyCache();
+                    }
 
-                    Log.Information("{LogContext} Item data cache updated from remote source. ItemCount={ItemCount}", LogContext, _items?.Count ?? 0);
+                    MarkLoadedSuccessfully();
+
+                    Log.Information("{LogContext} Item data updated from remote source. ItemCount={ItemCount}, CachePersisted={CachePersisted}", LogContext, _items?.Count ?? 0, cachePersisted);
+
                     return;
                 }
             }
@@ -122,6 +146,9 @@ public sealed class ItemDataProvider
             {
                 if(cacheLoaded)
                 {
+                    _loadedSuccessfully = false;
+                    _retryAfterUtc = DateTime.UtcNow.Add(FailedLoadRetryDelay);
+
                     Log.Warning(exception, "{LogContext} Item data refresh failed. Existing cache will be used.", LogContext);
                     return;
                 }
@@ -132,6 +159,9 @@ public sealed class ItemDataProvider
             {
                 if(cacheLoaded)
                 {
+                    _loadedSuccessfully = false;
+                    _retryAfterUtc = DateTime.UtcNow.Add(FailedLoadRetryDelay);
+
                     Log.Warning(exception, "{LogContext} Item data refresh timed out. Existing cache will be used.", LogContext);
                     return;
                 }
@@ -141,13 +171,21 @@ public sealed class ItemDataProvider
 
             _items = [];
             _itemsById = new Dictionary<string, ItemData>(StringComparer.Ordinal);
+            _loadedSuccessfully = false;
+            _retryAfterUtc = DateTime.UtcNow.Add(FailedLoadRetryDelay);
 
-            Log.Warning("{LogContext} Item data provider initialised with an empty data set.", LogContext);
+            Log.Warning("{LogContext} Item data provider initialised with an empty data set. NextRetryUtc={NextRetryUtc}", LogContext, _retryAfterUtc);
         }
         finally
         {
             _ = _loadSemaphore.Release();
         }
+    }
+
+    private void MarkLoadedSuccessfully()
+    {
+        _loadedSuccessfully = true;
+        _retryAfterUtc = DateTime.MinValue;
     }
 
     private async Task<bool> TryLoadCompactCacheAsync(CancellationToken cancellationToken)
@@ -196,16 +234,21 @@ public sealed class ItemDataProvider
             var json = await File.ReadAllTextAsync(_legacyCacheFilePath, cancellationToken);
 
             LoadSourceData(json);
-            await WriteCompactCacheAsync(cancellationToken);
 
-            await WriteCacheMetadataAsync(new CacheMetadata
+            var cachePersisted = await TryWriteCompactCacheAsync(cancellationToken);
+
+            if(cachePersisted)
             {
-                LastCheckedUtc = File.GetLastWriteTimeUtc(_legacyCacheFilePath)
-            }, cancellationToken);
+                _ = await TryWriteCacheMetadataAsync(new CacheMetadata
+                {
+                    LastCheckedUtc = File.GetLastWriteTimeUtc(_legacyCacheFilePath)
+                }, cancellationToken);
 
-            TryDeleteLegacyCache();
+                TryDeleteLegacyCache();
+            }
 
-            Log.Information("{LogContext} Legacy item data cache migrated. ItemCount={ItemCount}", LogContext, _items?.Count ?? 0);
+            Log.Information("{LogContext} Legacy item data cache loaded. ItemCount={ItemCount}, CachePersisted={CachePersisted}", LogContext, _items?.Count ?? 0, cachePersisted);
+
             return true;
         }
         catch(JsonException exception)
@@ -216,7 +259,7 @@ public sealed class ItemDataProvider
         }
         catch(IOException exception)
         {
-            Log.Warning(exception, "{LogContext} Failed to migrate legacy item data cache.", LogContext);
+            Log.Warning(exception, "{LogContext} Failed to read legacy item data cache.", LogContext);
             return false;
         }
         catch(UnauthorizedAccessException exception)
@@ -248,7 +291,7 @@ public sealed class ItemDataProvider
             if(item.Value.TryGetProperty("minecraft:max_stack_size", out JsonElement stackSizeElement) && stackSizeElement.TryGetInt32(out var parsedMaxStackSize))
                 maxStackSize = parsedMaxStackSize;
 
-            stackSizes[NormalizeItemId(item.Name)] = maxStackSize;
+            stackSizes[ItemIdService.Normalize(item.Name)] = maxStackSize;
         }
 
         LoadCompactData(stackSizes);
@@ -263,7 +306,7 @@ public sealed class ItemDataProvider
         {
             ItemData itemData = new()
             {
-                Id = NormalizeItemId(entry.Key),
+                Id = ItemIdService.Normalize(entry.Key),
                 MaxStackSize = entry.Value
             };
 
@@ -275,12 +318,31 @@ public sealed class ItemDataProvider
         _itemsById = itemsById;
     }
 
-    private async Task WriteCompactCacheAsync(CancellationToken cancellationToken)
+    private async Task<bool> TryWriteCompactCacheAsync(CancellationToken cancellationToken)
     {
-        Dictionary<string, int> stackSizes = _items!.ToDictionary(x => x.Id, x => x.MaxStackSize, StringComparer.Ordinal);
-        var json = JsonSerializer.Serialize(stackSizes);
+        try
+        {
+            Dictionary<string, int> stackSizes = _items!.ToDictionary(x => x.Id, x => x.MaxStackSize, StringComparer.Ordinal);
+            var json = JsonSerializer.Serialize(stackSizes);
 
-        await File.WriteAllTextAsync(_cacheFilePath, json, cancellationToken);
+            await WriteTextFileAtomicallyAsync(_cacheFilePath, json, cancellationToken);
+
+            return true;
+        }
+        catch(OperationCanceledException) when(cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch(IOException exception)
+        {
+            Log.Warning(exception, "{LogContext} Failed to write compact item data cache. In-memory data will still be used.", LogContext);
+            return false;
+        }
+        catch(UnauthorizedAccessException exception)
+        {
+            Log.Warning(exception, "{LogContext} Access to the compact item data cache was denied. In-memory data will still be used.", LogContext);
+            return false;
+        }
     }
 
     private async Task<CacheMetadata?> ReadCacheMetadataAsync(CancellationToken cancellationToken)
@@ -312,18 +374,45 @@ public sealed class ItemDataProvider
         }
     }
 
-    private async Task WriteCacheMetadataAsync(CacheMetadata metadata, CancellationToken cancellationToken)
+    private async Task<bool> TryWriteCacheMetadataAsync(CacheMetadata metadata, CancellationToken cancellationToken)
     {
-        var json = JsonSerializer.Serialize(metadata);
+        try
+        {
+            var json = JsonSerializer.Serialize(metadata);
 
-        await File.WriteAllTextAsync(_cacheMetadataFilePath, json, cancellationToken);
+            await WriteTextFileAtomicallyAsync(_cacheMetadataFilePath, json, cancellationToken);
+
+            return true;
+        }
+        catch(OperationCanceledException) when(cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch(IOException exception)
+        {
+            Log.Warning(exception, "{LogContext} Failed to write item data cache metadata.", LogContext);
+            return false;
+        }
+        catch(UnauthorizedAccessException exception)
+        {
+            Log.Warning(exception, "{LogContext} Access to item data cache metadata was denied.", LogContext);
+            return false;
+        }
     }
 
-    private static string NormalizeItemId(string itemId)
+    private static async Task WriteTextFileAtomicallyAsync(string filePath, string content, CancellationToken cancellationToken)
     {
-        const string prefix = "minecraft:";
+        var temporaryFilePath = $"{filePath}.{Guid.NewGuid():N}.tmp";
 
-        return itemId.StartsWith(prefix, StringComparison.Ordinal) ? itemId[prefix.Length..] : itemId;
+        try
+        {
+            await File.WriteAllTextAsync(temporaryFilePath, content, cancellationToken);
+            File.Move(temporaryFilePath, filePath, true);
+        }
+        finally
+        {
+            TryDeleteFile(temporaryFilePath);
+        }
     }
 
     private static async Task<DownloadResult> DownloadDataAsync(CacheMetadata? metadata, CancellationToken cancellationToken)

@@ -80,9 +80,15 @@ public partial class ProjectControl : UserControl
     private void LoadProjectData()
     {
         LBL_ProjectName.Text = _project.Name;
-        LBL_SchematicPath.Text = string.IsNullOrWhiteSpace(_project.SchematicPath) ? "No schematic file" : _project.SchematicPath;
-        LBL_CreatedAt.Text = $"Created: {_project.CreatedAtUtc:dd.MM.yyyy HH:mm}";
-        LBL_LastOpened.Text = $"Last opened: {_project.LastOpenedAtUtc:dd.MM.yyyy HH:mm}";
+        LBL_SchematicPath.Text = string.IsNullOrWhiteSpace(_project.SchematicPath)
+            ? "No schematic file"
+            : _project.SchematicPath;
+
+        DateTime createdAtLocal = ToLocalTime(_project.CreatedAtUtc);
+        DateTime lastOpenedAtLocal = ToLocalTime(_project.LastOpenedAtUtc);
+
+        LBL_CreatedAt.Text = $"Created: {createdAtLocal:dd.MM.yyyy HH:mm}";
+        LBL_LastOpened.Text = $"Last opened: {lastOpenedAtLocal:dd.MM.yyyy HH:mm}";
 
         if(string.IsNullOrWhiteSpace(_project.SchematicPath))
         {
@@ -90,12 +96,23 @@ public partial class ProjectControl : UserControl
             return;
         }
 
-        PBX_ProjectIcon.Image = Path.GetExtension(_project.SchematicPath) switch
+        var extension = Path.GetExtension(_project.SchematicPath);
+
+        PBX_ProjectIcon.Image = extension.ToLowerInvariant() switch
         {
             ".litematic" => Properties.Resources.ProjectIconL,
             ".schem" => Properties.Resources.ProjectIconS,
-            _ => null,
+            _ => null
         };
+    }
+
+    private static DateTime ToLocalTime(DateTime utcDateTime)
+    {
+        DateTime normalizedUtc = utcDateTime.Kind == DateTimeKind.Utc
+            ? utcDateTime
+            : DateTime.SpecifyKind(utcDateTime, DateTimeKind.Utc);
+
+        return normalizedUtc.ToLocalTime();
     }
 
     private void RegisterEvents(Control control)

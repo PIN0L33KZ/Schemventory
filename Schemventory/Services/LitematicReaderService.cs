@@ -1,4 +1,5 @@
-﻿using fNbt;
+﻿
+using fNbt;
 using Schemventory.Data;
 using Schemventory.Interfaces;
 using Serilog;
@@ -150,6 +151,10 @@ public sealed class LitematicReader : ISchematicReader
         var startLongIndex = (int)(bitIndex >> 6);
         var startBitOffset = (int)(bitIndex & 63);
         var mask = (1UL << bitsPerBlock) - 1UL;
+
+        if(startLongIndex < 0 || startLongIndex >= data.Length)
+            throw new InvalidDataException("BlockStates data is incomplete.");
+
         var firstLong = unchecked((ulong)data[startLongIndex]);
 
         if(startBitOffset + bitsPerBlock <= 64)
@@ -158,6 +163,10 @@ public sealed class LitematicReader : ISchematicReader
         var bitsFromFirstLong = 64 - startBitOffset;
         var bitsFromSecondLong = bitsPerBlock - bitsFromFirstLong;
         var firstPart = firstLong >> startBitOffset;
+
+        if(startLongIndex + 1 >= data.Length)
+            throw new InvalidDataException("BlockStates data is incomplete.");
+
         var secondLong = unchecked((ulong)data[startLongIndex + 1]);
         var secondMask = (1UL << bitsFromSecondLong) - 1UL;
         var secondPart = secondLong & secondMask;

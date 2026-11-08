@@ -1,4 +1,5 @@
-﻿using fNbt;
+﻿
+using fNbt;
 using Schemventory.Data;
 using Schemventory.Interfaces;
 using Serilog;
@@ -135,6 +136,10 @@ public sealed class SpongeSchematicReader : ISchematicReader
                 throw new InvalidDataException("Unexpected end of VarInt data.");
 
             var currentByte = data[offset++];
+
+            if(position == 28 && (currentByte & 0xF0) != 0)
+                throw new InvalidDataException("VarInt is too large.");
+
             value |= (currentByte & 0x7F) << position;
 
             if((currentByte & 0x80) == 0)

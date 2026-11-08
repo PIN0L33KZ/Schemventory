@@ -61,7 +61,7 @@ partial class ProjectControl
         PNL_Background.Controls.Add(LBL_SchematicPath);
         PNL_Background.Controls.Add(LBL_ProjectName);
         PNL_Background.CustomizableEdges = customizableEdges3;
-        PNL_Background.FillColor = Color.FromArgb(38, 34, 34);
+        PNL_Background.FillColor = Color.FromArgb(58, 55, 55);
         PNL_Background.Font = new Font("Leelawadee UI", 11.25F);
         PNL_Background.ForeColor = Color.FromArgb(235, 234, 234);
         PNL_Background.Location = new Point(3, 3);
@@ -116,7 +116,7 @@ partial class ProjectControl
         PBX_ProjectIcon.Image = Properties.Resources.ProjectIconL;
         PBX_ProjectIcon.Location = new Point(8, 6);
         PBX_ProjectIcon.Name = "PBX_ProjectIcon";
-        PBX_ProjectIcon.Size = new Size(50, 50);
+        PBX_ProjectIcon.Size = new Size(50, 44);
         PBX_ProjectIcon.SizeMode = PictureBoxSizeMode.AutoSize;
         PBX_ProjectIcon.TabIndex = 9;
         PBX_ProjectIcon.TabStop = false;

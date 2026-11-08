@@ -40,6 +40,7 @@ partial class FRM_RecentProjects
         PNL_RecentProjectControls = new FlowLayoutPanel();
         VSB_Main = new Guna.UI2.WinForms.Guna2VScrollBar();
         LBL_NoProjectsWarn = new Label();
+        LBL_AppVersion = new Label();
         ((System.ComponentModel.ISupportInitialize)PBX_AppLogo).BeginInit();
         SuspendLayout();
         // 
@@ -160,12 +161,25 @@ partial class FRM_RecentProjects
         LBL_NoProjectsWarn.TextAlign = ContentAlignment.MiddleCenter;
         LBL_NoProjectsWarn.Visible = false;
         // 
+        // LBL_AppVersion
+        // 
+        LBL_AppVersion.AutoEllipsis = true;
+        LBL_AppVersion.AutoSize = true;
+        LBL_AppVersion.Font = new Font("Leelawadee UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
+        LBL_AppVersion.ForeColor = Color.FromArgb(151, 148, 148);
+        LBL_AppVersion.Location = new Point(8, 9);
+        LBL_AppVersion.Name = "LBL_AppVersion";
+        LBL_AppVersion.Size = new Size(49, 15);
+        LBL_AppVersion.TabIndex = 0;
+        LBL_AppVersion.Text = "Version:";
+        // 
         // FRM_RecentProjects
         // 
         AutoScaleDimensions = new SizeF(8F, 20F);
         AutoScaleMode = AutoScaleMode.Font;
         BackColor = Color.FromArgb(38, 34, 34);
         ClientSize = new Size(407, 625);
+        Controls.Add(LBL_AppVersion);
         Controls.Add(VSB_Main);
         Controls.Add(LBL_AppTitle);
         Controls.Add(PBX_AppLogo);
@@ -196,4 +210,5 @@ partial class FRM_RecentProjects
     private FlowLayoutPanel PNL_RecentProjectControls;
     private Guna.UI2.WinForms.Guna2VScrollBar VSB_Main;
     private Label LBL_NoProjectsWarn;
+    private Label LBL_AppVersion;
 }

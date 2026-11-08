@@ -15,14 +15,14 @@ public partial class FRM_ReplaceMaterial : Form
     private readonly ItemDataProvider _itemDataProvider;
     private readonly ItemIconService _itemIconService;
     private readonly System.Windows.Forms.Timer _searchTimer;
-
+    private readonly CancellationTokenSource _formCancellationTokenSource = new();
 
     private List<ItemSearchEntry> _items = [];
     private List<ItemSearchEntry> _filteredItems = [];
     private CancellationTokenSource? _previewCancellationTokenSource;
 
     public ItemData? SelectedItem { get; private set; }
-    public string? ReplacementItemId => SelectedItem?.Id;
+    public string? ReplacementItemId => SelectedItem is null ? null : ItemIdService.GetFullId(SelectedItem.Id);
     public bool ResetRequested { get; private set; }
 
     public FRM_ReplaceMaterial(ProjectMaterial material, ItemDataProvider itemDataProvider, ItemIconService itemIconService)
@@ -40,7 +40,6 @@ public partial class FRM_ReplaceMaterial : Form
 
         _searchTimer.Tick += SearchTimer_Tick;
 
-
         Text = WindowName;
 
         InitializeListView();
@@ -53,7 +52,7 @@ public partial class FRM_ReplaceMaterial : Form
 
     private void InitializeForm()
     {
-        LBL_Description.Text = $"Choose a material to replace {GetDisplayName(_material.ItemId)} with.";
+        LBL_Description.Text = $"Choose a material to replace {ItemIdService.GetDisplayName(_material.ItemId)} with.";
         LBL_ItemName.Text = "No material selected";
         LBL_ItemId.Text = string.Empty;
         LBL_StackSize.Text = string.Empty;
@@ -81,12 +80,18 @@ public partial class FRM_ReplaceMaterial : Form
             TBX_Search.Enabled = false;
             LST_Items.Enabled = false;
 
-            IReadOnlyCollection<ItemData> items = await _itemDataProvider.GetItemsAsync();
+            IReadOnlyCollection<ItemData> items = await _itemDataProvider.GetItemsAsync(_formCancellationTokenSource.Token);
 
-            var originalItemId = NormalizeItemId(_material.ItemId);
+            if(_formCancellationTokenSource.IsCancellationRequested || IsDisposed)
+                return;
+
+            var originalItemId = ItemIdService.Normalize(_material.ItemId);
 
             _items = items.Where(x => !string.Equals(x.Id, originalItemId, StringComparison.Ordinal))
-                .Select(x => new ItemSearchEntry(x, GetDisplayName(x.Id), GetFullItemId(x.Id)))
+                .Select(x => new ItemSearchEntry(
+                    x,
+                    ItemIdService.GetDisplayName(x.Id),
+                    ItemIdService.GetFullId(x.Id)))
                 .OrderBy(x => x.DisplayName, StringComparer.CurrentCultureIgnoreCase)
                 .ToList();
 
@@ -100,11 +105,16 @@ public partial class FRM_ReplaceMaterial : Form
 
             Log.Debug("{LogContext} Replacement items loaded. Count={Count}", LogContext, _items.Count);
         }
+        catch(OperationCanceledException) when(_formCancellationTokenSource.IsCancellationRequested)
+        {
+            Log.Debug("{LogContext} Replacement material loading cancelled.", LogContext);
+        }
         catch(Exception exception)
         {
             Log.Error(exception, "{LogContext} Failed to load replacement material list. ItemId={ItemId}", LogContext, _material.ItemId);
 
-            _ = MessageBox.Show($"The material list could not be loaded.\n\n{exception.Message}", Constants.AppName, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            if(!IsDisposed)
+                _ = MessageBox.Show($"The material list could not be loaded.\n\n{exception.Message}", Constants.AppName, MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
@@ -126,7 +136,10 @@ public partial class FRM_ReplaceMaterial : Form
 
         _filteredItems = string.IsNullOrWhiteSpace(searchText)
             ? [.. _items]
-            : _items.Where(x => x.Item.Id.Contains(searchText, StringComparison.OrdinalIgnoreCase) || x.FullItemId.Contains(searchText, StringComparison.OrdinalIgnoreCase) || x.DisplayName.Contains(searchText, StringComparison.CurrentCultureIgnoreCase)).ToList();
+            : _items.Where(x => x.Item.Id.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+                                x.FullItemId.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+                                x.DisplayName.Contains(searchText, StringComparison.CurrentCultureIgnoreCase))
+                .ToList();
 
         ClearPreview();
         UpdateVirtualList();
@@ -187,7 +200,6 @@ public partial class FRM_ReplaceMaterial : Form
 
         ItemSearchEntry entry = _filteredItems[selectedIndex];
 
-
         SelectedItem = entry.Item;
 
         BTN_Replace.Enabled = true;
@@ -232,18 +244,11 @@ public partial class FRM_ReplaceMaterial : Form
         }
         catch(OperationCanceledException)
         {
-            Log.Debug(
-                "{LogContext} Preview icon loading cancelled. ItemId={ItemId}",
-                LogContext,
-                itemId);
+            Log.Debug("{LogContext} Preview icon loading cancelled. ItemId={ItemId}", LogContext, itemId);
         }
         catch(Exception exception)
         {
-            Log.Warning(
-                exception,
-                "{LogContext} Failed to load preview icon. ItemId={ItemId}",
-                LogContext,
-                itemId);
+            Log.Warning(exception, "{LogContext} Failed to load preview icon. ItemId={ItemId}", LogContext, itemId);
 
             if(IsDisposed)
                 return;
@@ -254,7 +259,7 @@ public partial class FRM_ReplaceMaterial : Form
         }
         finally
         {
-            if(ReferenceEquals(_previewCancellationTokenSource, cancellationTokenSource))
+            if(ReferenceEquals(_previewCancellationTokenSource, cancellationTokenSource) && !IsDisposed)
             {
                 PGI_Loading.Stop();
                 PGI_Loading.Visible = false;
@@ -302,7 +307,12 @@ public partial class FRM_ReplaceMaterial : Form
         if(SelectedItem is null)
             return;
 
-        Log.Debug("{LogContext} Replacement confirmed. ProjectId={ProjectId}, OriginalItemId={OriginalItemId}, ReplacementItemId={ReplacementItemId}", LogContext, _material.ProjectId, _material.ItemId, SelectedItem.Id);
+        Log.Debug(
+            "{LogContext} Replacement confirmed. ProjectId={ProjectId}, OriginalItemId={OriginalItemId}, ReplacementItemId={ReplacementItemId}",
+            LogContext,
+            _material.ProjectId,
+            _material.ItemId,
+            ReplacementItemId);
 
         DialogResult = DialogResult.OK;
         Close();
@@ -350,7 +360,6 @@ public partial class FRM_ReplaceMaterial : Form
             }
             catch(InvalidOperationException)
             {
-                // The ListView handle may not be ready yet.
             }
         }
 
@@ -361,6 +370,8 @@ public partial class FRM_ReplaceMaterial : Form
     {
         LST_Items.SizeChanged -= LST_Items_SizeChanged;
 
+        _formCancellationTokenSource.Cancel();
+        _formCancellationTokenSource.Dispose();
 
         _searchTimer.Stop();
         _searchTimer.Dispose();
@@ -372,25 +383,13 @@ public partial class FRM_ReplaceMaterial : Form
         PBX_Icon.Image = null;
     }
 
-    private static string NormalizeItemId(string itemId)
+    private void FRM_ReplaceMaterial_KeyDown(object sender, KeyEventArgs e)
     {
-        const string prefix = "minecraft:";
-
-        return itemId.StartsWith(prefix, StringComparison.Ordinal) ? itemId[prefix.Length..] : itemId;
-    }
-
-    private static string GetFullItemId(string itemId)
-    {
-        return itemId.StartsWith("minecraft:", StringComparison.Ordinal) ? itemId : $"minecraft:{itemId}";
-    }
-
-    private static string GetDisplayName(string itemId)
-    {
-        var name = NormalizeItemId(itemId);
-
-        name = name.Replace('_', ' ');
-
-        return System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(name);
+        if(e.KeyCode == Keys.Escape)
+        {
+            DialogResult = DialogResult.Cancel;
+            Close();
+        }
     }
 
     private sealed record ItemSearchEntry(ItemData Item, string DisplayName, string FullItemId);

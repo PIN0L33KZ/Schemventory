@@ -125,11 +125,13 @@ partial class FRM_About
         ForeColor = Color.FromArgb(235, 234, 234);
         FormBorderStyle = FormBorderStyle.FixedSingle;
         Icon = (Icon)resources.GetObject("$this.Icon");
+        KeyPreview = true;
         Margin = new Padding(3, 4, 3, 4);
         MaximizeBox = false;
         Name = "FRM_About";
         StartPosition = FormStartPosition.CenterScreen;
         Text = "FRM_About";
+        KeyDown += FRM_About_KeyDown;
         ((System.ComponentModel.ISupportInitialize)PBX_AppLogo).EndInit();
         ResumeLayout(false);
         PerformLayout();

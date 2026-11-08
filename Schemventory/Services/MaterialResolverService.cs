@@ -26,7 +26,7 @@ public sealed class MaterialResolver
         "minecraft:powder_snow"
     };
 
-    private static readonly HashSet<string> DoubleHeightPlants = new(StringComparer.Ordinal)
+    private static readonly HashSet<string> DoubleHeightBlocks = new(StringComparer.Ordinal)
     {
         "minecraft:sunflower",
         "minecraft:lilac",
@@ -34,8 +34,46 @@ public sealed class MaterialResolver
         "minecraft:peony",
         "minecraft:tall_grass",
         "minecraft:large_fern",
-        "minecraft:pitcher_plant"
+        "minecraft:pitcher_plant",
+        "minecraft:pitcher_crop",
+        "minecraft:small_dripleaf",
+        "minecraft:tall_seagrass"
     };
+
+    private static readonly Dictionary<string, string> DoubleHeightItemMappings =
+        new(StringComparer.Ordinal)
+        {
+            ["minecraft:pitcher_crop"] = "minecraft:pitcher_pod",
+            ["minecraft:tall_seagrass"] = "minecraft:seagrass"
+        };
+
+    private static readonly Dictionary<string, string> CountPropertyMappings =
+        new(StringComparer.Ordinal)
+        {
+            ["minecraft:sea_pickle"] = "pickles",
+            ["minecraft:turtle_egg"] = "eggs",
+            ["minecraft:snow"] = "layers",
+            ["minecraft:pink_petals"] = "flower_amount",
+            ["minecraft:wildflowers"] = "flower_amount",
+            ["minecraft:leaf_litter"] = "segment_amount"
+        };
+
+    private static readonly HashSet<string> MultiFaceBlocks = new(StringComparer.Ordinal)
+    {
+        "minecraft:glow_lichen",
+        "minecraft:sculk_vein",
+        "minecraft:resin_clump"
+    };
+
+    private static readonly string[] FacePropertyNames =
+    [
+        "up",
+        "down",
+        "north",
+        "south",
+        "east",
+        "west"
+    ];
 
     private static readonly Dictionary<string, string> RenamedBlockIds =
         new(StringComparer.Ordinal)
@@ -52,6 +90,7 @@ public sealed class MaterialResolver
             ["minecraft:wall_torch"] = "minecraft:torch",
             ["minecraft:redstone_wall_torch"] = "minecraft:redstone_torch",
             ["minecraft:soul_wall_torch"] = "minecraft:soul_torch",
+            ["minecraft:copper_wall_torch"] = "minecraft:copper_torch",
 
             ["minecraft:wheat"] = "minecraft:wheat_seeds",
             ["minecraft:beetroots"] = "minecraft:beetroot_seeds",
@@ -64,14 +103,21 @@ public sealed class MaterialResolver
             ["minecraft:cocoa"] = "minecraft:cocoa_beans",
             ["minecraft:sweet_berry_bush"] = "minecraft:sweet_berries",
             ["minecraft:torchflower_crop"] = "minecraft:torchflower_seeds",
-            ["minecraft:pitcher_crop"] = "minecraft:pitcher_pod",
 
             ["minecraft:water_cauldron"] = "minecraft:cauldron",
             ["minecraft:lava_cauldron"] = "minecraft:cauldron",
             ["minecraft:powder_snow_cauldron"] = "minecraft:cauldron",
 
             ["minecraft:dirt_path"] = "minecraft:dirt",
-            ["minecraft:farmland"] = "minecraft:dirt"
+            ["minecraft:farmland"] = "minecraft:dirt",
+
+            ["minecraft:big_dripleaf_stem"] = "minecraft:big_dripleaf",
+            ["minecraft:bamboo_sapling"] = "minecraft:bamboo",
+            ["minecraft:kelp_plant"] = "minecraft:kelp",
+            ["minecraft:twisting_vines_plant"] = "minecraft:twisting_vines",
+            ["minecraft:weeping_vines_plant"] = "minecraft:weeping_vines",
+            ["minecraft:cave_vines"] = "minecraft:glow_berries",
+            ["minecraft:cave_vines_plant"] = "minecraft:glow_berries"
         };
 
     public IReadOnlyList<ResolvedMaterial> Resolve(BlockStateEntry blockState)
@@ -84,31 +130,28 @@ public sealed class MaterialResolver
             return NoMaterials;
 
         if(blockId.EndsWith("_door", StringComparison.Ordinal))
-        {
-            var half = blockState.GetProperty("half");
-
-            return half == "upper"
-                ? NoMaterials
-                : Single(blockId);
-        }
+            return ResolveDoor(blockId, blockState);
 
         if(blockId.EndsWith("_bed", StringComparison.Ordinal))
-        {
-            var part = blockState.GetProperty("part");
+            return ResolveBed(blockId, blockState);
 
-            return part == "head"
-                ? NoMaterials
-                : Single(blockId);
-        }
+        if(DoubleHeightBlocks.Contains(blockId))
+            return ResolveDoubleHeightBlock(blockId, blockState);
 
-        if(DoubleHeightPlants.Contains(blockId))
-        {
-            var half = blockState.GetProperty("half");
+        if(blockId == "minecraft:pale_moss_carpet")
+            return ResolvePaleMossCarpet(blockId, blockState);
 
-            return half == "upper"
-                ? NoMaterials
-                : Single(blockId);
-        }
+        if(blockId.EndsWith("_slab", StringComparison.Ordinal))
+            return ResolveSlab(blockId, blockState);
+
+        if(IsCandleBlock(blockId))
+            return ResolveCountPropertyBlock(blockId, blockState, "candles");
+
+        if(CountPropertyMappings.TryGetValue(blockId, out var countProperty))
+            return ResolveCountPropertyBlock(blockId, blockState, countProperty);
+
+        if(MultiFaceBlocks.Contains(blockId))
+            return ResolveMultiFaceBlock(blockId, blockState);
 
         if(blockId.StartsWith("minecraft:potted_", StringComparison.Ordinal))
             return ResolvePottedPlant(blockId);
@@ -129,7 +172,83 @@ public sealed class MaterialResolver
 
         return wallVariant is not null
             ? Single(wallVariant)
-            : BlockToItemMappings.TryGetValue(blockId, out var itemId) ? Single(itemId) : Single(blockId);
+            : BlockToItemMappings.TryGetValue(blockId, out var itemId)
+            ? Single(itemId)
+            : Single(blockId);
+    }
+
+    private static IReadOnlyList<ResolvedMaterial> ResolveDoor(string blockId, BlockStateEntry blockState)
+    {
+        return blockState.GetProperty("half") == "upper"
+            ? NoMaterials
+            : Single(blockId);
+    }
+
+    private static IReadOnlyList<ResolvedMaterial> ResolveBed(string blockId, BlockStateEntry blockState)
+    {
+        return blockState.GetProperty("part") == "head"
+            ? NoMaterials
+            : Single(blockId);
+    }
+
+    private static IReadOnlyList<ResolvedMaterial> ResolveDoubleHeightBlock(string blockId, BlockStateEntry blockState)
+    {
+        if(blockState.GetProperty("half") == "upper")
+            return NoMaterials;
+
+        var itemId = DoubleHeightItemMappings.TryGetValue(blockId, out var mappedItemId)
+            ? mappedItemId
+            : blockId;
+
+        return Single(itemId);
+    }
+
+    private static IReadOnlyList<ResolvedMaterial> ResolvePaleMossCarpet(string blockId, BlockStateEntry blockState)
+    {
+        return blockState.GetProperty("bottom") == "false"
+            ? NoMaterials
+            : Single(blockId);
+    }
+
+    private static IReadOnlyList<ResolvedMaterial> ResolveSlab(string blockId, BlockStateEntry blockState)
+    {
+        var count = blockState.GetProperty("type") == "double" ? 2 : 1;
+
+        return Single(blockId, count);
+    }
+
+    private static IReadOnlyList<ResolvedMaterial> ResolveCountPropertyBlock(
+        string blockId,
+        BlockStateEntry blockState,
+        string propertyName)
+    {
+        var count = ReadPositiveCount(blockState.GetProperty(propertyName));
+
+        return Single(blockId, count);
+    }
+
+    private static IReadOnlyList<ResolvedMaterial> ResolveMultiFaceBlock(string blockId, BlockStateEntry blockState)
+    {
+        var count = FacePropertyNames.Count(
+            propertyName => string.Equals(
+                blockState.GetProperty(propertyName),
+                "true",
+                StringComparison.Ordinal));
+
+        return Single(blockId, Math.Max(1, count));
+    }
+
+    private static bool IsCandleBlock(string blockId)
+    {
+        return blockId == "minecraft:candle" ||
+               blockId.EndsWith("_candle", StringComparison.Ordinal);
+    }
+
+    private static int ReadPositiveCount(string? value)
+    {
+        return int.TryParse(value, out var count) && count > 0
+            ? count
+            : 1;
     }
 
     private static string NormalizeBlockId(string blockId)
@@ -210,9 +329,9 @@ public sealed class MaterialResolver
             };
     }
 
-    private static IReadOnlyList<ResolvedMaterial> Single(string id)
+    private static IReadOnlyList<ResolvedMaterial> Single(string id, long count = 1)
     {
-        return [Create(id)];
+        return [Create(id, count)];
     }
 
     private static ResolvedMaterial Create(string id, long count = 1)

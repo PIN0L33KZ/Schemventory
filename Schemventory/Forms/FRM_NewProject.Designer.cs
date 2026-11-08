@@ -324,11 +324,13 @@ partial class FRM_NewProject
         ForeColor = Color.FromArgb(235, 234, 234);
         FormBorderStyle = FormBorderStyle.FixedSingle;
         Icon = (Icon)resources.GetObject("$this.Icon");
+        KeyPreview = true;
         Margin = new Padding(3, 4, 3, 4);
         MaximizeBox = false;
         Name = "FRM_NewProject";
         StartPosition = FormStartPosition.CenterScreen;
         Load += FRM_NewProject_Load;
+        KeyDown += FRM_NewProject_KeyDown;
         ResumeLayout(false);
         PerformLayout();
     }

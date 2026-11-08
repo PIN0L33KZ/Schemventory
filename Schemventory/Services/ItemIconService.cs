@@ -8,6 +8,7 @@ namespace Schemventory.Services;
 public sealed class ItemIconService
 {
     private const string LogContext = "(ItemIconService)";
+    private const int MaxMemoryCacheEntries = 256;
 
     private static readonly TimeSpan MissingCacheLifetime = TimeSpan.FromDays(7);
 
@@ -19,7 +20,9 @@ public sealed class ItemIconService
     private readonly string _cacheDirectory;
     private readonly SemaphoreSlim _downloadSemaphore = new(6);
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _itemLocks = new(StringComparer.Ordinal);
-    private readonly ConcurrentDictionary<string, Bitmap> _memoryCache = new(StringComparer.Ordinal);
+    private readonly object _memoryCacheLock = new();
+    private readonly Dictionary<string, MemoryCacheEntry> _memoryCache = new(StringComparer.Ordinal);
+    private readonly LinkedList<string> _memoryCacheUsage = [];
 
     public ItemIconService()
     {
@@ -32,7 +35,7 @@ public sealed class ItemIconService
 
     public async Task<Image> GetItemIconAsync(string itemId, int size = 64, CancellationToken cancellationToken = default)
     {
-        var normalizedItemId = NormalizeItemId(itemId);
+        var normalizedItemId = ItemIdService.Normalize(itemId);
         var cacheKey = $"{normalizedItemId}:{size}";
         var cacheFilePath = GetCacheFilePath(normalizedItemId, size);
         var missingCacheFilePath = GetMissingCacheFilePath(normalizedItemId, size);
@@ -77,7 +80,11 @@ public sealed class ItemIconService
 
             if(imageData is null)
             {
-                await File.WriteAllTextAsync(missingCacheFilePath, string.Empty, cancellationToken);
+                await TryWriteMissingCacheMarkerAsync(
+                    missingCacheFilePath,
+                    normalizedItemId,
+                    size,
+                    cancellationToken);
 
                 Log.Debug("{LogContext} No remote icon available. ItemId={ItemId}, Size={Size}", LogContext, normalizedItemId, size);
                 return new Bitmap(Properties.Resources.MissingIcon);
@@ -85,7 +92,12 @@ public sealed class ItemIconService
 
             TryDeleteFile(missingCacheFilePath);
 
-            await File.WriteAllBytesAsync(cacheFilePath, imageData, cancellationToken);
+            await TryWriteIconCacheAsync(
+                cacheFilePath,
+                imageData,
+                normalizedItemId,
+                size,
+                cancellationToken);
 
             return CacheAndCloneImage(cacheKey, imageData);
         }
@@ -140,13 +152,91 @@ public sealed class ItemIconService
         return await response.Content.ReadAsByteArrayAsync(cancellationToken);
     }
 
+    private static async Task TryWriteIconCacheAsync(
+        string filePath,
+        byte[] imageData,
+        string itemId,
+        int size,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await File.WriteAllBytesAsync(filePath, imageData, cancellationToken);
+        }
+        catch(OperationCanceledException) when(cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch(IOException exception)
+        {
+            Log.Warning(
+                exception,
+                "{LogContext} Failed to write item icon cache. In-memory icon will still be used. ItemId={ItemId}, Size={Size}, Path={Path}",
+                LogContext,
+                itemId,
+                size,
+                filePath);
+        }
+        catch(UnauthorizedAccessException exception)
+        {
+            Log.Warning(
+                exception,
+                "{LogContext} Access to item icon cache was denied. In-memory icon will still be used. ItemId={ItemId}, Size={Size}, Path={Path}",
+                LogContext,
+                itemId,
+                size,
+                filePath);
+        }
+    }
+
+    private static async Task TryWriteMissingCacheMarkerAsync(
+        string filePath,
+        string itemId,
+        int size,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await File.WriteAllTextAsync(filePath, string.Empty, cancellationToken);
+        }
+        catch(OperationCanceledException) when(cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch(IOException exception)
+        {
+            Log.Debug(
+                exception,
+                "{LogContext} Failed to write missing-icon cache marker. Missing icon will still be returned. ItemId={ItemId}, Size={Size}, Path={Path}",
+                LogContext,
+                itemId,
+                size,
+                filePath);
+        }
+        catch(UnauthorizedAccessException exception)
+        {
+            Log.Debug(
+                exception,
+                "{LogContext} Access to missing-icon cache marker was denied. Missing icon will still be returned. ItemId={ItemId}, Size={Size}, Path={Path}",
+                LogContext,
+                itemId,
+                size,
+                filePath);
+        }
+    }
+
     private Image? TryGetMemoryCachedImage(string cacheKey)
     {
-        if(!_memoryCache.TryGetValue(cacheKey, out Bitmap? cachedBitmap))
-            return null;
+        lock(_memoryCacheLock)
+        {
+            if(!_memoryCache.TryGetValue(cacheKey, out MemoryCacheEntry? entry))
+                return null;
 
-        lock(cachedBitmap)
-            return new Bitmap(cachedBitmap);
+            _memoryCacheUsage.Remove(entry.UsageNode);
+            _memoryCacheUsage.AddLast(entry.UsageNode);
+
+            return new Bitmap(entry.Bitmap);
+        }
     }
 
     private async Task<Image?> TryLoadCachedImageAsync(string cacheKey, string filePath, CancellationToken cancellationToken)
@@ -175,13 +265,49 @@ public sealed class ItemIconService
     private Image CacheAndCloneImage(string cacheKey, byte[] data)
     {
         Bitmap createdBitmap = LoadImage(data);
-        Bitmap cachedBitmap = _memoryCache.GetOrAdd(cacheKey, createdBitmap);
 
-        if(!ReferenceEquals(createdBitmap, cachedBitmap))
-            createdBitmap.Dispose();
+        lock(_memoryCacheLock)
+        {
+            if(_memoryCache.TryGetValue(cacheKey, out MemoryCacheEntry? existingEntry))
+            {
+                createdBitmap.Dispose();
 
-        lock(cachedBitmap)
-            return new Bitmap(cachedBitmap);
+                _memoryCacheUsage.Remove(existingEntry.UsageNode);
+                _memoryCacheUsage.AddLast(existingEntry.UsageNode);
+
+                return new Bitmap(existingEntry.Bitmap);
+            }
+
+            LinkedListNode<string> usageNode = _memoryCacheUsage.AddLast(cacheKey);
+
+            _memoryCache[cacheKey] = new MemoryCacheEntry
+            {
+                Bitmap = createdBitmap,
+                UsageNode = usageNode
+            };
+
+            TrimMemoryCache();
+
+            return new Bitmap(createdBitmap);
+        }
+    }
+
+    private void TrimMemoryCache()
+    {
+        while(_memoryCache.Count > MaxMemoryCacheEntries)
+        {
+            LinkedListNode<string>? oldestNode = _memoryCacheUsage.First;
+
+            if(oldestNode is null)
+                return;
+
+            _memoryCacheUsage.RemoveFirst();
+
+            if(!_memoryCache.Remove(oldestNode.Value, out MemoryCacheEntry? entry))
+                continue;
+
+            entry.Bitmap.Dispose();
+        }
     }
 
     private static bool IsMissingCacheValid(string filePath)
@@ -206,23 +332,21 @@ public sealed class ItemIconService
 
     private string GetCacheFilePath(string itemId, int size)
     {
-        var fileName = $"{itemId}_{size}.png";
+        var fileName = $"{GetSafeCacheFileName(itemId)}_{size}.png";
 
         return Path.Combine(_cacheDirectory, fileName);
     }
 
     private string GetMissingCacheFilePath(string itemId, int size)
     {
-        var fileName = $"{itemId}_{size}.missing";
+        var fileName = $"{GetSafeCacheFileName(itemId)}_{size}.missing";
 
         return Path.Combine(_cacheDirectory, fileName);
     }
 
-    private static string NormalizeItemId(string itemId)
+    private static string GetSafeCacheFileName(string itemId)
     {
-        const string prefix = "minecraft:";
-
-        return itemId.StartsWith(prefix, StringComparison.Ordinal) ? itemId[prefix.Length..] : itemId;
+        return Uri.EscapeDataString(itemId);
     }
 
     private static Bitmap LoadImage(byte[] data)
@@ -244,5 +368,11 @@ public sealed class ItemIconService
         {
             Log.Debug(exception, "{LogContext} Cache cleanup failed. Path={Path}", LogContext, filePath);
         }
+    }
+
+    private sealed class MemoryCacheEntry
+    {
+        public required Bitmap Bitmap { get; init; }
+        public required LinkedListNode<string> UsageNode { get; init; }
     }
 }

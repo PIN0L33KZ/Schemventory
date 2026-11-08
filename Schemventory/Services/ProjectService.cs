@@ -86,6 +86,27 @@ internal class ProjectService
         Log.Debug("{LogContext} Project updated. ProjectId={ProjectId}, Name={ProjectName}", LogContext, project.Id, project.Name);
     }
 
+    public void UpdateLastOpened(Guid projectId)
+    {
+        using SqliteConnection connection = _databaseService.CreateConnection();
+        using SqliteCommand command = connection.CreateCommand();
+
+        command.CommandText = @"
+        UPDATE Projects
+        SET LastOpenedAtUtc = $lastOpenedAtUtc
+        WHERE Id = $id COLLATE NOCASE;";
+
+        _ = command.Parameters.AddWithValue("$lastOpenedAtUtc", DateTime.UtcNow.ToString("O"));
+
+        SqliteParameter idParameter = command.Parameters.Add("$id", SqliteType.Text);
+        idParameter.Value = projectId.ToString("D");
+
+        var affectedRows = command.ExecuteNonQuery();
+
+        if(affectedRows == 0)
+            throw new InvalidOperationException($"Project '{projectId}' does not exist.");
+    }
+
     public void Delete(Guid projectId)
     {
         using SqliteConnection connection = _databaseService.CreateConnection();

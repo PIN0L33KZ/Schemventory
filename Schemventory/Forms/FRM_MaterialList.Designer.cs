@@ -1,4 +1,5 @@
-﻿namespace Schemventory.Forms;
+﻿
+namespace Schemventory.Forms;
 
 partial class FRM_MaterialList
 {
@@ -41,6 +42,7 @@ partial class FRM_MaterialList
         LBL_ProjectName = new Label();
         PNL_MaterialList = new Schemventory.Controls.VirtualMaterialPanel();
         VSB_Main = new Guna.UI2.WinForms.Guna2VScrollBar();
+        TMR_ScrollUpdate = new System.Windows.Forms.Timer(components);
         IBN_About = new Guna.UI2.WinForms.Guna2ImageButton();
         TTP_Main = new ToolTip(components);
         BTN_AddMaterial = new Guna.UI2.WinForms.Guna2ImageButton();
@@ -95,7 +97,7 @@ partial class FRM_MaterialList
         LBL_TotalBlocks.Size = new Size(218, 20);
         LBL_TotalBlocks.TabIndex = 0;
         LBL_TotalBlocks.Text = "Total block count: BlockCount";
-        TTP_Main.SetToolTip(LBL_TotalBlocks, "Amout of blocks used in this project");
+        TTP_Main.SetToolTip(LBL_TotalBlocks, "Amout of different materials used in this project");
         // 
         // LBL_ProjectName
         // 
@@ -139,6 +141,11 @@ partial class FRM_MaterialList
         VSB_Main.ThumbStyle = Guna.UI2.WinForms.Enums.ThumbStyle.Inset;
         VSB_Main.Visible = false;
         VSB_Main.Scroll += VSB_Main_Scroll;
+        // 
+        // TMR_ScrollUpdate
+        // 
+        TMR_ScrollUpdate.Interval = 30;
+        TMR_ScrollUpdate.Tick += TMR_ScrollUpdate_Tick;
         // 
         // IBN_About
         // 
@@ -294,12 +301,13 @@ partial class FRM_MaterialList
     private Label LBL_DifferentMaterialsCount;
     private Schemventory.Controls.VirtualMaterialPanel PNL_MaterialList;
     private Guna.UI2.WinForms.Guna2VScrollBar VSB_Main;
+    private System.Windows.Forms.Timer TMR_ScrollUpdate;
     private Guna.UI2.WinForms.Guna2ImageButton IBN_About;
     private ToolTip TTP_Main;
     private Label LBL_FilterWarn;
     private Controls.FilterPanel FPN_Missing;
     private Controls.FilterPanel FPN_Replaced;
-    private Controls.FilterPanel FPN_Ignored;
     private Controls.FilterPanel FPN_Collected;
+    private Controls.FilterPanel FPN_Ignored;
     private Guna.UI2.WinForms.Guna2ImageButton BTN_AddMaterial;
 }

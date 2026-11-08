@@ -1,4 +1,5 @@
-﻿using Schemventory.App;
+﻿
+using Schemventory.App;
 using Schemventory.Forms;
 using Schemventory.Services;
 using Serilog;
@@ -20,6 +21,7 @@ public partial class MaterialControl : UserControl
     private CancellationTokenSource? _bindingCancellationTokenSource;
 
     public event EventHandler? StateChanged;
+    public event Action<ProjectMaterial>? RemoveRequested;
 
     public ProjectMaterial Material => BoundMaterial ?? throw new InvalidOperationException("No material is currently bound to this control.");
 
@@ -105,6 +107,23 @@ public partial class MaterialControl : UserControl
         PBX_MaterialIcon.Image = null;
     }
 
+    public void SuspendBinding()
+    {
+        CancelCurrentBinding();
+        _bindingVersion++;
+    }
+
+    public void SetToolTipsEnabled(bool enabled)
+    {
+        if(TTP_Main.Active == enabled)
+            return;
+
+        if(!enabled)
+            HideToolTips(this);
+
+        TTP_Main.Active = enabled;
+    }
+
     private void HoverTimer_Tick(object? sender, EventArgs e)
     {
         if(RectangleToScreen(ClientRectangle).Contains(Cursor.Position))
@@ -115,30 +134,34 @@ public partial class MaterialControl : UserControl
 
     private async void MaterialControl_Load(object sender, EventArgs e)
     {
-        if(BoundMaterial is null || _hasBeenBound)
+        ProjectMaterial? material = BoundMaterial;
+
+        if(material is null || _hasBeenBound)
             return;
 
-        await SetMaterialAsync(BoundMaterial);
+        await SetMaterialAsync(material);
     }
 
-    private void MaterialControl_DoubleClick(object? sender, EventArgs e)
+    private void MaterialControl_DoubleClick(object sender, EventArgs e)
     {
-        if(BoundMaterial is null)
+        ProjectMaterial? material = BoundMaterial;
+
+        if(material is null)
             return;
 
         try
         {
-            ProjectMaterialState previousState = Material.State;
+            ProjectMaterialState previousState = material.State;
 
-            switch(Material.State)
+            switch(material.State)
             {
                 case ProjectMaterialState.Missing:
                 case ProjectMaterialState.Replaced:
-                    MarkAsCollected();
+                    MarkAsCollected(material);
                     break;
 
                 case ProjectMaterialState.Collected:
-                    RestorePreviousState();
+                    RestorePreviousState(material);
                     break;
 
                 case ProjectMaterialState.Ignored:
@@ -146,41 +169,44 @@ public partial class MaterialControl : UserControl
                     return;
             }
 
-            ApplyMaterialState();
+            if(ReferenceEquals(BoundMaterial, material))
+                ApplyMaterialState();
+
             StateChanged?.Invoke(this, EventArgs.Empty);
 
-            Log.Information("{LogContext} Material state changed by double click. ProjectId={ProjectId}, ItemId={ItemId}, PreviousState={PreviousState}, NewState={NewState}", LogContext, Material.ProjectId, Material.ItemId, previousState, Material.State);
+            Log.Information("{LogContext} Material state changed by double click. ProjectId={ProjectId}, ItemId={ItemId}, PreviousState={PreviousState}, NewState={NewState}", LogContext, material.ProjectId, material.ItemId, previousState, material.State);
         }
         catch(Exception exception)
         {
-            Log.Error(exception, "{LogContext} Failed to change material state by double click. ProjectId={ProjectId}, ItemId={ItemId}", LogContext, Material.ProjectId, Material.ItemId);
+            Log.Error(exception, "{LogContext} Failed to change material state. ProjectId={ProjectId}, ItemId={ItemId}", LogContext, material.ProjectId, material.ItemId);
+
             _ = MessageBox.Show($"The material state could not be changed.\n\n{exception.Message}", Constants.AppName, MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
-    private void MarkAsCollected()
+    private void MarkAsCollected(ProjectMaterial material)
     {
-        _projectMaterialService.MarkCompleted(Material.ProjectId, Material.ItemId);
+        _projectMaterialService.MarkCompleted(material.ProjectId, material.ItemId);
 
-        Material.State = ProjectMaterialState.Collected;
-        Material.CollectedAmount = Material.RequiredAmount;
+        material.State = ProjectMaterialState.Collected;
+        material.CollectedAmount = material.RequiredAmount;
     }
 
-    private void RestorePreviousState()
+    private void RestorePreviousState(ProjectMaterial material)
     {
-        if(!string.IsNullOrWhiteSpace(Material.ReplacementItemId))
+        if(!string.IsNullOrWhiteSpace(material.ReplacementItemId))
         {
-            _projectMaterialService.MarkReplaced(Material.ProjectId, Material.ItemId, Material.ReplacementItemId);
+            _projectMaterialService.MarkReplaced(material.ProjectId, material.ItemId, material.ReplacementItemId);
 
-            Material.State = ProjectMaterialState.Replaced;
-            Material.CollectedAmount = 0;
+            material.State = ProjectMaterialState.Replaced;
+            material.CollectedAmount = 0;
             return;
         }
 
-        _projectMaterialService.MarkMissing(Material.ProjectId, Material.ItemId);
+        _projectMaterialService.MarkMissing(material.ProjectId, material.ItemId);
 
-        Material.State = ProjectMaterialState.Missing;
-        Material.CollectedAmount = 0;
+        material.State = ProjectMaterialState.Missing;
+        material.CollectedAmount = 0;
     }
 
     private void HoverStart(object? sender, EventArgs e)
@@ -234,29 +260,33 @@ public partial class MaterialControl : UserControl
 
     private void FillMaterialData()
     {
-        if(BoundMaterial is null)
+        ProjectMaterial? material = BoundMaterial;
+
+        if(material is null)
             return;
 
-        LBL_MaxStackSize.Text = $"Stack size: {Material.MaxStackSize}";
-        LBL_BlocksNeeded.Text = $"Total: {Material.RequiredAmount}";
+        LBL_MaxStackSize.Text = $"Stack size: {material.MaxStackSize}";
+        LBL_BlocksNeeded.Text = $"Total: {material.RequiredAmount}";
 
         ApplyMaterialState();
     }
 
     private void ApplyMaterialState()
     {
-        if(BoundMaterial is null)
+        ProjectMaterial? material = BoundMaterial;
+
+        if(material is null)
             return;
 
         ApplyDefaultColors();
 
-        LBL_MaterialName.Text = GetMaterialDisplayName();
+        LBL_MaterialName.Text = GetMaterialDisplayName(material);
 
-        switch(Material.State)
+        switch(material.State)
         {
             case ProjectMaterialState.Missing:
                 LBL_TotalFormatted.ForeColor = Constants.MissingColor;
-                LBL_TotalFormatted.Text = GetMissingText();
+                LBL_TotalFormatted.Text = GetMissingText(material);
                 PBX_StateIcon.Image = null;
                 PBX_StateIcon.Hide();
                 RegisterToolTips(this, "Double click to mark this material as collected");
@@ -264,7 +294,7 @@ public partial class MaterialControl : UserControl
 
             case ProjectMaterialState.Replaced:
                 LBL_TotalFormatted.ForeColor = Constants.ReplacedColor;
-                LBL_TotalFormatted.Text = GetMissingText();
+                LBL_TotalFormatted.Text = GetMissingText(material);
                 PBX_StateIcon.Image = Properties.Resources.Switched;
                 PBX_StateIcon.Show();
                 RegisterToolTips(this, "This material has been replaced");
@@ -299,9 +329,11 @@ public partial class MaterialControl : UserControl
 
     private Color GetStateColor()
     {
-        return BoundMaterial is null
+        ProjectMaterial? material = BoundMaterial;
+
+        return material is null
             ? Constants.DefaultColor
-            : Material.State switch
+            : material.State switch
             {
                 ProjectMaterialState.Collected => Constants.CollectedColor,
                 ProjectMaterialState.Replaced => Constants.ReplacedColor,
@@ -311,23 +343,29 @@ public partial class MaterialControl : UserControl
             };
     }
 
-    private string GetMaterialDisplayName()
+    private static string GetMaterialDisplayName(ProjectMaterial material)
     {
-        var displayName = GetDisplayName(Material.DisplayItemId);
+        var displayName = ItemIdService.GetDisplayName(material.DisplayItemId);
 
-        return !string.IsNullOrWhiteSpace(Material.ReplacementItemId) ? $"{displayName} (replaced)" : displayName;
+        return !string.IsNullOrWhiteSpace(material.ReplacementItemId)
+            ? $"{displayName} (replaced)"
+            : displayName;
     }
 
-    private string GetMissingText()
+    private static string GetMissingText(ProjectMaterial material)
     {
-        var missingAmount = Material.RemainingAmount;
-        var stacks = missingAmount / Material.MaxStackSize;
-        var blocks = missingAmount % Material.MaxStackSize;
+        var missingAmount = material.RemainingAmount;
+        var stacks = missingAmount / material.MaxStackSize;
+        var blocks = missingAmount % material.MaxStackSize;
 
         var stackText = stacks == 1 ? "Stack" : "Stacks";
         var blockText = blocks == 1 ? "Block" : "Blocks";
 
-        return stacks > 0 && blocks > 0 ? $"Missing: {stacks} {stackText} + {blocks} {blockText}" : stacks > 0 ? $"Missing: {stacks} {stackText}" : $"Missing: {blocks} {blockText}";
+        return stacks > 0 && blocks > 0
+            ? $"Missing: {stacks} {stackText} + {blocks} {blockText}"
+            : stacks > 0
+                ? $"Missing: {stacks} {stackText}"
+                : $"Missing: {blocks} {blockText}";
     }
 
     private async Task LoadMaterialIconAsync(ProjectMaterial material, int bindingVersion, CancellationToken cancellationToken)
@@ -362,15 +400,6 @@ public partial class MaterialControl : UserControl
         }
     }
 
-    private static string GetDisplayName(string itemId)
-    {
-        var name = itemId.Replace("minecraft:", "", StringComparison.Ordinal);
-
-        name = name.Replace('_', ' ');
-
-        return System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(name);
-    }
-
     private void RegisterEvents(Control control)
     {
         control.MouseEnter += HoverStart;
@@ -392,6 +421,14 @@ public partial class MaterialControl : UserControl
             RegisterToolTips(child, toolTip);
     }
 
+    private void HideToolTips(Control control)
+    {
+        TTP_Main.Hide(control);
+
+        foreach(Control child in control.Controls)
+            HideToolTips(child);
+    }
+
     private void IBN_MoreOptions_Click(object sender, EventArgs e)
     {
         if(BoundMaterial is null)
@@ -404,10 +441,15 @@ public partial class MaterialControl : UserControl
 
     private void UpdateContextMenuState()
     {
-        TMI_SetStateMissing.Visible = Material.State != ProjectMaterialState.Missing;
-        TMI_SetStateCollected.Visible = Material.State != ProjectMaterialState.Collected;
-        TMI_SetStateIgnore.Visible = Material.State != ProjectMaterialState.Ignored;
-        TMI_SetCollectedAmount.Visible = Material.State is not ProjectMaterialState.Collected and not ProjectMaterialState.Ignored;
+        ProjectMaterial? material = BoundMaterial;
+
+        if(material is null)
+            return;
+
+        TMI_SetStateMissing.Visible = material.State != ProjectMaterialState.Missing;
+        TMI_SetStateCollected.Visible = material.State != ProjectMaterialState.Collected;
+        TMI_SetStateIgnore.Visible = material.State != ProjectMaterialState.Ignored;
+        TMI_SetCollectedAmount.Visible = material.State is not ProjectMaterialState.Collected and not ProjectMaterialState.Ignored;
     }
 
     private void TMI_SetStateCollected_Click(object sender, EventArgs e)
@@ -427,123 +469,143 @@ public partial class MaterialControl : UserControl
 
     private void SetMaterialState(ProjectMaterialState state)
     {
-        if(BoundMaterial is null)
+        ProjectMaterial? material = BoundMaterial;
+
+        if(material is null)
             return;
 
-        ProjectMaterialState previousState = Material.State;
+        ProjectMaterialState previousState = material.State;
 
         try
         {
             switch(state)
             {
                 case ProjectMaterialState.Missing:
-                    _projectMaterialService.MarkMissing(Material.ProjectId, Material.ItemId);
+                    _projectMaterialService.MarkMissing(material.ProjectId, material.ItemId);
 
-                    Material.CollectedAmount = 0;
-                    Material.ReplacementItemId = null;
+                    material.CollectedAmount = 0;
+                    material.ReplacementItemId = null;
                     break;
 
                 case ProjectMaterialState.Collected:
-                    _projectMaterialService.MarkCompleted(Material.ProjectId, Material.ItemId);
+                    _projectMaterialService.MarkCompleted(material.ProjectId, material.ItemId);
 
-                    Material.CollectedAmount = Material.RequiredAmount;
+                    material.CollectedAmount = material.RequiredAmount;
                     break;
 
                 case ProjectMaterialState.Ignored:
-                    _projectMaterialService.MarkIgnored(Material.ProjectId, Material.ItemId);
+                    _projectMaterialService.MarkIgnored(material.ProjectId, material.ItemId);
 
-                    Material.CollectedAmount = 0;
-                    Material.ReplacementItemId = null;
+                    material.CollectedAmount = 0;
+                    material.ReplacementItemId = null;
                     break;
 
                 default:
                     throw new ArgumentOutOfRangeException(nameof(state), state, null);
             }
 
-            Material.State = state;
+            material.State = state;
 
-            ApplyMaterialState();
+            if(ReferenceEquals(BoundMaterial, material))
+                ApplyMaterialState();
+
             StateChanged?.Invoke(this, EventArgs.Empty);
 
-            Log.Information("{LogContext} Material state changed. ProjectId={ProjectId}, ItemId={ItemId}, PreviousState={PreviousState}, NewState={NewState}", LogContext, Material.ProjectId, Material.ItemId, previousState, Material.State);
+            Log.Information("{LogContext} Material state changed. ProjectId={ProjectId}, ItemId={ItemId}, PreviousState={PreviousState}, NewState={NewState}", LogContext, material.ProjectId, material.ItemId, previousState, material.State);
         }
         catch(Exception exception)
         {
-            Log.Error(exception, "{LogContext} Failed to change material state. ProjectId={ProjectId}, ItemId={ItemId}, RequestedState={RequestedState}", LogContext, Material.ProjectId, Material.ItemId, state);
+            Log.Error(exception, "{LogContext} Failed to change material state. ProjectId={ProjectId}, ItemId={ItemId}, RequestedState={RequestedState}", LogContext, material.ProjectId, material.ItemId, state);
+
             _ = MessageBox.Show($"The material state could not be changed.\n\n{exception.Message}", Constants.AppName, MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
     private void TMI_SetCollectedAmount_Click(object sender, EventArgs e)
     {
-        if(BoundMaterial is null || Material.State == ProjectMaterialState.Ignored)
+        ProjectMaterial? material = BoundMaterial;
+
+        if(material is null || material.State == ProjectMaterialState.Ignored)
             return;
 
-        using FRM_AdjustCollectedAmount form = new(Material);
+        using FRM_AdjustCollectedAmount form = new(material);
 
         if(form.ShowDialog(this) != DialogResult.OK)
         {
-            Log.Debug("{LogContext} Collected amount adjustment cancelled. ProjectId={ProjectId}, ItemId={ItemId}", LogContext, Material.ProjectId, Material.ItemId);
+            Log.Debug("{LogContext} Collected amount adjustment cancelled. ProjectId={ProjectId}, ItemId={ItemId}", LogContext, material.ProjectId, material.ItemId);
+
             return;
         }
 
         if(form.AmountChange == 0)
             return;
 
-        var newCollectedAmount = Math.Clamp(Material.CollectedAmount + form.AmountChange, 0, Material.RequiredAmount);
+        var newCollectedAmount = Math.Clamp(material.CollectedAmount + form.AmountChange, 0, material.RequiredAmount);
 
-        SetCollectedAmount(newCollectedAmount);
+        SetCollectedAmount(material, newCollectedAmount);
     }
 
-    private void SetCollectedAmount(long collectedAmount)
+    private void SetCollectedAmount(ProjectMaterial material, long collectedAmount)
     {
         try
         {
-            var previousAmount = Material.CollectedAmount;
+            var previousAmount = material.CollectedAmount;
 
-            _projectMaterialService.UpdateCollectedAmount(Material.ProjectId, Material.ItemId, collectedAmount);
+            _projectMaterialService.UpdateCollectedAmount(material.ProjectId, material.ItemId, collectedAmount);
 
-            Material.CollectedAmount = collectedAmount;
-            Material.State = Material.CollectedAmount >= Material.RequiredAmount ? ProjectMaterialState.Collected : !string.IsNullOrWhiteSpace(Material.ReplacementItemId) ? ProjectMaterialState.Replaced : ProjectMaterialState.Missing;
+            material.CollectedAmount = collectedAmount;
+            material.State = material.CollectedAmount >= material.RequiredAmount
+                ? ProjectMaterialState.Collected
+                : !string.IsNullOrWhiteSpace(material.ReplacementItemId)
+                    ? ProjectMaterialState.Replaced
+                    : ProjectMaterialState.Missing;
 
-            ApplyMaterialState();
+            if(ReferenceEquals(BoundMaterial, material))
+                ApplyMaterialState();
+
             StateChanged?.Invoke(this, EventArgs.Empty);
 
-            Log.Information("{LogContext} Collected amount changed. ProjectId={ProjectId}, ItemId={ItemId}, PreviousAmount={PreviousAmount}, NewAmount={NewAmount}", LogContext, Material.ProjectId, Material.ItemId, previousAmount, collectedAmount);
+            Log.Information("{LogContext} Collected amount changed. ProjectId={ProjectId}, ItemId={ItemId}, PreviousAmount={PreviousAmount}, NewAmount={NewAmount}", LogContext, material.ProjectId, material.ItemId, previousAmount, collectedAmount);
         }
         catch(Exception exception)
         {
-            Log.Error(exception, "{LogContext} Failed to change collected amount. ProjectId={ProjectId}, ItemId={ItemId}, RequestedAmount={RequestedAmount}", LogContext, Material.ProjectId, Material.ItemId, collectedAmount);
+            Log.Error(exception, "{LogContext} Failed to change collected amount. ProjectId={ProjectId}, ItemId={ItemId}, RequestedAmount={RequestedAmount}", LogContext, material.ProjectId, material.ItemId, collectedAmount);
+
             _ = MessageBox.Show($"The collected amount could not be changed.\n\n{exception.Message}", Constants.AppName, MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
     private async void TMI_ReplaceMaterial_Click(object sender, EventArgs e)
     {
-        if(BoundMaterial is null)
+        ProjectMaterial? material = BoundMaterial;
+
+        if(material is null)
             return;
 
         try
         {
-            using FRM_ReplaceMaterial form = new(Material, _itemDataProvider, _itemIconService);
+            using FRM_ReplaceMaterial form = new(material, _itemDataProvider, _itemIconService);
 
             if(form.ShowDialog(this) != DialogResult.OK)
             {
-                Log.Debug("{LogContext} Material replacement cancelled. ProjectId={ProjectId}, ItemId={ItemId}", LogContext, Material.ProjectId, Material.ItemId);
+                Log.Debug("{LogContext} Material replacement cancelled. ProjectId={ProjectId}, ItemId={ItemId}", LogContext, material.ProjectId, material.ItemId);
+
                 return;
             }
 
             if(form.ResetRequested)
             {
-                var previousReplacementItemId = Material.ReplacementItemId;
+                var previousReplacementItemId = material.ReplacementItemId;
 
-                ResetReplacement();
+                ResetReplacement(material);
 
-                await RefreshMaterialAsync();
+                if(ReferenceEquals(BoundMaterial, material))
+                    await SetMaterialAsync(material);
 
                 StateChanged?.Invoke(this, EventArgs.Empty);
 
-                Log.Information("{LogContext} Material replacement reset. ProjectId={ProjectId}, ItemId={ItemId}, PreviousReplacementItemId={PreviousReplacementItemId}", LogContext, Material.ProjectId, Material.ItemId, previousReplacementItemId);
+                Log.Information("{LogContext} Material replacement reset. ProjectId={ProjectId}, ItemId={ItemId}, PreviousReplacementItemId={PreviousReplacementItemId}", LogContext, material.ProjectId, material.ItemId, previousReplacementItemId);
+
                 return;
             }
 
@@ -552,31 +614,25 @@ public partial class MaterialControl : UserControl
 
             var replacementItemId = form.ReplacementItemId;
 
-            _projectMaterialService.MarkReplaced(Material.ProjectId, Material.ItemId, replacementItemId);
+            _projectMaterialService.MarkReplaced(material.ProjectId, material.ItemId, replacementItemId);
 
-            Material.State = ProjectMaterialState.Replaced;
-            Material.ReplacementItemId = replacementItemId;
-            Material.CollectedAmount = 0;
+            material.State = ProjectMaterialState.Replaced;
+            material.ReplacementItemId = replacementItemId;
+            material.CollectedAmount = 0;
 
-            await RefreshMaterialAsync();
+            if(ReferenceEquals(BoundMaterial, material))
+                await SetMaterialAsync(material);
 
             StateChanged?.Invoke(this, EventArgs.Empty);
 
-            Log.Information("{LogContext} Material replaced. ProjectId={ProjectId}, ItemId={ItemId}, ReplacementItemId={ReplacementItemId}", LogContext, Material.ProjectId, Material.ItemId, replacementItemId);
+            Log.Information("{LogContext} Material replaced. ProjectId={ProjectId}, ItemId={ItemId}, ReplacementItemId={ReplacementItemId}", LogContext, material.ProjectId, material.ItemId, replacementItemId);
         }
         catch(Exception exception)
         {
-            Log.Error(exception, "{LogContext} Failed to replace material. ProjectId={ProjectId}, ItemId={ItemId}", LogContext, Material.ProjectId, Material.ItemId);
+            Log.Error(exception, "{LogContext} Failed to replace material. ProjectId={ProjectId}, ItemId={ItemId}", LogContext, material.ProjectId, material.ItemId);
+
             _ = MessageBox.Show($"The material could not be replaced.\n\n{exception.Message}", Constants.AppName, MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
-    }
-
-    private async Task RefreshMaterialAsync()
-    {
-        if(BoundMaterial is null)
-            return;
-
-        await SetMaterialAsync(BoundMaterial);
     }
 
     private void CancelCurrentBinding()
@@ -589,13 +645,13 @@ public partial class MaterialControl : UserControl
         _bindingCancellationTokenSource = null;
     }
 
-    private void ResetReplacement()
+    private void ResetReplacement(ProjectMaterial material)
     {
-        _projectMaterialService.MarkMissing(Material.ProjectId, Material.ItemId);
+        _projectMaterialService.MarkMissing(material.ProjectId, material.ItemId);
 
-        Material.State = ProjectMaterialState.Missing;
-        Material.ReplacementItemId = null;
-        Material.CollectedAmount = 0;
+        material.State = ProjectMaterialState.Missing;
+        material.ReplacementItemId = null;
+        material.CollectedAmount = 0;
     }
 
     private void MaterialControl_Disposed(object? sender, EventArgs e)
@@ -609,5 +665,15 @@ public partial class MaterialControl : UserControl
 
         PBX_MaterialIcon.Image?.Dispose();
         PBX_MaterialIcon.Image = null;
+    }
+
+    private void TMI_RemoveMaterial_Click(object sender, EventArgs e)
+    {
+        ProjectMaterial? material = BoundMaterial;
+
+        if(material is null)
+            return;
+
+        RemoveRequested?.Invoke(material);
     }
 }
