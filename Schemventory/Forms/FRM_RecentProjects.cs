@@ -23,6 +23,7 @@ public partial class FRM_RecentProjects : Form
 
         Text = WindowName;
         LBL_AppTitle.Text = Constants.AppName;
+        LBL_AppVersion.Text = $"Version: {Application.ProductVersion}";
 
         _databaseService = databaseService;
         _projectService = new ProjectService(databaseService);
