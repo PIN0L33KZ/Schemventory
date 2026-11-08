@@ -20,6 +20,7 @@ public partial class FRM_MaterialList : Form
     private IReadOnlyCollection<ProjectMaterial> _materials = [];
     private List<ProjectMaterial> _viewMaterials = [];
     private bool _loadingFilterSettings;
+    private int? _pendingScrollOffset;
 
     public FRM_MaterialList(DatabaseService databaseService, Project project, ItemIconService itemIconService, ItemDataProvider itemDataProvider)
     {
@@ -200,6 +201,8 @@ public partial class FRM_MaterialList : Form
 
     private void ApplyMaterialView(bool resetScrollPosition)
     {
+        CancelPendingScrollUpdate();
+
         _viewMaterials = _materials
             .Where(ShouldShowMaterial)
             .OrderBy(x => GetStateSortOrder(x.State))
@@ -259,24 +262,58 @@ public partial class FRM_MaterialList : Form
         VSB_Main.Visible = PNL_MaterialList.Visible && maximumValue > 0;
     }
 
+    private void QueueScrollUpdate(int scrollOffset)
+    {
+        var targetOffset = Math.Clamp(scrollOffset, VSB_Main.Minimum, PNL_MaterialList.MaximumScrollOffset);
+
+        if(_pendingScrollOffset == targetOffset)
+            return;
+
+        if(_pendingScrollOffset is null && targetOffset == PNL_MaterialList.ScrollOffset)
+            return;
+
+        _pendingScrollOffset = targetOffset;
+
+        if(VSB_Main.Value != targetOffset)
+            VSB_Main.Value = targetOffset;
+
+        if(!TMR_ScrollUpdate.Enabled)
+            TMR_ScrollUpdate.Start();
+    }
+
+    private void CancelPendingScrollUpdate()
+    {
+        TMR_ScrollUpdate.Stop();
+        _pendingScrollOffset = null;
+    }
+
+    private void TMR_ScrollUpdate_Tick(object? sender, EventArgs e)
+    {
+        TMR_ScrollUpdate.Stop();
+
+        if(_pendingScrollOffset is not int scrollOffset)
+            return;
+
+        _pendingScrollOffset = null;
+        PNL_MaterialList.SetScrollOffset(scrollOffset);
+    }
+
     private void VSB_Main_Scroll(object? sender, ScrollEventArgs e)
     {
-        PNL_MaterialList.SetScrollOffset(e.NewValue);
+        QueueScrollUpdate(e.NewValue);
     }
 
     private void PNL_MaterialList_MouseWheelScrollRequested(int pixelDelta)
     {
-        var newValue = Math.Clamp(VSB_Main.Value + pixelDelta, VSB_Main.Minimum, PNL_MaterialList.MaximumScrollOffset);
+        var currentOffset = _pendingScrollOffset ?? VSB_Main.Value;
+        var newOffset = Math.Clamp(currentOffset + pixelDelta, VSB_Main.Minimum, PNL_MaterialList.MaximumScrollOffset);
 
-        if(newValue == VSB_Main.Value)
-            return;
-
-        VSB_Main.Value = newValue;
-        PNL_MaterialList.SetScrollOffset(newValue);
+        QueueScrollUpdate(newOffset);
     }
 
     private void PNL_MaterialList_ScrollMetricsChanged(object? sender, EventArgs e)
     {
+        CancelPendingScrollUpdate();
         UpdateScrollBar();
     }
 
@@ -321,11 +358,13 @@ public partial class FRM_MaterialList : Form
 
     private void FRM_MaterialList_ResizeBegin(object sender, EventArgs e)
     {
+        CancelPendingScrollUpdate();
         PNL_MaterialList.SuspendVirtualLayout();
     }
 
     private void FRM_MaterialList_ResizeEnd(object sender, EventArgs e)
     {
+        CancelPendingScrollUpdate();
         PNL_MaterialList.ResumeVirtualLayout();
         UpdateScrollBar();
     }
@@ -338,7 +377,7 @@ public partial class FRM_MaterialList : Form
 
         if(addMaterialForm.ShowDialog(this) != DialogResult.OK || string.IsNullOrWhiteSpace(addMaterialForm.SelectedItemId))
         {
-            Log.Debug("{LogContext} Add material dialog cancelled. ProjectId={ProjectId}", LogContext, _project.Id);
+            Log.Debug("{LogContext} Add material dialog cancelled. ProjectId={ProjectId}, ItemId={ItemId}", LogContext, _project.Id, addMaterialForm.SelectedItemId);
             return;
         }
 
