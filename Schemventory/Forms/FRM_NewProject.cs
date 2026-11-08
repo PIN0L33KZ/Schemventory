@@ -199,6 +199,7 @@ public partial class FRM_NewProject : Form
                 : "A schematic file will be added to this project.\n\n" +
                   "Adding a schematic will replace the current material list, including manually added materials.\n\n" +
                   "Do you want to continue?";
+
         DialogResult result = MessageBox.Show(
             message,
             $"Change schematic - {Constants.AppName}",
@@ -274,6 +275,16 @@ public partial class FRM_NewProject : Form
 
             return false;
         }
+
+        var schematicChanged = !IsEditMode ||
+                               _currentProject is null ||
+                               !string.Equals(
+                                   _currentProject.SchematicPath,
+                                   schematicFilePath,
+                                   StringComparison.OrdinalIgnoreCase);
+
+        if(!schematicChanged)
+            return true;
 
         if(!File.Exists(schematicFilePath))
         {

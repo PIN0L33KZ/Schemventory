@@ -67,7 +67,7 @@ public partial class FRM_RecentProjects : Form
 
         try
         {
-            PNL_RecentProjectControls.Controls.Clear();
+            DisposeProjectControls();
             List<ProjectControl> projectControls = GetProjectControls();
 
             if(projectControls.Count > 0)
@@ -92,6 +92,17 @@ public partial class FRM_RecentProjects : Form
         finally
         {
             PNL_RecentProjectControls.ResumeLayout();
+        }
+    }
+
+    private void DisposeProjectControls()
+    {
+        while(PNL_RecentProjectControls.Controls.Count > 0)
+        {
+            Control control = PNL_RecentProjectControls.Controls[0];
+
+            PNL_RecentProjectControls.Controls.RemoveAt(0);
+            control.Dispose();
         }
     }
 

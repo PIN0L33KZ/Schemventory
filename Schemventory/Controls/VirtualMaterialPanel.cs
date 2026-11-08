@@ -140,10 +140,20 @@ public sealed class VirtualMaterialPanel : Panel
     {
         base.OnPaint(eventArgs);
 
-        if(!_resizeSuspended || _resizeSnapshot is null)
+        if(!_resizeSuspended ||
+           _resizeSnapshot is null ||
+           ClientSize.Width <= 0 ||
+           ClientSize.Height <= 0)
+        {
             return;
+        }
 
-        eventArgs.Graphics.DrawImageUnscaled(_resizeSnapshot, Point.Empty);
+        // Keep the captured material list at its original size during resize.
+        // Enlarged areas are painted with the panel background instead of
+        // stretching the snapshot and distorting the material controls.
+        eventArgs.Graphics.DrawImageUnscaled(
+            _resizeSnapshot,
+            Point.Empty);
     }
 
     protected override void OnMouseWheel(MouseEventArgs eventArgs)
@@ -483,12 +493,9 @@ public sealed class VirtualMaterialPanel : Panel
         if(_resizeSuspended)
             return;
 
-        // Capture the fully rendered panel before child controls are hidden.
         CreateResizeSnapshot();
 
         _resizeSuspended = true;
-
-        // Invalidate every refresh that started before the resize.
         _refreshVersion++;
 
         SuspendLayout();
@@ -527,8 +534,6 @@ public sealed class VirtualMaterialPanel : Panel
 
         ScrollRow = Math.Min(ScrollRow, MaximumScrollRow);
 
-        // Bind all visible controls again because their previous asynchronous
-        // bindings were intentionally cancelled when the resize started.
         RefreshVisibleControls(forceRebind: true);
 
         _resizeSnapshot?.Dispose();
