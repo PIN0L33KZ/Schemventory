@@ -1,4 +1,5 @@
-﻿using Schemventory.App;
+﻿
+using Schemventory.App;
 using Schemventory.Controls;
 using Schemventory.Data;
 using Schemventory.Services;
@@ -85,20 +86,11 @@ public partial class FRM_MaterialList : Form
 
     private void MaterialControl_RemoveRequested(ProjectMaterial material)
     {
-        DialogResult result = MessageBox.Show(
-            $"Do you really want to remove '{ItemIdService.GetDisplayName(material.ItemId)}' from this project?\n\n" +
-            "This action cannot be undone.",
-            $"Remove material - {Constants.AppName}",
-            MessageBoxButtons.YesNo,
-            MessageBoxIcon.Warning);
+        DialogResult result = MessageBox.Show($"Do you really want to remove '{ItemIdService.GetDisplayName(material.ItemId)}' from this project?\n\n" + "This action cannot be undone.", $"Remove material - {Constants.AppName}", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
 
         if(result != DialogResult.Yes)
         {
-            Log.Debug(
-                "{LogContext} Material removal cancelled. ProjectId={ProjectId}, ItemId={ItemId}",
-                LogContext,
-                material.ProjectId,
-                material.ItemId);
+            Log.Debug("{LogContext} Material removal cancelled. ProjectId={ProjectId}, ItemId={ItemId}", LogContext, material.ProjectId, material.ItemId);
 
             return;
         }
@@ -111,26 +103,13 @@ public partial class FRM_MaterialList : Form
             ApplyMaterialView(resetScrollPosition: false);
             UpdateStatistics();
 
-            Log.Information(
-                "{LogContext} Material removed. ProjectId={ProjectId}, ItemId={ItemId}",
-                LogContext,
-                material.ProjectId,
-                material.ItemId);
+            Log.Information("{LogContext} Material removed. ProjectId={ProjectId}, ItemId={ItemId}", LogContext, material.ProjectId, material.ItemId);
         }
         catch(Exception exception)
         {
-            Log.Error(
-                exception,
-                "{LogContext} Failed to remove material. ProjectId={ProjectId}, ItemId={ItemId}",
-                LogContext,
-                material.ProjectId,
-                material.ItemId);
+            Log.Error(exception, "{LogContext} Failed to remove material. ProjectId={ProjectId}, ItemId={ItemId}", LogContext, material.ProjectId, material.ItemId);
 
-            _ = MessageBox.Show(
-                $"The material could not be removed.\n\n{exception.Message}",
-                Constants.AppName,
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Error);
+            _ = MessageBox.Show($"The material could not be removed.\n\n{exception.Message}", Constants.AppName, MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
@@ -263,16 +242,16 @@ public partial class FRM_MaterialList : Form
 
     private void UpdateScrollBar()
     {
-        var totalRows = PNL_MaterialList.TotalRows;
-        var viewportRows = Math.Max(1, PNL_MaterialList.ViewportRows);
+        var contentHeight = PNL_MaterialList.ContentHeight;
+        var viewportHeight = Math.Max(1, PNL_MaterialList.ViewportHeight);
 
         VSB_Main.Minimum = 0;
-        VSB_Main.Maximum = Math.Max(0, totalRows - 1);
-        VSB_Main.LargeChange = viewportRows;
-        VSB_Main.SmallChange = 1;
+        VSB_Main.Maximum = Math.Max(0, contentHeight - 1);
+        VSB_Main.LargeChange = viewportHeight;
+        VSB_Main.SmallChange = PNL_MaterialList.ScrollStep;
 
-        var maximumValue = PNL_MaterialList.MaximumScrollRow;
-        var scrollValue = Math.Clamp(PNL_MaterialList.ScrollRow, 0, maximumValue);
+        var maximumValue = PNL_MaterialList.MaximumScrollOffset;
+        var scrollValue = Math.Clamp(PNL_MaterialList.ScrollOffset, 0, maximumValue);
 
         if(VSB_Main.Value != scrollValue)
             VSB_Main.Value = scrollValue;
@@ -282,18 +261,18 @@ public partial class FRM_MaterialList : Form
 
     private void VSB_Main_Scroll(object? sender, ScrollEventArgs e)
     {
-        PNL_MaterialList.SetScrollRow(e.NewValue);
+        PNL_MaterialList.SetScrollOffset(e.NewValue);
     }
 
-    private void PNL_MaterialList_MouseWheelScrollRequested(int rowDelta)
+    private void PNL_MaterialList_MouseWheelScrollRequested(int pixelDelta)
     {
-        var newValue = Math.Clamp(VSB_Main.Value + rowDelta, VSB_Main.Minimum, PNL_MaterialList.MaximumScrollRow);
+        var newValue = Math.Clamp(VSB_Main.Value + pixelDelta, VSB_Main.Minimum, PNL_MaterialList.MaximumScrollOffset);
 
         if(newValue == VSB_Main.Value)
             return;
 
         VSB_Main.Value = newValue;
-        PNL_MaterialList.SetScrollRow(newValue);
+        PNL_MaterialList.SetScrollOffset(newValue);
     }
 
     private void PNL_MaterialList_ScrollMetricsChanged(object? sender, EventArgs e)
@@ -303,7 +282,7 @@ public partial class FRM_MaterialList : Form
 
     private void PNL_MaterialList_ScrollPositionChanged(object? sender, EventArgs e)
     {
-        var scrollValue = Math.Clamp(PNL_MaterialList.ScrollRow, 0, PNL_MaterialList.MaximumScrollRow);
+        var scrollValue = Math.Clamp(PNL_MaterialList.ScrollOffset, 0, PNL_MaterialList.MaximumScrollOffset);
 
         if(VSB_Main.Value != scrollValue)
             VSB_Main.Value = scrollValue;
@@ -325,11 +304,7 @@ public partial class FRM_MaterialList : Form
         {
             Log.Error(exception, "{LogContext} Failed to save project filter settings. ProjectId={ProjectId}", LogContext, _project.Id);
 
-            _ = MessageBox.Show(
-                $"The filter settings could not be saved.\n\n{exception.Message}",
-                Constants.AppName,
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Error);
+            _ = MessageBox.Show($"The filter settings could not be saved.\n\n{exception.Message}", Constants.AppName, MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
 
         ApplyMaterialView(resetScrollPosition: true);
