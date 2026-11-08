@@ -357,11 +357,7 @@ public sealed class VirtualMaterialPanel : Panel
             _ = CompleteRefreshAsync(bindingTasks, refreshVersion);
     }
 
-    private void BindControl(
-        MaterialControl materialControl,
-        int materialIndex,
-        List<Task> bindingTasks,
-        bool forceRebind = false)
+    private void BindControl(MaterialControl materialControl, int materialIndex, List<Task> bindingTasks, bool forceRebind = false)
     {
         if(_resizeSuspended)
             return;

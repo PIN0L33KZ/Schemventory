@@ -1,4 +1,5 @@
-﻿using Schemventory.App;
+﻿
+using Schemventory.App;
 using Schemventory.Data;
 using Serilog;
 using System.Net;
@@ -73,10 +74,7 @@ public sealed class ItemDataProvider
                _itemsById is not null &&
                DateTime.UtcNow < _retryAfterUtc)
             {
-                Log.Debug(
-                    "{LogContext} Skipping item data reload during retry cooldown. RetryAfterUtc={RetryAfterUtc}",
-                    LogContext,
-                    _retryAfterUtc);
+                Log.Debug("{LogContext} Skipping item data reload during retry cooldown. RetryAfterUtc={RetryAfterUtc}", LogContext, _retryAfterUtc);
 
                 return;
             }
@@ -103,14 +101,12 @@ public sealed class ItemDataProvider
                 {
                     if(cacheLoaded)
                     {
-                        _ = await TryWriteCacheMetadataAsync(
-                            new CacheMetadata
-                            {
-                                LastCheckedUtc = DateTime.UtcNow,
-                                ETag = refreshResult.ETag ?? metadata?.ETag,
-                                LastModified = refreshResult.LastModified ?? metadata?.LastModified
-                            },
-                            cancellationToken);
+                        _ = await TryWriteCacheMetadataAsync(new CacheMetadata
+                        {
+                            LastCheckedUtc = DateTime.UtcNow,
+                            ETag = refreshResult.ETag ?? metadata?.ETag,
+                            LastModified = refreshResult.LastModified ?? metadata?.LastModified
+                        }, cancellationToken);
 
                         MarkLoadedSuccessfully();
 
@@ -129,25 +125,19 @@ public sealed class ItemDataProvider
 
                     if(cachePersisted)
                     {
-                        _ = await TryWriteCacheMetadataAsync(
-                            new CacheMetadata
-                            {
-                                LastCheckedUtc = DateTime.UtcNow,
-                                ETag = refreshResult.ETag,
-                                LastModified = refreshResult.LastModified
-                            },
-                            cancellationToken);
+                        _ = await TryWriteCacheMetadataAsync(new CacheMetadata
+                        {
+                            LastCheckedUtc = DateTime.UtcNow,
+                            ETag = refreshResult.ETag,
+                            LastModified = refreshResult.LastModified
+                        }, cancellationToken);
 
                         TryDeleteLegacyCache();
                     }
 
                     MarkLoadedSuccessfully();
 
-                    Log.Information(
-                        "{LogContext} Item data updated from remote source. ItemCount={ItemCount}, CachePersisted={CachePersisted}",
-                        LogContext,
-                        _items?.Count ?? 0,
-                        cachePersisted);
+                    Log.Information("{LogContext} Item data updated from remote source. ItemCount={ItemCount}, CachePersisted={CachePersisted}", LogContext, _items?.Count ?? 0, cachePersisted);
 
                     return;
                 }
@@ -156,7 +146,8 @@ public sealed class ItemDataProvider
             {
                 if(cacheLoaded)
                 {
-                    MarkLoadedSuccessfully();
+                    _loadedSuccessfully = false;
+                    _retryAfterUtc = DateTime.UtcNow.Add(FailedLoadRetryDelay);
 
                     Log.Warning(exception, "{LogContext} Item data refresh failed. Existing cache will be used.", LogContext);
                     return;
@@ -168,7 +159,8 @@ public sealed class ItemDataProvider
             {
                 if(cacheLoaded)
                 {
-                    MarkLoadedSuccessfully();
+                    _loadedSuccessfully = false;
+                    _retryAfterUtc = DateTime.UtcNow.Add(FailedLoadRetryDelay);
 
                     Log.Warning(exception, "{LogContext} Item data refresh timed out. Existing cache will be used.", LogContext);
                     return;
@@ -182,10 +174,7 @@ public sealed class ItemDataProvider
             _loadedSuccessfully = false;
             _retryAfterUtc = DateTime.UtcNow.Add(FailedLoadRetryDelay);
 
-            Log.Warning(
-                "{LogContext} Item data provider initialised with an empty data set. NextRetryUtc={NextRetryUtc}",
-                LogContext,
-                _retryAfterUtc);
+            Log.Warning("{LogContext} Item data provider initialised with an empty data set. NextRetryUtc={NextRetryUtc}", LogContext, _retryAfterUtc);
         }
         finally
         {
@@ -250,21 +239,15 @@ public sealed class ItemDataProvider
 
             if(cachePersisted)
             {
-                _ = await TryWriteCacheMetadataAsync(
-                    new CacheMetadata
-                    {
-                        LastCheckedUtc = File.GetLastWriteTimeUtc(_legacyCacheFilePath)
-                    },
-                    cancellationToken);
+                _ = await TryWriteCacheMetadataAsync(new CacheMetadata
+                {
+                    LastCheckedUtc = File.GetLastWriteTimeUtc(_legacyCacheFilePath)
+                }, cancellationToken);
 
                 TryDeleteLegacyCache();
             }
 
-            Log.Information(
-                "{LogContext} Legacy item data cache loaded. ItemCount={ItemCount}, CachePersisted={CachePersisted}",
-                LogContext,
-                _items?.Count ?? 0,
-                cachePersisted);
+            Log.Information("{LogContext} Legacy item data cache loaded. ItemCount={ItemCount}, CachePersisted={CachePersisted}", LogContext, _items?.Count ?? 0, cachePersisted);
 
             return true;
         }
