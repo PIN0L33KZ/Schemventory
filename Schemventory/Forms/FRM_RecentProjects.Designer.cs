@@ -127,7 +127,7 @@ partial class FRM_RecentProjects
         PNL_RecentProjectControls.Location = new Point(12, 164);
         PNL_RecentProjectControls.Name = "PNL_RecentProjectControls";
         PNL_RecentProjectControls.Size = new Size(383, 411);
-        PNL_RecentProjectControls.TabIndex = 1;
+        PNL_RecentProjectControls.TabIndex = 0;
         // 
         // VSB_Main
         // 

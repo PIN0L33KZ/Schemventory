@@ -9,7 +9,7 @@
 	<Identity
 		Name="29897PIN0L33KZ.21632EBE5B72C"
 		Publisher="CN=EFAEC772-46BA-4D61-B0A7-77125C707AA4"
-		Version="1.0.0.0" />
+		Version="1.1.0.0" />
 
 	<Properties>
 		<DisplayName>Schemventory</DisplayName>

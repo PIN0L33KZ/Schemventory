@@ -46,6 +46,8 @@ partial class AppTheme
         Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges15 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
         Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges16 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
         Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges17 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
+        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges18 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
+        Guna.UI2.WinForms.Suite.CustomizableEdges customizableEdges19 = new Guna.UI2.WinForms.Suite.CustomizableEdges();
         BTN_Primary = new Guna.UI2.WinForms.Guna2Button();
         BTN_Secondary = new Guna.UI2.WinForms.Guna2Button();
         TBX_Input = new Guna.UI2.WinForms.Guna2TextBox();
@@ -65,6 +67,9 @@ partial class AppTheme
         RBN_Select1 = new Guna.UI2.WinForms.Guna2RadioButton();
         PGI_Loading = new Guna.UI2.WinForms.Guna2WinProgressIndicator();
         PNL_Background = new Guna.UI2.WinForms.Guna2Panel();
+        HSB_Main = new Guna.UI2.WinForms.Guna2HScrollBar();
+        LLB_Link1 = new LinkLabel();
+        guna2ComboBox1 = new Guna.UI2.WinForms.Guna2ComboBox();
         ((System.ComponentModel.ISupportInitialize)NUD_Number).BeginInit();
         SuspendLayout();
         // 
@@ -75,7 +80,6 @@ partial class AppTheme
         BTN_Primary.BorderRadius = 5;
         BTN_Primary.Cursor = Cursors.Hand;
         BTN_Primary.CustomizableEdges = customizableEdges1;
-        BTN_Primary.DialogResult = DialogResult.OK;
         BTN_Primary.DisabledState.BorderColor = Color.FromArgb(80, 76, 76);
         BTN_Primary.DisabledState.CustomBorderColor = Color.FromArgb(80, 76, 76);
         BTN_Primary.DisabledState.FillColor = Color.FromArgb(80, 76, 76);
@@ -209,7 +213,6 @@ partial class AppTheme
         BTN_SelectFilePath.BorderThickness = 2;
         BTN_SelectFilePath.Cursor = Cursors.Hand;
         BTN_SelectFilePath.CustomizableEdges = customizableEdges9;
-        BTN_SelectFilePath.DialogResult = DialogResult.OK;
         BTN_SelectFilePath.DisabledState.BorderColor = Color.FromArgb(80, 76, 76);
         BTN_SelectFilePath.DisabledState.CustomBorderColor = Color.FromArgb(80, 76, 76);
         BTN_SelectFilePath.DisabledState.FillColor = Color.FromArgb(80, 76, 76);
@@ -419,11 +422,76 @@ partial class AppTheme
         PNL_Background.TabIndex = 0;
         PNL_Background.UseTransparentBackground = true;
         // 
+        // HSB_Main
+        // 
+        HSB_Main.BackColor = Color.Transparent;
+        HSB_Main.BorderRadius = 5;
+        HSB_Main.FillColor = Color.FromArgb(80, 76, 76);
+        HSB_Main.InUpdate = false;
+        HSB_Main.LargeChange = 10;
+        HSB_Main.Location = new Point(30, 526);
+        HSB_Main.Name = "HSB_Main";
+        HSB_Main.ScrollbarSize = 18;
+        HSB_Main.Size = new Size(300, 18);
+        HSB_Main.TabIndex = 0;
+        HSB_Main.TabStop = false;
+        HSB_Main.ThumbColor = Color.FromArgb(103, 99, 99);
+        HSB_Main.ThumbSize = 5F;
+        HSB_Main.ThumbStyle = Guna.UI2.WinForms.Enums.ThumbStyle.Inset;
+        // 
+        // LLB_Link1
+        // 
+        LLB_Link1.ActiveLinkColor = Color.FromArgb(255, 82, 82);
+        LLB_Link1.AutoSize = true;
+        LLB_Link1.Cursor = Cursors.Help;
+        LLB_Link1.Font = new Font("Leelawadee UI", 11.25F, FontStyle.Regular, GraphicsUnit.Point, 0);
+        LLB_Link1.ForeColor = Color.FromArgb(235, 234, 234);
+        LLB_Link1.LinkBehavior = LinkBehavior.HoverUnderline;
+        LLB_Link1.LinkColor = Color.FromArgb(162, 123, 90);
+        LLB_Link1.Location = new Point(98, 158);
+        LLB_Link1.Margin = new Padding(0, 0, 3, 0);
+        LLB_Link1.Name = "LLB_Link1";
+        LLB_Link1.Size = new Size(35, 20);
+        LLB_Link1.TabIndex = 0;
+        LLB_Link1.Text = "Link";
+        LLB_Link1.TextAlign = ContentAlignment.MiddleCenter;
+        LLB_Link1.VisitedLinkColor = Color.FromArgb(194, 165, 142);
+        // 
+        // guna2ComboBox1
+        // 
+        guna2ComboBox1.BackColor = Color.Transparent;
+        guna2ComboBox1.BorderColor = Color.FromArgb(103, 99, 99);
+        guna2ComboBox1.BorderRadius = 5;
+        guna2ComboBox1.BorderThickness = 2;
+        guna2ComboBox1.Cursor = Cursors.Hand;
+        guna2ComboBox1.CustomizableEdges = customizableEdges18;
+        guna2ComboBox1.DisabledState.BorderColor = Color.FromArgb(80, 76, 76);
+        guna2ComboBox1.DisabledState.FillColor = Color.FromArgb(80, 76, 76);
+        guna2ComboBox1.DisabledState.ForeColor = Color.FromArgb(151, 148, 148);
+        guna2ComboBox1.DrawMode = DrawMode.OwnerDrawFixed;
+        guna2ComboBox1.DropDownStyle = ComboBoxStyle.DropDownList;
+        guna2ComboBox1.FillColor = Color.FromArgb(58, 55, 55);
+        guna2ComboBox1.FocusedColor = Color.FromArgb(162, 123, 90);
+        guna2ComboBox1.FocusedState.BorderColor = Color.FromArgb(162, 123, 90);
+        guna2ComboBox1.Font = new Font("Leelawadee UI", 11.25F, FontStyle.Regular, GraphicsUnit.Point, 0);
+        guna2ComboBox1.ForeColor = Color.FromArgb(235, 234, 234);
+        guna2ComboBox1.HoverState.BorderColor = Color.FromArgb(194, 165, 142);
+        guna2ComboBox1.ItemHeight = 30;
+        guna2ComboBox1.Location = new Point(197, 105);
+        guna2ComboBox1.Name = "guna2ComboBox1";
+        guna2ComboBox1.ShadowDecoration.CustomizableEdges = customizableEdges19;
+        guna2ComboBox1.Size = new Size(140, 36);
+        guna2ComboBox1.TabIndex = 0;
+        guna2ComboBox1.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
+        // 
         // AppTheme
         // 
         AutoScaleDimensions = new SizeF(7F, 15F);
         AutoScaleMode = AutoScaleMode.Font;
         BackColor = Color.Black;
+        Controls.Add(guna2ComboBox1);
+        Controls.Add(LLB_Link1);
+        Controls.Add(HSB_Main);
         Controls.Add(PNL_Background);
         Controls.Add(PGI_Loading);
         Controls.Add(RBN_Select1);
@@ -477,4 +545,7 @@ partial class AppTheme
     private Guna.UI2.WinForms.Guna2RadioButton RBN_Select1;
     private Guna.UI2.WinForms.Guna2WinProgressIndicator PGI_Loading;
     private Guna.UI2.WinForms.Guna2Panel PNL_Background;
+    private Guna.UI2.WinForms.Guna2HScrollBar HSB_Main;
+    private LinkLabel LLB_Link1;
+    private Guna.UI2.WinForms.Guna2ComboBox guna2ComboBox1;
 }

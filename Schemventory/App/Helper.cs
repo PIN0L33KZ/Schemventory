@@ -12,6 +12,6 @@ internal static class Helper
 
     public static string GetAppDataPath()
     {
-        return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), Constants.AppName);
+        return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PIN0L33KZ GbR", Constants.AppName);
     }
 }
