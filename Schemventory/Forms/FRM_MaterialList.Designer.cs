@@ -1,5 +1,4 @@
-﻿
-namespace Schemventory.Forms;
+﻿namespace Schemventory.Forms;
 
 partial class FRM_MaterialList
 {
@@ -121,6 +120,7 @@ partial class FRM_MaterialList
         PNL_MaterialList.Size = new Size(967, 415);
         PNL_MaterialList.TabIndex = 0;
         PNL_MaterialList.TabStop = true;
+        PNL_MaterialList.ReorderRequested += PNL_MaterialList_ReorderRequested;
         // 
         // VSB_Main
         // 
@@ -307,7 +307,7 @@ partial class FRM_MaterialList
     private Label LBL_FilterWarn;
     private Controls.FilterPanel FPN_Missing;
     private Controls.FilterPanel FPN_Replaced;
-    private Controls.FilterPanel FPN_Collected;
     private Controls.FilterPanel FPN_Ignored;
+    private Controls.FilterPanel FPN_Collected;
     private Guna.UI2.WinForms.Guna2ImageButton BTN_AddMaterial;
 }

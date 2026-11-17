@@ -14,6 +14,8 @@ public sealed class ProjectMaterial
 
     public string? ReplacementItemId { get; set; }
 
+    public int? SortOrder { get; set; }
+
     public string DisplayItemId => !string.IsNullOrWhiteSpace(ReplacementItemId)
         ? ReplacementItemId
         : ItemId;

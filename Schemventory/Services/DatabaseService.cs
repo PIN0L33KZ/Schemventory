@@ -148,8 +148,8 @@ public class DatabaseService
 
                 using(SqliteCommand renameCommand = connection.CreateCommand())
                 {
-                    renameCommand.Transaction = transaction;
                     renameCommand.CommandText = "ALTER TABLE Projects_New RENAME TO Projects;";
+                    renameCommand.Transaction = transaction;
 
                     _ = renameCommand.ExecuteNonQuery();
                 }
@@ -186,6 +186,7 @@ public class DatabaseService
                 CollectedAmount INTEGER NOT NULL DEFAULT 0,
                 State INTEGER NOT NULL DEFAULT 0,
                 ReplacementItemId TEXT NULL,
+                SortOrder INTEGER NULL,
 
                 PRIMARY KEY(ProjectId, ItemId),
 
@@ -222,6 +223,16 @@ public class DatabaseService
             _ = command.ExecuteNonQuery();
 
             Log.Information("{LogContext} Added ProjectMaterials.ReplacementItemId column.", LogContext);
+        }
+
+        if(!ColumnExists(connection, "ProjectMaterials", "SortOrder"))
+        {
+            using SqliteCommand command = connection.CreateCommand();
+            command.CommandText = "ALTER TABLE ProjectMaterials ADD COLUMN SortOrder INTEGER NULL;";
+
+            _ = command.ExecuteNonQuery();
+
+            Log.Information("{LogContext} Added ProjectMaterials.SortOrder column.", LogContext);
         }
 
         if(stateColumnAdded)

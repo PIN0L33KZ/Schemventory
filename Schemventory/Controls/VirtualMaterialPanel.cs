@@ -1,6 +1,7 @@
-﻿
+﻿using Schemventory.App;
 using Schemventory.Services;
 using Serilog;
+using System.Drawing.Drawing2D;
 
 namespace Schemventory.Controls;
 
@@ -14,6 +15,9 @@ public sealed class VirtualMaterialPanel : Panel
     private const int ContentPadding = 3;
 
     private readonly List<MaterialControl> _controlPool = [];
+    private readonly DragPlaceholder _dragPlaceholder = new();
+    private readonly System.Windows.Forms.Timer _dragTimer = new() { Interval = Constants.MaterialDragUpdateIntervalMilliseconds };
+    private readonly DragCancelFilter _dragCancelFilter;
 
     private IReadOnlyList<ProjectMaterial> _materials = Array.Empty<ProjectMaterial>();
 
@@ -22,17 +26,27 @@ public sealed class VirtualMaterialPanel : Panel
     private ProjectMaterialService? _projectMaterialService;
 
     private Bitmap? _resizeSnapshot;
+    private DragPreviewForm? _dragPreview;
     private int _columnCount = 1;
     private int _renderRowCount = 1;
     private int _refreshVersion;
+    private int _openMaterialCount;
+    private int _dragSourceIndex = -1;
+    private int _dragTargetIndex = -1;
+    private Point _dragStartScreenPosition;
+    private Point _dragCursorOffset;
     private bool _resizeSuspended;
     private bool _toolTipsEnabled = true;
+    private bool _previousToolTipsEnabled = true;
+    private bool _dragPending;
+    private bool _dragging;
 
     public event EventHandler? MaterialStateChanged;
     public event EventHandler? ScrollMetricsChanged;
     public event EventHandler? ScrollPositionChanged;
     public event Action<int>? MouseWheelScrollRequested;
     public event Action<ProjectMaterial>? MaterialRemoveRequested;
+    public event Action<int, int>? ReorderRequested;
 
     public int TotalRows => _materials.Count == 0 ? 0 : (int)Math.Ceiling((double)_materials.Count / _columnCount);
     public int ViewportHeight { get; private set; } = 1;
@@ -47,6 +61,11 @@ public sealed class VirtualMaterialPanel : Panel
 
         UpdateStyles();
         TabStop = true;
+
+        _dragCancelFilter = new DragCancelFilter(this);
+        _dragTimer.Tick += DragTimer_Tick;
+
+        Controls.Add(_dragPlaceholder);
     }
 
     public void Initialize(ItemIconService itemIconService, ItemDataProvider itemDataProvider, ProjectMaterialService projectMaterialService)
@@ -62,7 +81,18 @@ public sealed class VirtualMaterialPanel : Panel
     {
         ArgumentNullException.ThrowIfNull(materials);
 
+        CancelDrag();
+
         _materials = materials;
+        _openMaterialCount = 0;
+
+        foreach(ProjectMaterial material in materials)
+        {
+            if(material.State is not ProjectMaterialState.Missing and not ProjectMaterialState.Replaced)
+                break;
+
+            _openMaterialCount++;
+        }
 
         if(resetScrollPosition)
             ScrollOffset = 0;
@@ -107,6 +137,9 @@ public sealed class VirtualMaterialPanel : Panel
 
     public void SetToolTipsEnabled(bool enabled)
     {
+        if(enabled && _dragging)
+            return;
+
         if(_toolTipsEnabled == enabled)
             return;
 
@@ -119,6 +152,9 @@ public sealed class VirtualMaterialPanel : Panel
     protected override void OnResize(EventArgs eventArgs)
     {
         base.OnResize(eventArgs);
+
+        if(_dragPending || _dragging)
+            CancelDrag();
 
         if(_itemIconService is null)
             return;
@@ -184,6 +220,11 @@ public sealed class VirtualMaterialPanel : Panel
     {
         if(disposing)
         {
+            CancelDrag();
+
+            _dragTimer.Tick -= DragTimer_Tick;
+            _dragTimer.Dispose();
+
             _resizeSnapshot?.Dispose();
             _resizeSnapshot = null;
         }
@@ -228,6 +269,7 @@ public sealed class VirtualMaterialPanel : Panel
             materialControl.RemoveRequested += MaterialControl_RemoveRequested;
 
             RegisterMouseWheel(materialControl);
+            RegisterDragSources(materialControl);
 
             _controlPool.Add(materialControl);
             Controls.Add(materialControl);
@@ -248,14 +290,25 @@ public sealed class VirtualMaterialPanel : Panel
         }
     }
 
+    private Rectangle GetMaterialBounds(int materialIndex)
+    {
+        var contentWidth = (_columnCount * MaterialControlWidth) + ((_columnCount - 1) * HorizontalGap);
+        var startX = Math.Max(ContentPadding, (ClientSize.Width - contentWidth) / 2);
+        var row = materialIndex / _columnCount;
+        var column = materialIndex % _columnCount;
+
+        return new Rectangle(startX + (column * (MaterialControlWidth + HorizontalGap)), ContentPadding + (row * ScrollStep) - ScrollOffset, MaterialControlWidth, MaterialControlHeight);
+    }
+
     private void PositionControlPool()
     {
         if(_controlPool.Count == 0)
+        {
+            PositionDragPlaceholder();
             return;
+        }
 
-        var contentWidth = (_columnCount * MaterialControlWidth) + ((_columnCount - 1) * HorizontalGap);
-        var startX = Math.Max(ContentPadding, (ClientSize.Width - contentWidth) / 2);
-        var rowOffset = ScrollOffset % ScrollStep;
+        var firstMaterialIndex = ScrollOffset / ScrollStep * _columnCount;
 
         SuspendLayout();
 
@@ -263,11 +316,7 @@ public sealed class VirtualMaterialPanel : Panel
         {
             for(var index = 0; index < _controlPool.Count; index++)
             {
-                var row = index / _columnCount;
-                var column = index % _columnCount;
-
-                _controlPool[index].Location = new Point(startX + (column * (MaterialControlWidth + HorizontalGap)), ContentPadding + (row * ScrollStep) - rowOffset);
-
+                _controlPool[index].Location = GetMaterialBounds(firstMaterialIndex + index).Location;
                 _controlPool[index].Size = new Size(MaterialControlWidth, MaterialControlHeight);
             }
         }
@@ -275,6 +324,8 @@ public sealed class VirtualMaterialPanel : Panel
         {
             ResumeLayout(false);
         }
+
+        PositionDragPlaceholder();
     }
 
     private bool TryRecycleRows(int oldFirstVisibleRow, int newFirstVisibleRow)
@@ -342,9 +393,7 @@ public sealed class VirtualMaterialPanel : Panel
         try
         {
             for(var slotIndex = 0; slotIndex < _controlPool.Count; slotIndex++)
-            {
                 BindControl(_controlPool[slotIndex], firstMaterialIndex + slotIndex, bindingTasks, forceRebind);
-            }
         }
         finally
         {
@@ -353,6 +402,8 @@ public sealed class VirtualMaterialPanel : Panel
 
         if(bindingTasks.Count > 0)
             _ = CompleteRefreshAsync(bindingTasks, refreshVersion);
+
+        PositionDragPlaceholder();
     }
 
     private void BindControl(MaterialControl materialControl, int materialIndex, List<Task> bindingTasks, bool forceRebind = false)
@@ -367,7 +418,16 @@ public sealed class VirtualMaterialPanel : Panel
             return;
         }
 
-        ProjectMaterial material = _materials[materialIndex];
+        var projectedIndex = GetProjectedIndex(materialIndex);
+
+        if(projectedIndex < 0)
+        {
+            materialControl.ClearMaterial();
+            materialControl.Visible = false;
+            return;
+        }
+
+        ProjectMaterial material = _materials[projectedIndex];
 
         materialControl.Visible = true;
 
@@ -378,6 +438,28 @@ public sealed class VirtualMaterialPanel : Panel
         }
 
         bindingTasks.Add(materialControl.SetMaterialAsync(material));
+    }
+
+    private int GetProjectedIndex(int index)
+    {
+        if(!_dragging || _dragTargetIndex < 0)
+            return index;
+
+        if(index == _dragTargetIndex)
+            return -1;
+
+        if(_dragSourceIndex < _dragTargetIndex &&
+           index >= _dragSourceIndex &&
+           index < _dragTargetIndex)
+        {
+            return index + 1;
+        }
+
+        return _dragSourceIndex > _dragTargetIndex &&
+           index > _dragTargetIndex &&
+           index <= _dragSourceIndex
+            ? index - 1
+            : index;
     }
 
     private async Task CompleteRefreshAsync(IReadOnlyCollection<Task> bindingTasks, int refreshVersion)
@@ -450,6 +532,316 @@ public sealed class VirtualMaterialPanel : Panel
         MouseWheelScrollRequested?.Invoke(direction * wheelSteps * ScrollStep);
     }
 
+    private void RegisterDragSources(Control control)
+    {
+        if(control is not Guna.UI2.WinForms.Guna2ImageButton)
+            control.MouseDown += DragSource_MouseDown;
+
+        foreach(Control child in control.Controls)
+            RegisterDragSources(child);
+    }
+
+    private void DragSource_MouseDown(object? sender, MouseEventArgs eventArgs)
+    {
+        MouseButtons primaryButton = SystemInformation.MouseButtonsSwapped ? MouseButtons.Right : MouseButtons.Left;
+
+        if(eventArgs.Button != primaryButton ||
+           _openMaterialCount < 2 ||
+           _resizeSuspended ||
+           _dragPending ||
+           _dragging ||
+           sender is not Control control)
+        {
+            return;
+        }
+
+        while(control is not MaterialControl && control.Parent is not null)
+            control = control.Parent;
+
+        if(control is not MaterialControl materialControl || materialControl.BoundMaterial is not ProjectMaterial material)
+            return;
+
+        if(material.State is not ProjectMaterialState.Missing and not ProjectMaterialState.Replaced)
+            return;
+
+        var sourceIndex = -1;
+
+        for(var index = 0; index < _openMaterialCount; index++)
+        {
+            if(!ReferenceEquals(_materials[index], material))
+                continue;
+
+            sourceIndex = index;
+            break;
+        }
+
+        if(sourceIndex < 0)
+            return;
+
+        _dragSourceIndex = sourceIndex;
+        _dragTargetIndex = sourceIndex;
+        _dragStartScreenPosition = Control.MousePosition;
+        _dragCursorOffset = materialControl.PointToClient(_dragStartScreenPosition);
+        _dragPending = true;
+
+        _dragTimer.Start();
+    }
+
+    private void DragTimer_Tick(object? sender, EventArgs eventArgs)
+    {
+        Point screenPosition = Control.MousePosition;
+        MouseButtons primaryButton = SystemInformation.MouseButtonsSwapped ? MouseButtons.Right : MouseButtons.Left;
+        var buttonPressed = (Control.MouseButtons & primaryButton) == primaryButton;
+
+        Form? ownerForm = FindForm();
+
+        if(ownerForm is null || ownerForm.IsDisposed || !ownerForm.ContainsFocus)
+        {
+            CancelDrag();
+            return;
+        }
+
+        if(!buttonPressed)
+        {
+            if(_dragging)
+            {
+                Point localPosition = PointToClient(screenPosition);
+                EndDrag(ClientRectangle.Contains(localPosition));
+            }
+            else
+            {
+                CancelDrag();
+            }
+
+            return;
+        }
+
+        if(_dragPending && !_dragging)
+        {
+            var distanceX = Math.Abs(screenPosition.X - _dragStartScreenPosition.X);
+            var distanceY = Math.Abs(screenPosition.Y - _dragStartScreenPosition.Y);
+
+            if(distanceX < Constants.MaterialDragStartDistancePixels &&
+               distanceY < Constants.MaterialDragStartDistancePixels)
+            {
+                return;
+            }
+
+            BeginDrag();
+        }
+
+        if(_dragging)
+            UpdateDragPosition(screenPosition);
+    }
+
+    private void BeginDrag()
+    {
+        if(!_dragPending || _dragSourceIndex < 0)
+            return;
+
+        MaterialControl? sourceControl = null;
+
+        foreach(MaterialControl materialControl in _controlPool)
+        {
+            if(ReferenceEquals(materialControl.BoundMaterial, _materials[_dragSourceIndex]))
+            {
+                sourceControl = materialControl;
+                break;
+            }
+        }
+
+        if(sourceControl is null)
+        {
+            CancelDrag();
+            return;
+        }
+
+        Bitmap snapshot = new(sourceControl.Width, sourceControl.Height);
+
+        try
+        {
+            sourceControl.DrawToBitmap(snapshot, new Rectangle(Point.Empty, sourceControl.Size));
+
+            DragPreviewForm preview = new(snapshot)
+            {
+                Location = new Point(_dragStartScreenPosition.X - _dragCursorOffset.X, _dragStartScreenPosition.Y - _dragCursorOffset.Y)
+            };
+
+            Form? ownerForm = FindForm();
+
+            if(ownerForm is null)
+            {
+                preview.Dispose();
+                snapshot.Dispose();
+                CancelDrag();
+                return;
+            }
+
+            _dragPreview = preview;
+            _dragPending = false;
+            _dragging = true;
+
+            Cursor.Current = Cursors.SizeAll;
+
+            _previousToolTipsEnabled = _toolTipsEnabled;
+            SetToolTipsEnabled(false);
+
+            Application.AddMessageFilter(_dragCancelFilter);
+
+            preview.Show(ownerForm);
+
+            RefreshVisibleControls();
+        }
+        catch
+        {
+            snapshot.Dispose();
+            CancelDrag();
+            throw;
+        }
+    }
+
+    private void UpdateDragPosition(Point screenPosition)
+    {
+        if(!_dragging)
+            return;
+
+        _dragPreview?.Location = new Point(screenPosition.X - _dragCursorOffset.X, screenPosition.Y - _dragCursorOffset.Y);
+
+        Point localPosition = PointToClient(screenPosition);
+
+        if(!ClientRectangle.Contains(localPosition))
+        {
+            _dragPlaceholder.Visible = false;
+            return;
+        }
+
+        if(MaximumScrollOffset > 0)
+        {
+            if(localPosition.Y < Constants.MaterialDragAutoScrollMarginPixels)
+                SetScrollOffset(ScrollOffset - Constants.MaterialDragAutoScrollStepPixels);
+            else if(localPosition.Y >= ClientSize.Height - Constants.MaterialDragAutoScrollMarginPixels)
+                SetScrollOffset(ScrollOffset + Constants.MaterialDragAutoScrollStepPixels);
+        }
+
+        var targetIndex = GetDragTargetIndex(localPosition);
+
+        if(targetIndex != _dragTargetIndex)
+        {
+            _dragTargetIndex = targetIndex;
+            RefreshVisibleControls();
+        }
+        else
+        {
+            PositionDragPlaceholder();
+        }
+    }
+
+    private int GetDragTargetIndex(Point localPosition)
+    {
+        if(_openMaterialCount == 0)
+            return -1;
+
+        var contentWidth = (_columnCount * MaterialControlWidth) + ((_columnCount - 1) * HorizontalGap);
+        var startX = Math.Max(ContentPadding, (ClientSize.Width - contentWidth) / 2);
+        var columnStep = MaterialControlWidth + HorizontalGap;
+
+        var firstColumnCentre = startX + (MaterialControlWidth / 2.0);
+        var column = (int)Math.Floor(((localPosition.X - firstColumnCentre) / columnStep) + 0.5);
+
+        var firstRowCentre = ContentPadding + (MaterialControlHeight / 2.0);
+        var contentY = localPosition.Y + ScrollOffset;
+        var row = (int)Math.Floor(((contentY - firstRowCentre) / ScrollStep) + 0.5);
+
+        row = Math.Clamp(row, 0, Math.Max(0, TotalRows - 1));
+
+        var firstIndexInRow = row * _columnCount;
+        var availableColumns = Math.Min(_columnCount, _materials.Count - firstIndexInRow);
+
+        column = Math.Clamp(column, 0, Math.Max(0, availableColumns - 1));
+
+        var targetIndex = firstIndexInRow + column;
+
+        return targetIndex < _openMaterialCount ? targetIndex : -1;
+    }
+
+    private void PositionDragPlaceholder()
+    {
+        if(!_dragging ||
+           _dragTargetIndex < 0 ||
+           _dragTargetIndex >= _openMaterialCount)
+        {
+            _dragPlaceholder.Visible = false;
+            return;
+        }
+
+        Rectangle targetBounds = GetMaterialBounds(_dragTargetIndex);
+
+        _dragPlaceholder.Bounds = targetBounds;
+        _dragPlaceholder.Visible = targetBounds.Bottom > 0 &&
+                                   targetBounds.Top < ClientSize.Height &&
+                                   targetBounds.Right > 0 &&
+                                   targetBounds.Left < ClientSize.Width;
+
+        if(_dragPlaceholder.Visible)
+            _dragPlaceholder.BringToFront();
+    }
+
+    private void CancelDrag()
+    {
+        EndDrag(false);
+    }
+
+    private void EndDrag(bool commit)
+    {
+        if(!_dragPending && !_dragging)
+            return;
+
+        var shouldReorder = commit &&
+                            _dragging &&
+                            _dragSourceIndex >= 0 &&
+                            _dragTargetIndex >= 0 &&
+                            _dragTargetIndex < _openMaterialCount &&
+                            _dragSourceIndex != _dragTargetIndex;
+
+        var sourceIndex = _dragSourceIndex;
+        var targetIndex = _dragTargetIndex;
+        var wasDragging = _dragging;
+
+        _dragTimer.Stop();
+
+        if(wasDragging)
+            Application.RemoveMessageFilter(_dragCancelFilter);
+
+        _dragPending = false;
+        _dragging = false;
+        _dragSourceIndex = -1;
+        _dragTargetIndex = -1;
+
+        Cursor.Current = Cursors.Default;
+
+        _dragPlaceholder.Visible = false;
+
+        if(_dragPreview is not null)
+        {
+            Image? image = _dragPreview.BackgroundImage;
+            _dragPreview.BackgroundImage = null;
+            _dragPreview.Dispose();
+            image?.Dispose();
+            _dragPreview = null;
+        }
+
+        if(wasDragging)
+        {
+            SetToolTipsEnabled(_previousToolTipsEnabled);
+
+            if(!IsDisposed && !Disposing && !_resizeSuspended)
+                RefreshVisibleControls();
+        }
+
+        if(shouldReorder && !IsDisposed && !Disposing)
+            ReorderRequested?.Invoke(sourceIndex, targetIndex);
+    }
+
     private void CreateResizeSnapshot()
     {
         _resizeSnapshot?.Dispose();
@@ -477,6 +869,7 @@ public sealed class VirtualMaterialPanel : Panel
         if(_resizeSuspended)
             return;
 
+        CancelDrag();
         CreateResizeSnapshot();
 
         _resizeSuspended = true;
@@ -521,5 +914,78 @@ public sealed class VirtualMaterialPanel : Panel
         Invalidate();
 
         Log.Debug("{LogContext} Virtual layout resumed after snapshot resize. ColumnCount={ColumnCount}, ViewportHeight={ViewportHeight}, RenderRowCount={RenderRowCount}, ScrollOffset={ScrollOffset}", LogContext, _columnCount, ViewportHeight, _renderRowCount, ScrollOffset);
+    }
+
+    private sealed class DragCancelFilter(VirtualMaterialPanel owner) : IMessageFilter
+    {
+        private readonly VirtualMaterialPanel _owner = owner;
+
+        public bool PreFilterMessage(ref Message message)
+        {
+            const int WmKeyDown = 0x0100;
+
+            if(message.Msg == WmKeyDown && message.WParam.ToInt32() == (int)Keys.Escape)
+            {
+                _owner.CancelDrag();
+                return true;
+            }
+
+            return false;
+        }
+    }
+
+    private sealed class DragPreviewForm : Form
+    {
+        protected override bool ShowWithoutActivation => true;
+
+        protected override CreateParams CreateParams
+        {
+            get
+            {
+                const int WsExTransparent = 0x00000020;
+                const int WsExToolWindow = 0x00000080;
+                const int WsExNoActivate = 0x08000000;
+
+                CreateParams parameters = base.CreateParams;
+                parameters.ExStyle |= WsExTransparent | WsExToolWindow | WsExNoActivate;
+                return parameters;
+            }
+        }
+
+        public DragPreviewForm(Bitmap snapshot)
+        {
+            FormBorderStyle = FormBorderStyle.None;
+            ShowInTaskbar = false;
+            StartPosition = FormStartPosition.Manual;
+            Size = snapshot.Size;
+            BackgroundImage = snapshot;
+            BackgroundImageLayout = ImageLayout.None;
+            Opacity = Constants.MaterialDragPreviewOpacity;
+        }
+    }
+
+    private sealed class DragPlaceholder : Control
+    {
+        public DragPlaceholder()
+        {
+            SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.SupportsTransparentBackColor, true);
+
+            BackColor = Color.Transparent;
+            Visible = false;
+            TabStop = false;
+        }
+
+        protected override void OnPaint(PaintEventArgs eventArgs)
+        {
+            base.OnPaint(eventArgs);
+
+            using SolidBrush backgroundBrush = new(Constants.MaterialDragPlaceholderBackgroundColor);
+            using Pen borderPen = new(Constants.MaterialDragPlaceholderColor, 2f) { DashStyle = DashStyle.Dash };
+
+            eventArgs.Graphics.FillRectangle(backgroundBrush, ClientRectangle);
+            eventArgs.Graphics.DrawRectangle(borderPen, 2, 2, Math.Max(0, Width - 5), Math.Max(0, Height - 5));
+
+            TextRenderer.DrawText(eventArgs.Graphics, "Move to here", Font, ClientRectangle, Constants.MaterialDragPlaceholderColor, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine);
+        }
     }
 }

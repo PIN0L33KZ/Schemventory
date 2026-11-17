@@ -1,5 +1,4 @@
-﻿
-using Schemventory.App;
+﻿using Schemventory.App;
 using Schemventory.Controls;
 using Schemventory.Data;
 using Schemventory.Services;
@@ -115,6 +114,62 @@ public partial class FRM_MaterialList : Form
         }
     }
 
+    private void PNL_MaterialList_ReorderRequested(int sourceIndex, int targetIndex)
+    {
+        if(sourceIndex < 0 || sourceIndex >= _viewMaterials.Count ||
+           targetIndex < 0 || targetIndex >= _viewMaterials.Count ||
+           sourceIndex == targetIndex)
+        {
+            return;
+        }
+
+        ProjectMaterial sourceMaterial = _viewMaterials[sourceIndex];
+        ProjectMaterial targetMaterial = _viewMaterials[targetIndex];
+
+        if(!IsOpenMaterial(sourceMaterial) || !IsOpenMaterial(targetMaterial))
+            return;
+
+        List<ProjectMaterial> orderedOpenMaterials = _materials
+            .Where(IsOpenMaterial)
+            .OrderBy(x => x.SortOrder ?? int.MaxValue)
+            .ThenByDescending(x => x.RequiredAmount)
+            .ThenBy(x => x.ItemId, StringComparer.Ordinal)
+            .ToList();
+
+        var sourcePosition = orderedOpenMaterials.IndexOf(sourceMaterial);
+        var targetPosition = orderedOpenMaterials.IndexOf(targetMaterial);
+
+        if(sourcePosition < 0 || targetPosition < 0 || sourcePosition == targetPosition)
+            return;
+
+        orderedOpenMaterials.RemoveAt(sourcePosition);
+
+        var insertionPosition = orderedOpenMaterials.IndexOf(targetMaterial);
+
+        if(sourcePosition < targetPosition)
+            insertionPosition++;
+
+        orderedOpenMaterials.Insert(insertionPosition, sourceMaterial);
+
+        try
+        {
+            _projectMaterialService.SaveOpenMaterialOrder(_project.Id, orderedOpenMaterials.Select(x => x.ItemId).ToArray());
+
+            for(var index = 0; index < orderedOpenMaterials.Count; index++)
+                orderedOpenMaterials[index].SortOrder = index;
+
+            ApplyMaterialView(resetScrollPosition: false);
+
+            Log.Information("{LogContext} Open material reordered. ProjectId={ProjectId}, ItemId={ItemId}, SourceIndex={SourceIndex}, TargetIndex={TargetIndex}", LogContext, _project.Id, sourceMaterial.ItemId, sourceIndex, targetIndex);
+        }
+        catch(Exception exception)
+        {
+            Log.Error(exception, "{LogContext} Failed to save open material order. ProjectId={ProjectId}, ItemId={ItemId}", LogContext, _project.Id, sourceMaterial.ItemId);
+
+            _ = MessageBox.Show($"The material order could not be saved.\n\n{exception.Message}", Constants.AppName, MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
     private void FillProjectData()
     {
         LBL_ProjectName.Text = _project.Name;
@@ -207,7 +262,9 @@ public partial class FRM_MaterialList : Form
         _viewMaterials = _materials
             .Where(ShouldShowMaterial)
             .OrderBy(x => GetStateSortOrder(x.State))
+            .ThenBy(x => IsOpenMaterial(x) ? x.SortOrder ?? int.MaxValue : 0)
             .ThenByDescending(x => x.RequiredAmount)
+            .ThenBy(x => x.ItemId, StringComparer.Ordinal)
             .ToList();
 
         var hasVisibleMaterials = _viewMaterials.Count > 0;
@@ -231,6 +288,11 @@ public partial class FRM_MaterialList : Form
             ProjectMaterialState.Ignored => FPN_Ignored.Checked,
             _ => false
         };
+    }
+
+    private static bool IsOpenMaterial(ProjectMaterial material)
+    {
+        return material.State is ProjectMaterialState.Missing or ProjectMaterialState.Replaced;
     }
 
     private static int GetStateSortOrder(ProjectMaterialState state)

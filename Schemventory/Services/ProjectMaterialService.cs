@@ -21,7 +21,7 @@ public class ProjectMaterialService
         using SqliteCommand command = connection.CreateCommand();
 
         command.CommandText = @"
-            SELECT ProjectId, ItemId, RequiredAmount, CollectedAmount, State, ReplacementItemId
+            SELECT ProjectId, ItemId, RequiredAmount, CollectedAmount, State, ReplacementItemId, SortOrder
             FROM ProjectMaterials
             WHERE ProjectId = $projectId COLLATE NOCASE
             ORDER BY RequiredAmount DESC, ItemId;";
@@ -39,7 +39,8 @@ public class ProjectMaterialService
                 RequiredAmount = reader.GetInt64(2),
                 CollectedAmount = reader.GetInt64(3),
                 State = (ProjectMaterialState)reader.GetInt32(4),
-                ReplacementItemId = reader.IsDBNull(5) ? null : reader.GetString(5)
+                ReplacementItemId = reader.IsDBNull(5) ? null : reader.GetString(5),
+                SortOrder = reader.IsDBNull(6) ? null : reader.GetInt32(6)
             });
         }
 
@@ -87,6 +88,42 @@ public class ProjectMaterialService
         Log.Debug("{LogContext} Material added manually. ProjectId={ProjectId}, ItemId={ItemId}, RequiredAmount={RequiredAmount}", LogContext, projectId, itemId, requiredAmount);
     }
 
+    public void SaveOpenMaterialOrder(Guid projectId, IReadOnlyList<string> itemIds)
+    {
+        ArgumentNullException.ThrowIfNull(itemIds);
+
+        using SqliteConnection connection = _databaseService.CreateConnection();
+        using SqliteTransaction transaction = connection.BeginTransaction();
+        using SqliteCommand command = connection.CreateCommand();
+
+        command.Transaction = transaction;
+        command.CommandText = @"
+            UPDATE ProjectMaterials
+            SET SortOrder = $sortOrder
+            WHERE ProjectId = $projectId COLLATE NOCASE
+            AND ItemId = $itemId
+            AND State IN ($missingState, $replacedState);";
+
+        command.Parameters.Add("$projectId", SqliteType.Text).Value = projectId.ToString("D");
+        _ = command.Parameters.AddWithValue("$missingState", (int)ProjectMaterialState.Missing);
+        _ = command.Parameters.AddWithValue("$replacedState", (int)ProjectMaterialState.Replaced);
+
+        SqliteParameter itemIdParameter = command.Parameters.Add("$itemId", SqliteType.Text);
+        SqliteParameter sortOrderParameter = command.Parameters.Add("$sortOrder", SqliteType.Integer);
+
+        for(var index = 0; index < itemIds.Count; index++)
+        {
+            itemIdParameter.Value = itemIds[index];
+            sortOrderParameter.Value = index;
+
+            EnsureMaterialUpdated(command.ExecuteNonQuery(), projectId, itemIds[index]);
+        }
+
+        transaction.Commit();
+
+        Log.Debug("{LogContext} Open material order saved. ProjectId={ProjectId}, Count={Count}", LogContext, projectId, itemIds.Count);
+    }
+
     internal void Replace(Guid projectId, IReadOnlyCollection<MaterialEntry> materials, SqliteConnection connection, SqliteTransaction transaction)
     {
         Log.Debug("{LogContext} Replacing project material set. ProjectId={ProjectId}, MaterialCount={MaterialCount}", LogContext, projectId, materials.Count);
@@ -107,11 +144,11 @@ public class ProjectMaterialService
         insertCommand.CommandText = @"
             INSERT INTO ProjectMaterials
             (
-                ProjectId, ItemId, RequiredAmount, CollectedAmount, State, ReplacementItemId
+                ProjectId, ItemId, RequiredAmount, CollectedAmount, State, ReplacementItemId, SortOrder
             )
             VALUES
             (
-                $projectId, $itemId, $requiredAmount, $collectedAmount, $state, $replacementItemId
+                $projectId, $itemId, $requiredAmount, $collectedAmount, $state, $replacementItemId, $sortOrder
             );";
 
         SqliteParameter projectIdParameter = insertCommand.Parameters.Add("$projectId", SqliteType.Text);
@@ -120,6 +157,7 @@ public class ProjectMaterialService
         SqliteParameter collectedAmountParameter = insertCommand.Parameters.Add("$collectedAmount", SqliteType.Integer);
         SqliteParameter stateParameter = insertCommand.Parameters.Add("$state", SqliteType.Integer);
         SqliteParameter replacementItemIdParameter = insertCommand.Parameters.Add("$replacementItemId", SqliteType.Text);
+        SqliteParameter sortOrderParameter = insertCommand.Parameters.Add("$sortOrder", SqliteType.Integer);
 
         projectIdParameter.Value = projectId.ToString("D");
 
@@ -152,6 +190,7 @@ public class ProjectMaterialService
             collectedAmountParameter.Value = collectedAmount;
             stateParameter.Value = (int)state;
             replacementItemIdParameter.Value = (object?)replacementItemId ?? DBNull.Value;
+            sortOrderParameter.Value = (object?)existingState?.SortOrder ?? DBNull.Value;
 
             _ = insertCommand.ExecuteNonQuery();
         }
@@ -276,7 +315,7 @@ public class ProjectMaterialService
         command.Transaction = transaction;
 
         command.CommandText = @"
-            SELECT ItemId, CollectedAmount, State, ReplacementItemId
+            SELECT ItemId, CollectedAmount, State, ReplacementItemId, SortOrder
             FROM ProjectMaterials
             WHERE ProjectId = $projectId COLLATE NOCASE;";
 
@@ -290,7 +329,8 @@ public class ProjectMaterialService
             {
                 CollectedAmount = reader.GetInt64(1),
                 State = (ProjectMaterialState)reader.GetInt32(2),
-                ReplacementItemId = reader.IsDBNull(3) ? null : reader.GetString(3)
+                ReplacementItemId = reader.IsDBNull(3) ? null : reader.GetString(3),
+                SortOrder = reader.IsDBNull(4) ? null : reader.GetInt32(4)
             };
         }
 
@@ -311,5 +351,6 @@ public class ProjectMaterialService
         public long CollectedAmount { get; init; }
         public ProjectMaterialState State { get; init; }
         public string? ReplacementItemId { get; init; }
+        public int? SortOrder { get; init; }
     }
 }
