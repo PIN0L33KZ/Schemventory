@@ -1,13 +1,14 @@
 # Schemventory
 
-Schemventory is a Windows application for creating and tracking Minecraft material lists from schematic files.
+Schemventory is a Windows application for creating and tracking Minecraft material lists. Import materials from schematic files or add your own.
 
 It reads supported schematic formats, resolves block states into inventory materials and helps track what has already been collected, what is still missing and which materials have been replaced or ignored.
 
 ## Features
 
-- Read Litematica `.litematic` files
-- Read Sponge Schematic v2 and v3 `.schem` files
+- Import materials from Litematica `.litematic` files
+- Import materials from Sponge Schematic v2 and v3 `.schem` files
+- Add custom materials
 - Generate material lists from schematic contents
 - Track required, collected and remaining material amounts
 - Enter collected amounts in stacks and blocks
