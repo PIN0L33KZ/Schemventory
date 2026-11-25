@@ -15,9 +15,9 @@
 
 		<!-- Application version -->
 		<IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
-		<Version>1.1.0</Version>
-		<AssemblyVersion>1.1.0.0</AssemblyVersion>
-		<FileVersion>1.1.0.0</FileVersion>
+		<Version>1.2.0</Version>
+		<AssemblyVersion>1.2.0.0</AssemblyVersion>
+		<FileVersion>1.2.0.0</FileVersion>
 
 		<!-- Application information -->
 		<Product>Schemventory</Product>
@@ -51,8 +51,8 @@
 
 	<ItemGroup>
 		<PackageReference Include="fNbt" Version="2.1.0" />
-		<PackageReference Include="Guna.UI2.WinForms" Version="2.0.4.8" />
-		<PackageReference Include="Microsoft.Data.Sqlite" Version="11.0.0-rc.1.26425.128" />
+		<PackageReference Include="Guna.UI2.WinForms" Version="2.0.5.1" />
+		<PackageReference Include="Microsoft.Data.Sqlite" Version="11.0.0" />
 		<PackageReference Include="Serilog" Version="4.4.1-dev-02447" />
 		<PackageReference Include="Serilog.Sinks.File" Version="8.0.0-nblumhardt-02322" />
 	</ItemGroup>
