@@ -6,9 +6,10 @@ namespace Schemventory.App;
 internal static class LoggerConfigurator
 {
     private const string LogContext = "(Subsystem)";
+
     internal static void Configure()
     {
-        var logDirectory = Constants.LogDirectory;
+        var logDirectory = Constants.AppLogDir;
 
         try
         {
@@ -18,7 +19,7 @@ internal static class LoggerConfigurator
                 .MinimumLevel.Verbose()
                 .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
                 .Enrich.FromLogContext()
-                .WriteTo.File(path: Path.Combine(logDirectory, "log-.txt"), outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] {Message:lj}{NewLine}{Exception}", rollingInterval: RollingInterval.Day, retainedFileCountLimit: 10, shared: true, flushToDiskInterval: TimeSpan.FromSeconds(2))
+                .WriteTo.File(path: Path.Combine(logDirectory, Constants.LogFilePattern), outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] {Message:lj}{NewLine}{Exception}", rollingInterval: RollingInterval.Day, retainedFileCountLimit: Constants.MaxLogFiles, shared: true, flushToDiskInterval: TimeSpan.FromSeconds(Constants.LogFlushIntervalSeconds))
                 .CreateLogger();
 
             Log.Verbose("________________________________________________________________________________________________");
@@ -33,6 +34,6 @@ internal static class LoggerConfigurator
 
     internal static string GetLogDirectory()
     {
-        return Constants.LogDirectory;
+        return Constants.AppLogDir;
     }
 }

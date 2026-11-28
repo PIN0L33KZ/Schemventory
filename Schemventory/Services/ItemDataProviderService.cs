@@ -1,5 +1,4 @@
-﻿
-using Schemventory.App;
+﻿using Schemventory.App;
 using Schemventory.Data;
 using Serilog;
 using System.Net;
@@ -33,11 +32,11 @@ public sealed class ItemDataProvider
 
     public ItemDataProvider()
     {
-        _ = Directory.CreateDirectory(Constants.CacheDirectory);
+        _ = Directory.CreateDirectory(Constants.AppCacheDir);
 
-        _cacheFilePath = Path.Combine(Constants.CacheDirectory, "items.json");
-        _cacheMetadataFilePath = Path.Combine(Constants.CacheDirectory, "items.meta.json");
-        _legacyCacheFilePath = Path.Combine(Constants.CacheDirectory, "item_components.json");
+        _cacheFilePath = Path.Combine(Constants.AppCacheDir, "items.json");
+        _cacheMetadataFilePath = Path.Combine(Constants.AppCacheDir, "items.meta.json");
+        _legacyCacheFilePath = Path.Combine(Constants.AppCacheDir, "item_components.json");
 
         Log.Debug("{LogContext} Item data cache initialised. CachePath={CachePath}", LogContext, _cacheFilePath);
     }
@@ -101,12 +100,14 @@ public sealed class ItemDataProvider
                 {
                     if(cacheLoaded)
                     {
-                        _ = await TryWriteCacheMetadataAsync(new CacheMetadata
+                        CacheMetadata refreshedMetadata = new()
                         {
                             LastCheckedUtc = DateTime.UtcNow,
                             ETag = refreshResult.ETag ?? metadata?.ETag,
                             LastModified = refreshResult.LastModified ?? metadata?.LastModified
-                        }, cancellationToken);
+                        };
+
+                        _ = await TryWriteCacheMetadataAsync(refreshedMetadata, cancellationToken);
 
                         MarkLoadedSuccessfully();
 
@@ -125,12 +126,14 @@ public sealed class ItemDataProvider
 
                     if(cachePersisted)
                     {
-                        _ = await TryWriteCacheMetadataAsync(new CacheMetadata
+                        CacheMetadata refreshedMetadata = new()
                         {
                             LastCheckedUtc = DateTime.UtcNow,
                             ETag = refreshResult.ETag,
                             LastModified = refreshResult.LastModified
-                        }, cancellationToken);
+                        };
+
+                        _ = await TryWriteCacheMetadataAsync(refreshedMetadata, cancellationToken);
 
                         TryDeleteLegacyCache();
                     }
@@ -239,10 +242,12 @@ public sealed class ItemDataProvider
 
             if(cachePersisted)
             {
-                _ = await TryWriteCacheMetadataAsync(new CacheMetadata
+                CacheMetadata metadata = new()
                 {
                     LastCheckedUtc = File.GetLastWriteTimeUtc(_legacyCacheFilePath)
-                }, cancellationToken);
+                };
+
+                _ = await TryWriteCacheMetadataAsync(metadata, cancellationToken);
 
                 TryDeleteLegacyCache();
             }
@@ -259,7 +264,7 @@ public sealed class ItemDataProvider
         }
         catch(IOException exception)
         {
-            Log.Warning(exception, "{LogContext} Failed to read legacy item data cache.", LogContext);
+            Log.Warning(exception, "{LogContext} Failed to read the legacy item data cache.", LogContext);
             return false;
         }
         catch(UnauthorizedAccessException exception)
@@ -364,7 +369,7 @@ public sealed class ItemDataProvider
         }
         catch(IOException exception)
         {
-            Log.Debug(exception, "{LogContext} Failed to read item data cache metadata.", LogContext);
+            Log.Debug(exception, "{LogContext} Item data cache metadata could not be read.", LogContext);
             return null;
         }
         catch(UnauthorizedAccessException exception)

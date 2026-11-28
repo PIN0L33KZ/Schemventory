@@ -26,7 +26,7 @@ public sealed class ItemIconService
 
     public ItemIconService()
     {
-        _cacheDirectory = Path.Combine(Constants.CacheDirectory, "ItemIcons");
+        _cacheDirectory = Path.Combine(Constants.AppCacheDir, "ItemIcons");
 
         _ = Directory.CreateDirectory(_cacheDirectory);
 
@@ -80,11 +80,7 @@ public sealed class ItemIconService
 
             if(imageData is null)
             {
-                await TryWriteMissingCacheMarkerAsync(
-                    missingCacheFilePath,
-                    normalizedItemId,
-                    size,
-                    cancellationToken);
+                await TryWriteMissingCacheMarkerAsync(missingCacheFilePath, normalizedItemId, size, cancellationToken);
 
                 Log.Debug("{LogContext} No remote icon available. ItemId={ItemId}, Size={Size}", LogContext, normalizedItemId, size);
                 return new Bitmap(Properties.Resources.MissingIcon);
@@ -92,12 +88,7 @@ public sealed class ItemIconService
 
             TryDeleteFile(missingCacheFilePath);
 
-            await TryWriteIconCacheAsync(
-                cacheFilePath,
-                imageData,
-                normalizedItemId,
-                size,
-                cancellationToken);
+            await TryWriteIconCacheAsync(cacheFilePath, imageData, normalizedItemId, size, cancellationToken);
 
             return CacheAndCloneImage(cacheKey, imageData);
         }
@@ -152,12 +143,7 @@ public sealed class ItemIconService
         return await response.Content.ReadAsByteArrayAsync(cancellationToken);
     }
 
-    private static async Task TryWriteIconCacheAsync(
-        string filePath,
-        byte[] imageData,
-        string itemId,
-        int size,
-        CancellationToken cancellationToken)
+    private static async Task TryWriteIconCacheAsync(string filePath, byte[] imageData, string itemId, int size, CancellationToken cancellationToken)
     {
         try
         {
@@ -169,31 +155,15 @@ public sealed class ItemIconService
         }
         catch(IOException exception)
         {
-            Log.Warning(
-                exception,
-                "{LogContext} Failed to write item icon cache. In-memory icon will still be used. ItemId={ItemId}, Size={Size}, Path={Path}",
-                LogContext,
-                itemId,
-                size,
-                filePath);
+            Log.Warning(exception, "{LogContext} Failed to write item icon cache. In-memory icon will still be used. ItemId={ItemId}, Size={Size}, Path={Path}", LogContext, itemId, size, filePath);
         }
         catch(UnauthorizedAccessException exception)
         {
-            Log.Warning(
-                exception,
-                "{LogContext} Access to item icon cache was denied. In-memory icon will still be used. ItemId={ItemId}, Size={Size}, Path={Path}",
-                LogContext,
-                itemId,
-                size,
-                filePath);
+            Log.Warning(exception, "{LogContext} Access to item icon cache was denied. In-memory icon will still be used. ItemId={ItemId}, Size={Size}, Path={Path}", LogContext, itemId, size, filePath);
         }
     }
 
-    private static async Task TryWriteMissingCacheMarkerAsync(
-        string filePath,
-        string itemId,
-        int size,
-        CancellationToken cancellationToken)
+    private static async Task TryWriteMissingCacheMarkerAsync(string filePath, string itemId, int size, CancellationToken cancellationToken)
     {
         try
         {
@@ -205,23 +175,11 @@ public sealed class ItemIconService
         }
         catch(IOException exception)
         {
-            Log.Debug(
-                exception,
-                "{LogContext} Failed to write missing-icon cache marker. Missing icon will still be returned. ItemId={ItemId}, Size={Size}, Path={Path}",
-                LogContext,
-                itemId,
-                size,
-                filePath);
+            Log.Debug(exception, "{LogContext} Failed to write missing-icon cache marker. Missing icon will still be returned. ItemId={ItemId}, Size={Size}, Path={Path}", LogContext, itemId, size, filePath);
         }
         catch(UnauthorizedAccessException exception)
         {
-            Log.Debug(
-                exception,
-                "{LogContext} Access to missing-icon cache marker was denied. Missing icon will still be returned. ItemId={ItemId}, Size={Size}, Path={Path}",
-                LogContext,
-                itemId,
-                size,
-                filePath);
+            Log.Debug(exception, "{LogContext} Access to missing-icon cache marker was denied. Missing icon will still be returned. ItemId={ItemId}, Size={Size}, Path={Path}", LogContext, itemId, size, filePath);
         }
     }
 

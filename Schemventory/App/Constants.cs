@@ -1,27 +1,42 @@
 ﻿namespace Schemventory.App;
 
-internal class Constants
+internal static class Constants
 {
-    public const string AppName = "Schemventory";
-    public const string AppAuthor = "PIN0L33KZ GbR";
-    public const string AppWebsite = "https://pinoleekz.de/";
+    // Publisher
+    internal const string Publisher = "PIN0L33KZ GbR";
+    internal const string PublisherUrl = "https://pinoleekz.de/";
+    internal static string Copyright => $"© {Publisher}, {DateTime.Now.Year}";
 
-    public const int MaterialDragStartDistancePixels = 8;
-    public const int MaterialDragUpdateIntervalMilliseconds = 16;
-    public const int MaterialDragAutoScrollMarginPixels = 36;
-    public const int MaterialDragAutoScrollStepPixels = 12;
-    public const double MaterialDragPreviewOpacity = 0.25;
+    // Application
+    internal const string AppName = "Schemventory";
 
-    public static readonly string CacheDirectory = Path.Combine(Helper.GetAppDataPath(), "Cache");
-    public static readonly string LogDirectory = Path.Combine(Helper.GetAppDataPath(), "logs");
-    public static readonly string AppDatabasePath = Path.Combine(Helper.GetAppDataPath(), "Schemventory.db");
+    // Directories
+    internal static readonly string AppDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), Publisher, AppName);
+    internal static readonly string AppCacheDir = Path.Combine(AppDir, "Cache");
+    internal static readonly string AppLogDir = Path.Combine(AppDir, "logs");
+    internal static readonly string AppDatabasePath = Path.Combine(AppDir, "Schemventory.db");
 
-    public static readonly Color MissingColor = Color.FromArgb(217, 74, 74);
-    public static readonly Color CollectedColor = Color.FromArgb(71, 213, 166);
-    public static readonly Color IgnoredColor = Color.FromArgb(215, 172, 97);
-    public static readonly Color ReplacedColor = Color.FromArgb(43, 133, 187);
-    public static readonly Color DefaultColor = Color.FromArgb(58, 55, 55);
-    public static readonly Color DefaultBorderColor = Color.FromArgb(103, 99, 99);
-    public static readonly Color MaterialDragPlaceholderColor = Color.FromArgb(162, 123, 90);
-    public static readonly Color MaterialDragPlaceholderBackgroundColor = Color.FromArgb(25, 194, 165, 142);
+    // Logging
+    internal const string LogFilePattern = "log-.txt";
+    internal const int MaxLogFiles = 10;
+    internal const int LogFlushIntervalSeconds = 2;
+
+    // Material Colours
+    internal static readonly Color MissingColor = Color.FromArgb(217, 74, 74);
+    internal static readonly Color CollectedColor = Color.FromArgb(71, 213, 166);
+    internal static readonly Color IgnoredColor = Color.FromArgb(215, 172, 97);
+    internal static readonly Color ReplacedColor = Color.FromArgb(43, 133, 187);
+
+    // Material Controls
+    internal static readonly Color DefaultColor = Color.FromArgb(58, 55, 55);
+    internal static readonly Color DefaultBorderColor = Color.FromArgb(103, 99, 99);
+
+    // Material Drag and Drop
+    internal const int MaterialDragStartDistancePixels = 8;
+    internal const int MaterialDragUpdateIntervalMilliseconds = 16;
+    internal const int MaterialDragAutoScrollMarginPixels = 36;
+    internal const int MaterialDragAutoScrollStepPixels = 12;
+    internal const double MaterialDragPreviewOpacity = 0.25;
+    internal static readonly Color MaterialDragPlaceholderColor = Color.FromArgb(162, 123, 90);
+    internal static readonly Color MaterialDragPlaceholderBackgroundColor = Color.FromArgb(25, 194, 165, 142);
 }
