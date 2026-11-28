@@ -12,7 +12,7 @@ public class DatabaseService
 
     public DatabaseService()
     {
-        Helper.EnsureAppDataPath();
+        _ = Directory.CreateDirectory(Constants.AppDir);
         Log.Debug("{LogContext} Database path: {DatabasePath}", LogContext, _databaseFilePath);
     }
 
